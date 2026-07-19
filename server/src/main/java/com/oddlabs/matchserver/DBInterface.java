@@ -16,6 +16,7 @@ import com.oddlabs.matchmaking.GamePlayer;
 import com.oddlabs.matchmaking.GameSession;
 import com.oddlabs.matchmaking.Login;
 import com.oddlabs.matchmaking.LoginDetails;
+import com.oddlabs.matchmaking.OpenSkillLeaderboardRankingEntry;
 import com.oddlabs.matchmaking.OpenSkillRating;
 import com.oddlabs.matchmaking.Participant;
 import com.oddlabs.matchmaking.Profile;
@@ -644,6 +645,53 @@ public final class DBInterface {
             stmt.executeUpdate();
         } catch (SQLException e) {
             MatchmakingServer.getLogger().throwing(DBInterface.class.getName(), "deleteOpenSkillRating", e);
+        }
+    }
+
+    /**
+     * Returns the top {@code n} OpenSkill players ordered by display rating
+     * ({@code SCALING_FACTOR*(mu - sigma)}). Players who have never played a game (sigma still at
+     * the default value) are excluded; players who have played but whose skill is still uncertain
+     * (sigma above the provisional threshold) are included and marked provisional so the client
+     * can show a {@code ?} next to their rating. Players tied on rating share the same rank.
+     */
+    @NullMarked
+    public static OpenSkillLeaderboardRankingEntry[] getTopOpenSkillRankingEntries(int n) {
+        try (
+             Connection conn = DBUtils.createDatabaseConnection(); PreparedStatement stmt = conn.prepareStatement(
+                     """
+                             SELECT
+                                 nick,
+                                 mu,
+                                 sigma,
+                                 RANK() OVER (ORDER BY ? * (mu - sigma) DESC) AS `rank`
+                             FROM openskill_rating
+                             WHERE sigma < ?
+                             ORDER BY ? * (mu - sigma) DESC
+                             LIMIT ?
+                             """
+             );
+        ) {
+            stmt.setDouble(1, OpenSkillRatingSystem.SCALING_FACTOR);
+            stmt.setDouble(2, OpenSkillRatingSystem.INITIAL_SIGMA);
+            stmt.setDouble(3, OpenSkillRatingSystem.SCALING_FACTOR);
+            stmt.setInt(4, n);
+            try (ResultSet result = stmt.executeQuery()) {
+                List<OpenSkillLeaderboardRankingEntry> rankings = new ArrayList<>();
+                while (result.next()) {
+                    String nick = result.getString("nick");
+                    double mu = result.getDouble("mu");
+                    double sigma = result.getDouble("sigma");
+                    int rank = result.getInt("rank");
+                    int rating = OpenSkillRatingSystem.displayRating(mu, sigma);
+                    boolean provisional = OpenSkillRatingSystem.isProvisional(sigma);
+                    rankings.add(new OpenSkillLeaderboardRankingEntry(rank, nick, rating, provisional, mu, sigma));
+                }
+                return rankings.toArray(OpenSkillLeaderboardRankingEntry[]::new);
+            }
+        } catch (SQLException e) {
+            MatchmakingServer.getLogger().throwing(DBInterface.class.getName(), "getTopOpenSkillRankingEntries", e);
+            return new OpenSkillLeaderboardRankingEntry[0];
         }
     }
 

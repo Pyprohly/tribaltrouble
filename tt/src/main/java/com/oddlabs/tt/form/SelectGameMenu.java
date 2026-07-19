@@ -1,10 +1,24 @@
 package com.oddlabs.tt.form;
 
+import static com.oddlabs.tt.gui.Origin.AT_END;
+import static com.oddlabs.tt.gui.Placement.BOTTOM_LEFT;
+import static com.oddlabs.tt.gui.Placement.RIGHT_MID;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.ResourceBundle;
+
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
+import org.jspecify.annotations.NullMarked;
+
 import com.oddlabs.matchmaking.ChatRoomEntry;
 import com.oddlabs.matchmaking.Game;
 import com.oddlabs.matchmaking.GameHost;
 import com.oddlabs.matchmaking.GameSession;
 import com.oddlabs.matchmaking.MatchmakingServerInterface;
+import com.oddlabs.matchmaking.OpenSkillLeaderboardRankingEntry;
 import com.oddlabs.matchmaking.Profile;
 import com.oddlabs.matchmaking.RankingEntry;
 import com.oddlabs.matchmaking.RosterTemplate;
@@ -23,6 +37,7 @@ import com.oddlabs.tt.gui.IntegerLabel;
 import com.oddlabs.tt.gui.Label;
 import com.oddlabs.tt.gui.MouseButton;
 import com.oddlabs.tt.gui.MultiColumnComboBox;
+import com.oddlabs.tt.gui.NumericLabel;
 import com.oddlabs.tt.gui.Panel;
 import com.oddlabs.tt.gui.PanelGroup;
 import com.oddlabs.tt.gui.PulldownItem;
@@ -38,20 +53,10 @@ import com.oddlabs.tt.net.ChatCommand;
 import com.oddlabs.tt.net.GameNetwork;
 import com.oddlabs.tt.net.MatchmakingListener;
 import com.oddlabs.tt.net.Network;
+import com.oddlabs.tt.render.Renderer;
 import com.oddlabs.tt.resource.WorldGenerator;
 import com.oddlabs.tt.util.ServerMessageBundler;
 import com.oddlabs.tt.util.Utils;
-import org.jspecify.annotations.NonNull;
-import org.jspecify.annotations.Nullable;
-
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.ResourceBundle;
-
-import static com.oddlabs.tt.gui.Origin.AT_END;
-import static com.oddlabs.tt.gui.Placement.BOTTOM_LEFT;
-import static com.oddlabs.tt.gui.Placement.RIGHT_MID;
 
 public final class SelectGameMenu extends Form implements MatchmakingListener, TerrainMenuListener {
     private static final int BUTTON_WIDTH_SHORT = 60;
@@ -80,9 +85,11 @@ public final class SelectGameMenu extends Form implements MatchmakingListener, T
     private final NetworkSelector network;
 
     private final @NonNull MultiColumnComboBox<RankingEntry> ranking_list_box;
+    private final @NonNull MultiColumnComboBox<OpenSkillLeaderboardRankingEntry> openskill_ranking_list_box;
 
     private final int game_name_size;
     private final int user_name_size;
+    private final int openskill_user_name_size;
     private final int room_name_size;
 
     private static final ResourceBundle bundle = ResourceBundle.getBundle(SelectGameMenu.class.getName());
@@ -94,6 +101,9 @@ public final class SelectGameMenu extends Form implements MatchmakingListener, T
     private GameMenu game_panel;
     private @Nullable ChatPanel chat_panel;
     private PanelGroup panel_group;
+
+    private final Panel highscore_list_panel;
+    private final Panel openskill_list_panel;
 
     public SelectGameMenu(NetworkSelector network, @NonNull GUIRoot gui_root, @NonNull Menu main_menu) {
         this(network, gui_root, main_menu, 0);
@@ -150,7 +160,7 @@ public final class SelectGameMenu extends Form implements MatchmakingListener, T
         panels[PANEL_INDEX_GAME] = game_list_panel;
 
         // League panel
-        Panel highscore_list_panel = new Panel(i18n("league_caption"));
+        highscore_list_panel = new Panel(i18n("league_caption"));
         label_headline = new Label(i18n("league_description"), Skin.getSkin().getHeadlineFont());
         highscore_list_panel.addChild(label_headline);
         user_name_size = 250;
@@ -172,6 +182,45 @@ public final class SelectGameMenu extends Form implements MatchmakingListener, T
 
         highscore_list_panel.compileCanvas();
         panels[PANEL_INDEX_HIGHSCORE] = highscore_list_panel;
+
+        // OpenSkill League panel (hidden; reached by shift-clicking "The League" tab)
+        openskill_list_panel = new Panel(i18n("openskill_league_caption"));
+        Label openskill_headline = new Label(i18n("openskill_league_description"),
+                Skin.getSkin().getHeadlineFont());
+        openskill_list_panel.addChild(openskill_headline);
+        openskill_user_name_size = user_name_size + 100;
+        ColumnInfo[] openskill_infos = new ColumnInfo[]{new ColumnInfo(i18n("rank"), 50), new ColumnInfo(i18n("name"),
+                openskill_user_name_size), new ColumnInfo(i18n("rating"), 100), new ColumnInfo(i18n("mu"),
+                        100), new ColumnInfo(i18n("sigma"), 100)};
+        openskill_ranking_list_box = new MultiColumnComboBox<>(gui_root, openskill_infos, 350);
+        openskill_list_panel.addChild(openskill_ranking_list_box);
+
+        HorizButton update_openskill_scores_button = new HorizButton(i18n("update_scores"),
+                BUTTON_WIDTH_EXTRA_LONG);
+        openskill_list_panel.addChild(update_openskill_scores_button);
+        update_openskill_scores_button.addMouseClickListener(new UpdateScoresListener());
+
+        openskill_headline.place();
+        openskill_ranking_list_box.place(openskill_headline, BOTTOM_LEFT);
+        update_openskill_scores_button.place(openskill_ranking_list_box, BOTTOM_LEFT);
+
+        openskill_list_panel.compileCanvas();
+
+        highscore_list_panel.addFocusListener(activated -> {
+            boolean tabHovered = highscore_list_panel.getTab().isHovered();
+            boolean shiftDown = Renderer.getLocalInput().isShiftDownCurrently();
+            if (activated && tabHovered && shiftDown) {
+                setPanel(PANEL_INDEX_HIGHSCORE, openskill_list_panel);
+            }
+        });
+
+        openskill_list_panel.addFocusListener(activated -> {
+            boolean tabHovered = openskill_list_panel.getTab().isHovered();
+            boolean shiftDown = Renderer.getLocalInput().isShiftDownCurrently();
+            if (activated && tabHovered && !shiftDown) {
+                setPanel(PANEL_INDEX_HIGHSCORE, highscore_list_panel);
+            }
+        });
 
         // Chat room list panel
         chat_room_list_panel = new Panel(i18n("chat_caption"));
@@ -227,6 +276,7 @@ public final class SelectGameMenu extends Form implements MatchmakingListener, T
         updateList(MatchmakingServerInterface.TYPE_GAME);
         updateList(MatchmakingServerInterface.TYPE_CHAT_ROOM_LIST);
         updateList(MatchmakingServerInterface.TYPE_RANKING_LIST);
+        updateList(MatchmakingServerInterface.TYPE_OPENSKILL_RANKING_LIST);
 
         profiles_form = new ProfilesForm(gui_root, main_menu, this);
         if (Network.getMatchmakingClient().getProfile() == null) {
@@ -359,6 +409,11 @@ public final class SelectGameMenu extends Form implements MatchmakingListener, T
                     updateRankingList((RankingEntry) name);
                 }
                 break;
+            case MatchmakingServerInterface.TYPE_OPENSKILL_RANKING_LIST:
+                for (Object name : names) {
+                    updateOpenSkillRankingList((OpenSkillLeaderboardRankingEntry) name);
+                }
+                break;
             default:
                 throw new IllegalArgumentException("Unexpected list type " + type);
         }
@@ -378,6 +433,9 @@ public final class SelectGameMenu extends Form implements MatchmakingListener, T
             case MatchmakingServerInterface.TYPE_RANKING_LIST:
                 ranking_list_box.clear();
                 break;
+            case MatchmakingServerInterface.TYPE_OPENSKILL_RANKING_LIST:
+                openskill_ranking_list_box.clear();
+                break;
             default:
                 throw new IllegalArgumentException("Unexpected list type " + type);
         }
@@ -392,6 +450,23 @@ public final class SelectGameMenu extends Form implements MatchmakingListener, T
                 new IntegerLabel(ranking.getLosses(), Skin.getSkin().getMultiColumnComboBoxData().font()),
                 new IntegerLabel(ranking.getInvalid(), Skin.getSkin().getMultiColumnComboBoxData().font())), ranking);
         ranking_list_box.addRow(row);
+    }
+
+    @NullMarked
+    private void updateOpenSkillRankingList(OpenSkillLeaderboardRankingEntry entry) {
+        Font font = Skin.getSkin().getMultiColumnComboBoxData().font();
+        String ratingText = "%d%s".formatted(entry.rating(), entry.provisional() ? "?" : "");
+        var row = new Row<OpenSkillLeaderboardRankingEntry, Label>(
+                new Label[]{new IntegerLabel(entry.rank(), font), new Label(entry.nick(), font,
+                        openskill_user_name_size), new NumericLabel(ratingText, font, 100, AT_END,
+                                entry.rating()), new NumericLabel(String.format(java.util.Locale.ROOT, "%.3f",
+                                        entry.mu()), font, 100, AT_END, entry.mu()), new NumericLabel(String.format(
+                                                java.util.Locale.ROOT, "%.3f", entry.sigma()), font, 100, AT_END,
+                                                entry.sigma()),
+                },
+                entry
+        );
+        openskill_ranking_list_box.addRow(row);
     }
 
     private void updateGameListGUI() {
@@ -488,6 +563,7 @@ public final class SelectGameMenu extends Form implements MatchmakingListener, T
         @Override
         public void mouseClicked(@NonNull MouseButton button, int x, int y, int clicks) {
             updateList(MatchmakingServerInterface.TYPE_RANKING_LIST);
+            updateList(MatchmakingServerInterface.TYPE_OPENSKILL_RANKING_LIST);
         }
     }
 

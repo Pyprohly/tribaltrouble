@@ -11,6 +11,7 @@ import java.util.Set;
 
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
+import org.jspecify.annotations.NullMarked;
 
 import com.oddlabs.matchmaking.ChatRoomEntry;
 import com.oddlabs.matchmaking.Game;
@@ -20,7 +21,6 @@ import com.oddlabs.matchmaking.MatchmakingClientInterface;
 import com.oddlabs.matchmaking.MatchmakingServerInterface;
 import com.oddlabs.matchmaking.Participant;
 import com.oddlabs.matchmaking.Profile;
-import com.oddlabs.matchmaking.RankingEntry;
 import com.oddlabs.matchserver.discord.DiscordBotService;
 import com.oddlabs.matchserver.discord.commands.RegisterProfileToDiscordUserCommand;
 import com.oddlabs.net.ARMIEvent;
@@ -447,21 +447,10 @@ public final class Client implements MatchmakingServerInterface, ConnectionInter
                 }
                 break;
             case TYPE_RANKING_LIST:
-                RankingEntry[] all = DBInterface.getTopRankings(50);
-                RankingEntry[] ranking_chunk = new RankingEntry[CHUNK_SIZE];
-                for (int i = 0; i < all.length; i++) {
-                    ranking_chunk[chunk_index++] = all[i];
-                    if (chunk_index == ranking_chunk.length) {
-                        client_interface.updateList(type, ranking_chunk);
-                        chunk_index = 0;
-                    }
-                }
-                if (chunk_index > 0) {
-                    RankingEntry[] capped_ranking_chunk = new RankingEntry[chunk_index];
-                    for (int i = 0; i < capped_ranking_chunk.length; i++)
-                        capped_ranking_chunk[i] = ranking_chunk[i];
-                    client_interface.updateList(type, capped_ranking_chunk);
-                }
+                sendRankingChunk(type, DBInterface.getTopRankings(50), chunk_index);
+                break;
+            case TYPE_OPENSKILL_RANKING_LIST:
+                sendRankingChunk(type, DBInterface.getTopOpenSkillRankingEntries(50), chunk_index);
                 break;
             default:
                 MatchmakingServer.getLogger().warning("Unexpected type requested");
@@ -469,6 +458,24 @@ public final class Client implements MatchmakingServerInterface, ConnectionInter
         }
         this.update_key = random.nextInt();
         client_interface.updateComplete(this.update_key);
+    }
+
+    @NullMarked
+    private void sendRankingChunk(int type, Object[] all, int chunk_index) {
+        Object[] ranking_chunk = new Object[CHUNK_SIZE];
+        for (int i = 0; i < all.length; i++) {
+            ranking_chunk[chunk_index++] = all[i];
+            if (chunk_index == ranking_chunk.length) {
+                client_interface.updateList(type, ranking_chunk);
+                chunk_index = 0;
+            }
+        }
+        if (chunk_index > 0) {
+            Object[] capped_ranking_chunk = new Object[chunk_index];
+            for (int i = 0; i < capped_ranking_chunk.length; i++)
+                capped_ranking_chunk[i] = ranking_chunk[i];
+            client_interface.updateList(type, capped_ranking_chunk);
+        }
     }
 
     public void closeTunnel(HostSequenceID address_to) {
