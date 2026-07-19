@@ -1,10 +1,22 @@
 package com.oddlabs.matchserver;
 
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Timestamp;
+import java.util.ArrayList;
+import java.util.List;
+
+import org.jspecify.annotations.Nullable;
+import org.jspecify.annotations.NullMarked;
+
 import com.oddlabs.matchmaking.Game;
 import com.oddlabs.matchmaking.GamePlayer;
 import com.oddlabs.matchmaking.GameSession;
 import com.oddlabs.matchmaking.Login;
 import com.oddlabs.matchmaking.LoginDetails;
+import com.oddlabs.matchmaking.OpenSkillRating;
 import com.oddlabs.matchmaking.Participant;
 import com.oddlabs.matchmaking.Profile;
 import com.oddlabs.matchmaking.RankingEntry;
@@ -14,14 +26,6 @@ import com.oddlabs.matchserver.models.VersusMatchupModel;
 import com.oddlabs.matchserver.models.VersusMatchupResultModel;
 import com.oddlabs.util.CryptUtils;
 import com.oddlabs.util.DBUtils;
-
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Timestamp;
-import java.util.ArrayList;
-import java.util.List;
 
 public final class DBInterface {
 
@@ -275,6 +279,7 @@ public final class DBInterface {
             MatchmakingServer.getLogger().throwing(DBInterface.class.getName(), "createProfile", e);
             throw new RuntimeException(e);
         }
+        createOpenSkillRating(nick);
     }
 
     public static void deleteProfile(String username, String nick) {
@@ -305,6 +310,7 @@ public final class DBInterface {
                 System.out.println("Exception: " + e);
                 MatchmakingServer.getLogger().throwing(DBInterface.class.getName(), "deleteProfile DELETE", e);
             }
+            deleteOpenSkillRating(nick);
         }
     }
 
@@ -584,6 +590,64 @@ public final class DBInterface {
             return new RankingEntry[0];
         }
     }
+
+    //region OpenSkill
+
+    @NullMarked
+    public static @Nullable OpenSkillRating getOpenSkillRating(String nick) throws SQLException {
+        try (
+             Connection conn = DBUtils.createDatabaseConnection(); PreparedStatement stmt = conn.prepareStatement(
+                     "SELECT mu, sigma FROM openskill_rating WHERE nick = ?");
+        ) {
+            stmt.setString(1, nick);
+            try (ResultSet result = stmt.executeQuery()) {
+                if (result.next()) {
+                    var mu = result.getDouble("mu");
+                    var sigma = result.getDouble("sigma");
+                    return new OpenSkillRating(nick, mu, sigma);
+                }
+            }
+        }
+        return null;
+    }
+
+    @NullMarked
+    public static void upsertOpenSkillRating(OpenSkillRating rating) throws SQLException {
+        try (
+             Connection conn = DBUtils.createDatabaseConnection(); PreparedStatement stmt = conn.prepareStatement(
+                     "INSERT INTO openskill_rating (nick, mu, sigma) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE mu = VALUES(mu), sigma = VALUES(sigma)");
+        ) {
+            stmt.setString(1, rating.nick());
+            stmt.setDouble(2, rating.mu());
+            stmt.setDouble(3, rating.sigma());
+            stmt.executeUpdate();
+        }
+    }
+
+    @NullMarked
+    private static void createOpenSkillRating(String nick) {
+        try {
+            upsertOpenSkillRating(new OpenSkillRating(nick, OpenSkillRatingSystem.INITIAL_MU,
+                    OpenSkillRatingSystem.INITIAL_SIGMA));
+        } catch (SQLException e) {
+            MatchmakingServer.getLogger().throwing(DBInterface.class.getName(), "seedOpenSkillRating", e);
+        }
+    }
+
+    @NullMarked
+    private static void deleteOpenSkillRating(String nick) {
+        try (
+             Connection conn = DBUtils.createDatabaseConnection(); PreparedStatement stmt = conn.prepareStatement(
+                     "DELETE FROM openskill_rating WHERE nick = ?");
+        ) {
+            stmt.setString(1, nick);
+            stmt.executeUpdate();
+        } catch (SQLException e) {
+            MatchmakingServer.getLogger().throwing(DBInterface.class.getName(), "deleteOpenSkillRating", e);
+        }
+    }
+
+    //endregion
 
     public static void createGame(Game game, String nick, int sim_version) {
         try (Connection conn = DBUtils.createDatabaseConnection(); PreparedStatement stmt = conn.prepareStatement(
