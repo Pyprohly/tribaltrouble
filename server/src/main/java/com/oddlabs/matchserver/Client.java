@@ -19,6 +19,7 @@ import com.oddlabs.matchmaking.GameHost;
 import com.oddlabs.matchmaking.GameSession;
 import com.oddlabs.matchmaking.MatchmakingClientInterface;
 import com.oddlabs.matchmaking.MatchmakingServerInterface;
+import com.oddlabs.matchmaking.OpenSkillLeaderboardRankingEntry;
 import com.oddlabs.matchmaking.Participant;
 import com.oddlabs.matchmaking.Profile;
 import com.oddlabs.matchserver.discord.DiscordBotService;
@@ -452,12 +453,40 @@ public final class Client implements MatchmakingServerInterface, ConnectionInter
             case TYPE_OPENSKILL_RANKING_LIST:
                 sendRankingChunk(type, DBInterface.getTopOpenSkillRankingEntries(50), chunk_index);
                 break;
+            case TYPE_OPENSKILL_PERSONAL_RANKING:
+                var profile = getProfile();
+                OpenSkillLeaderboardRankingEntry rankingEntry = profile != null ? getPersonalOpenSkillRankingEntry(
+                        profile.getNick()) : null;
+                OpenSkillLeaderboardRankingEntry[] entries = rankingEntry != null ? new OpenSkillLeaderboardRankingEntry[]{rankingEntry} : new OpenSkillLeaderboardRankingEntry[0];
+                sendRankingChunk(type, entries, chunk_index);
+                break;
             default:
                 MatchmakingServer.getLogger().warning("Unexpected type requested");
                 break;
         }
         this.update_key = random.nextInt();
         client_interface.updateComplete(this.update_key);
+    }
+
+    /**
+     * Returns the OpenSkill leaderboard entry for the given nick. Players who are not on the
+     * leaderboard (i.e., have never played a rated game, so their rating is still at the initial
+     * values) get an unranked entry with rank 0, which the client displays as {@code -}.
+     */
+    @NullMarked
+    private static OpenSkillLeaderboardRankingEntry getPersonalOpenSkillRankingEntry(String nick) {
+        OpenSkillLeaderboardRankingEntry entry = DBInterface.getOpenSkillRankingEntry(nick);
+        if (entry != null) {
+            return entry;
+        }
+        return new OpenSkillLeaderboardRankingEntry(
+                0,
+                nick,
+                OpenSkillRatingSystem.INITIAL_DISPLAY_RATING,
+                true,
+                OpenSkillRatingSystem.INITIAL_MU,
+                OpenSkillRatingSystem.INITIAL_SIGMA
+        );
     }
 
     @NullMarked

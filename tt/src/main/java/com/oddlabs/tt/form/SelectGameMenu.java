@@ -11,7 +11,6 @@ import java.util.ResourceBundle;
 
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
-import org.jspecify.annotations.NullMarked;
 
 import com.oddlabs.matchmaking.ChatRoomEntry;
 import com.oddlabs.matchmaking.Game;
@@ -37,7 +36,6 @@ import com.oddlabs.tt.gui.IntegerLabel;
 import com.oddlabs.tt.gui.Label;
 import com.oddlabs.tt.gui.MouseButton;
 import com.oddlabs.tt.gui.MultiColumnComboBox;
-import com.oddlabs.tt.gui.NumericLabel;
 import com.oddlabs.tt.gui.Panel;
 import com.oddlabs.tt.gui.PanelGroup;
 import com.oddlabs.tt.gui.PulldownItem;
@@ -85,11 +83,10 @@ public final class SelectGameMenu extends Form implements MatchmakingListener, T
     private final NetworkSelector network;
 
     private final @NonNull MultiColumnComboBox<RankingEntry> ranking_list_box;
-    private final @NonNull MultiColumnComboBox<OpenSkillLeaderboardRankingEntry> openskill_ranking_list_box;
+    private final @NonNull OpenSkillLeaderboard openskill_leaderboard;
 
     private final int game_name_size;
     private final int user_name_size;
-    private final int openskill_user_name_size;
     private final int room_name_size;
 
     private static final ResourceBundle bundle = ResourceBundle.getBundle(SelectGameMenu.class.getName());
@@ -188,12 +185,8 @@ public final class SelectGameMenu extends Form implements MatchmakingListener, T
         Label openskill_headline = new Label(i18n("openskill_league_description"),
                 Skin.getSkin().getHeadlineFont());
         openskill_list_panel.addChild(openskill_headline);
-        openskill_user_name_size = user_name_size + 100;
-        ColumnInfo[] openskill_infos = new ColumnInfo[]{new ColumnInfo(i18n("rank"), 50), new ColumnInfo(i18n("name"),
-                openskill_user_name_size), new ColumnInfo(i18n("rating"), 100), new ColumnInfo(i18n("mu"),
-                        100), new ColumnInfo(i18n("sigma"), 100)};
-        openskill_ranking_list_box = new MultiColumnComboBox<>(gui_root, openskill_infos, 350);
-        openskill_list_panel.addChild(openskill_ranking_list_box);
+        openskill_leaderboard = new OpenSkillLeaderboard(gui_root, this::i18n);
+        openskill_list_panel.addChild(openskill_leaderboard);
 
         HorizButton update_openskill_scores_button = new HorizButton(i18n("update_scores"),
                 BUTTON_WIDTH_EXTRA_LONG);
@@ -201,8 +194,8 @@ public final class SelectGameMenu extends Form implements MatchmakingListener, T
         update_openskill_scores_button.addMouseClickListener(new UpdateScoresListener());
 
         openskill_headline.place();
-        openskill_ranking_list_box.place(openskill_headline, BOTTOM_LEFT);
-        update_openskill_scores_button.place(openskill_ranking_list_box, BOTTOM_LEFT);
+        openskill_leaderboard.place(openskill_headline, BOTTOM_LEFT);
+        update_openskill_scores_button.place(openskill_leaderboard, BOTTOM_LEFT);
 
         openskill_list_panel.compileCanvas();
 
@@ -277,6 +270,7 @@ public final class SelectGameMenu extends Form implements MatchmakingListener, T
         updateList(MatchmakingServerInterface.TYPE_CHAT_ROOM_LIST);
         updateList(MatchmakingServerInterface.TYPE_RANKING_LIST);
         updateList(MatchmakingServerInterface.TYPE_OPENSKILL_RANKING_LIST);
+        updateList(MatchmakingServerInterface.TYPE_OPENSKILL_PERSONAL_RANKING);
 
         profiles_form = new ProfilesForm(gui_root, main_menu, this);
         if (Network.getMatchmakingClient().getProfile() == null) {
@@ -389,6 +383,11 @@ public final class SelectGameMenu extends Form implements MatchmakingListener, T
     }
 
     @Override
+    public void profileUpdated() {
+        updateList(MatchmakingServerInterface.TYPE_OPENSKILL_PERSONAL_RANKING);
+    }
+
+    @Override
     public void updateChatRoom(@NonNull ChatRoomInfo info) {
         chat_panel.update(info);
     }
@@ -411,8 +410,15 @@ public final class SelectGameMenu extends Form implements MatchmakingListener, T
                 break;
             case MatchmakingServerInterface.TYPE_OPENSKILL_RANKING_LIST:
                 for (Object name : names) {
-                    updateOpenSkillRankingList((OpenSkillLeaderboardRankingEntry) name);
+                    openskill_leaderboard.addRow((OpenSkillLeaderboardRankingEntry) name);
                 }
+                break;
+            case MatchmakingServerInterface.TYPE_OPENSKILL_PERSONAL_RANKING:
+                OpenSkillLeaderboardRankingEntry entry = null;
+                if (names.length > 0) {
+                    entry = (OpenSkillLeaderboardRankingEntry) names[0];
+                }
+                openskill_leaderboard.setPersonalEntry(entry);
                 break;
             default:
                 throw new IllegalArgumentException("Unexpected list type " + type);
@@ -434,7 +440,10 @@ public final class SelectGameMenu extends Form implements MatchmakingListener, T
                 ranking_list_box.clear();
                 break;
             case MatchmakingServerInterface.TYPE_OPENSKILL_RANKING_LIST:
-                openskill_ranking_list_box.clear();
+                openskill_leaderboard.clearRows();
+                break;
+            case MatchmakingServerInterface.TYPE_OPENSKILL_PERSONAL_RANKING:
+                openskill_leaderboard.setPersonalEntry(null);
                 break;
             default:
                 throw new IllegalArgumentException("Unexpected list type " + type);
@@ -450,23 +459,6 @@ public final class SelectGameMenu extends Form implements MatchmakingListener, T
                 new IntegerLabel(ranking.getLosses(), Skin.getSkin().getMultiColumnComboBoxData().font()),
                 new IntegerLabel(ranking.getInvalid(), Skin.getSkin().getMultiColumnComboBoxData().font())), ranking);
         ranking_list_box.addRow(row);
-    }
-
-    @NullMarked
-    private void updateOpenSkillRankingList(OpenSkillLeaderboardRankingEntry entry) {
-        Font font = Skin.getSkin().getMultiColumnComboBoxData().font();
-        String ratingText = "%d%s".formatted(entry.rating(), entry.provisional() ? "?" : "");
-        var row = new Row<OpenSkillLeaderboardRankingEntry, Label>(
-                new Label[]{new IntegerLabel(entry.rank(), font), new Label(entry.nick(), font,
-                        openskill_user_name_size), new NumericLabel(ratingText, font, 100, AT_END,
-                                entry.rating()), new NumericLabel(String.format(java.util.Locale.ROOT, "%.3f",
-                                        entry.mu()), font, 100, AT_END, entry.mu()), new NumericLabel(String.format(
-                                                java.util.Locale.ROOT, "%.3f", entry.sigma()), font, 100, AT_END,
-                                                entry.sigma()),
-                },
-                entry
-        );
-        openskill_ranking_list_box.addRow(row);
     }
 
     private void updateGameListGUI() {
@@ -564,6 +556,7 @@ public final class SelectGameMenu extends Form implements MatchmakingListener, T
         public void mouseClicked(@NonNull MouseButton button, int x, int y, int clicks) {
             updateList(MatchmakingServerInterface.TYPE_RANKING_LIST);
             updateList(MatchmakingServerInterface.TYPE_OPENSKILL_RANKING_LIST);
+            updateList(MatchmakingServerInterface.TYPE_OPENSKILL_PERSONAL_RANKING);
         }
     }
 
