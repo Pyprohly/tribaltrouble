@@ -32,7 +32,7 @@ import java.util.Map;
 import java.util.Random;
 
 public final class Landscape {
-    public static final boolean DEBUG = false;
+    public static final boolean DEBUG = true;
     private static final int STRUCTURE_SEED = 42; // must be constant; otherwise distinct repeating patterns might appear
 
     private static final int NUM_PLANT_TYPES = 4;
@@ -1297,10 +1297,12 @@ public final class Landscape {
         water_map = height.copy().threshold(Globals.SEA_LEVEL - 10.0f, Globals.SEA_LEVEL).floodfill(0, 0, -1.0f, 0.1f,
                 new int[1]).threshold(-1.01f, -0.99f);
         if (DEBUG) water_map.toLayer().saveAsPNG("water_map");
+        Channel shore_line = water_map.copy().smooth(2).threshold(0.4f, 0.6f);
+        if (DEBUG) shore_line.toLayer().saveAsPNG("shore_line");
         Channel beach = height.copy().threshold(
                 Globals.SEA_LEVEL,
                 Globals.SEA_LEVEL + 0.5f / height_scale);
-        dock_map = water_map.copy().smooth(20).threshold(0.0f, 0.99f).channelMultiply(beach);
+        dock_map = water_map.copy().smooth(5).threshold(0.0f, 0.99f).channelMultiply(beach).channelMultiply(shore_line);
         if (DEBUG) beach.toLayer().saveAsPNG("beach");
         if (DEBUG) dock_map.toLayer().saveAsPNG("dock_map");
         for (int y = 0; y < unit_grids_per_world; y++) {

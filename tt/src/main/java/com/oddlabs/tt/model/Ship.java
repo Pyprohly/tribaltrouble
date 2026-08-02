@@ -599,8 +599,8 @@ public class Ship extends Building implements Movable {
         if (!unit_grid.isDockable(grid_x, grid_y)) {
             return false;
         }
-        for (int y = 0; y < size * 2 - 1; y++) {
-            for (int x = 0; x < size * 2 - 1; x++) {
+        for (int y = 0; y < size - 1; y++) {
+            for (int x = 0; x < size - 1; x++) {
                 int current_grid_x = grid_x + x - (size - 1);
                 int current_grid_y = grid_y + y - (size - 1);
                 if (current_grid_x >= unit_grid.getGridSize()
