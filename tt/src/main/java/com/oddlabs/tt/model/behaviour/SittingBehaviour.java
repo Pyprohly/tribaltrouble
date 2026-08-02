@@ -29,6 +29,9 @@ public final class SittingBehaviour implements Behaviour {
             case ShipAllocation.SITTING:
                 unit.switchToSittingAnimation();
                 break;
+            case ShipAllocation.STEERING:
+                unit.switchToSteeringAnimation();
+                break;
             case ShipAllocation.ROWING_RIGHT:
                 if (ship.isMoving()) {
                     unit.switchToRowingRightAnimation();

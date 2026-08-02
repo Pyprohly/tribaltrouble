@@ -268,6 +268,10 @@ public final class ShipTrajectory {
     }
 
     public ShipTrajectoryPoint advance(float distance) {
+        if (distance <= 0.001f) {
+            return new ShipTrajectoryPoint(ship);
+        }
+
         if (currentSegmentIndex >= trajectory.size()) {
             return null;
         }

@@ -34,7 +34,7 @@ public final class BuildingTemplate extends Template {
     private final float chimney_x;
     private final float chimney_y;
     private final float chimney_z;
-    private final boolean near_sea;
+    private final boolean vikings;
 
     public BuildingTemplate(
             int template_id,
@@ -61,7 +61,7 @@ public final class BuildingTemplate extends Template {
             float chimney_x,
             float chimney_y,
             float chimney_z,
-            boolean near_sea,
+            boolean vikings,
             @NonNull String name) {
         super(abilities, shadow_diameter, shadow_renderer, hit_offset_z, no_detail_size, defense_chance, name);
         this.template_id = template_id;
@@ -88,7 +88,7 @@ public final class BuildingTemplate extends Template {
         this.chimney_x = chimney_x;
         this.chimney_y = chimney_y;
         this.chimney_z = chimney_z;
-        this.near_sea = near_sea;
+        this.vikings = vikings;
     }
 
     public int getTemplateID() {
@@ -201,7 +201,7 @@ public final class BuildingTemplate extends Template {
         return chimney_z;
     }
 
-    public final boolean isNearSea() {
-        return near_sea;
+    public final boolean isVikings() {
+        return vikings;
     }
 }

@@ -61,9 +61,10 @@ public class Unit extends Selectable<UnitTemplate> implements Occupant, Movable 
         public static final int DYING = 3;
         public static final int MAGIC = 4;
         public static final int THOR = 5;
-        public static final int SITTING = 0;
-        public static final int ROWING_RIGHT = 1;
-        public static final int ROWING_LEFT = 2;
+        public static final int SITTING = 4;
+        public static final int STEERING = 5;
+        public static final int ROWING_RIGHT = 6;
+        public static final int ROWING_LEFT = 7;
     }
 
     public static final int SPEAR_RELEASE_FRAME = 29;
@@ -232,6 +233,21 @@ public class Unit extends Selectable<UnitTemplate> implements Occupant, Movable 
         return hit_points;
     }
 
+    public final void drown() {
+        clearControllerStack();
+        setReference(null);
+        mounted = false;
+        onboard = false;
+        mount_offset = 0;
+        enable();
+        if (supply_container != null) {
+            supply_container.resetSupply(LeftPaddle.class);
+            supply_container.resetSupply(RightPaddle.class);
+        }
+        mounted_building = null;
+        startDying();
+    }
+
     public final void unmount() {
         assert !isDead();
         clearControllerStack();
@@ -321,20 +337,25 @@ public class Unit extends Selectable<UnitTemplate> implements Occupant, Movable 
 
     public final void switchToSittingAnimation() {
         assert !isDead();
-        switchAnimation(IDLE_SPEED, Animation.SITTING, 1);
+        switchAnimation(IDLE_SPEED, Animation.SITTING, 0);
+    }
+
+    public final void switchToSteeringAnimation() {
+        assert !isDead();
+        switchAnimation(IDLE_SPEED, Animation.STEERING, 0);
     }
 
     public final void switchToRowingRightAnimation() {
         assert !isDead();
         assert supply_container != null;
-        switchAnimation(IDLE_SPEED, Animation.ROWING_RIGHT, 1);
+        switchAnimation(IDLE_SPEED, Animation.ROWING_RIGHT, 0);
         supply_container.increaseSupply(1, RightPaddle.class);
     }
 
     public final void switchToRowingLeftAnimation() {
         assert !isDead();
         assert supply_container != null;
-        switchAnimation(IDLE_SPEED, Animation.ROWING_LEFT, 1);
+        switchAnimation(IDLE_SPEED, Animation.ROWING_LEFT, 0);
         supply_container.increaseSupply(1, LeftPaddle.class);
     }
 

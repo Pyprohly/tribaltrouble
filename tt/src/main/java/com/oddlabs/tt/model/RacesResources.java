@@ -377,7 +377,7 @@ public final class RacesResources {
                 new float[]{0f, 1f, 3f}, 0f, 6f,
                 3.65f, .25f, 8f,
                 0f, 0f, 0f,
-                false,
+                true,
                 i18n("quarters"));
         ProgressForm.progress(1f / num_progress);
         BuildingTemplate viking_armory_template = createBuildingTemplate(
@@ -397,7 +397,7 @@ public final class RacesResources {
                 new float[]{0f, 1f, 3f}, 0f, 6f,
                 0f, 2.25f, 10f,
                 .25f, -2.8f, 13.1f,
-                false,
+                true,
                 i18n("armory"));
         ProgressForm.progress(1f / num_progress);
         BuildingTemplate viking_tower_template = createBuildingTemplate(
@@ -416,7 +416,7 @@ public final class RacesResources {
                 new float[]{0f, 2f, 7.5f}, 9.55f, 2.5f,
                 .85f, .85f, 9.5f,
                 0f, 0f, 0f,
-                false,
+                true,
                 i18n("tower"));
         ProgressForm.progress(1f / num_progress);
         BuildingTemplate native_quarters_template = createBuildingTemplate(
@@ -510,7 +510,7 @@ public final class RacesResources {
                 1.0f,
                 0.0f,
                 5.0f,
-                true,
+                false,
                 Utils.getBundleString(bundle, "ship"));
         ProgressForm.progress(1f / num_progress);
 
@@ -570,14 +570,8 @@ public final class RacesResources {
         SpriteFile sprite_list_peon = new SpriteFile("/geometry/vikings/peon.binsprite",
                 Globals.NO_MIPMAP_CUTOFF,
                 true, true, true, false);
-        SpriteFile sprite_list_peon2 = new SpriteFile("/geometry/vikings/peon2.binsprite",
-                Globals.NO_MIPMAP_CUTOFF,
-                true, true, true, false);
         ProgressForm.progress(1f / num_progress);
         SpriteFile sprite_list_native_peon = new SpriteFile("/geometry/natives/peon.binsprite",
-                Globals.NO_MIPMAP_CUTOFF,
-                true, true, true, false);
-        SpriteFile sprite_list_native_peon2 = new SpriteFile("/geometry/natives/peon2.binsprite",
                 Globals.NO_MIPMAP_CUTOFF,
                 true, true, true, false);
         ProgressForm.progress(1f / num_progress);
@@ -648,8 +642,7 @@ public final class RacesResources {
                 new Abilities(Abilities.ATTACK | Abilities.TARGET | Abilities.THROW),
                 4f,
                 viking_warrior_rock_weapon,
-                new SpriteKey[]{queues.register(sprite_list_warrior, Race.UNIT_WARRIOR_ROCK)
-                },
+                new SpriteKey[]{queues.register(sprite_list_warrior, Race.UNIT_WARRIOR_ROCK)},
                 shadow_diameter_warrior,
                 default_shadow_list,
                 null,
@@ -667,8 +660,7 @@ public final class RacesResources {
                 new Abilities(Abilities.ATTACK | Abilities.TARGET | Abilities.THROW),
                 4f,
                 viking_warrior_iron_weapon,
-                new SpriteKey[]{queues.register(sprite_list_warrior, Race.UNIT_WARRIOR_IRON)
-                },
+                new SpriteKey[]{queues.register(sprite_list_warrior, Race.UNIT_WARRIOR_IRON)},
                 shadow_diameter_warrior,
                 default_shadow_list,
                 null,
@@ -686,8 +678,7 @@ public final class RacesResources {
                 new Abilities(Abilities.ATTACK | Abilities.TARGET | Abilities.THROW),
                 4f,
                 viking_warrior_rubber_weapon,
-                new SpriteKey[]{queues.register(sprite_list_warrior, Race.UNIT_WARRIOR_RUBBER)
-                },
+                new SpriteKey[]{queues.register(sprite_list_warrior, Race.UNIT_WARRIOR_RUBBER)},
                 shadow_diameter_warrior,
                 default_shadow_list,
                 null,
@@ -762,8 +753,7 @@ public final class RacesResources {
                 new Abilities(Abilities.BUILD | Abilities.HARVEST | Abilities.ATTACK | Abilities.TARGET),
                 5f,
                 new InstantHitFactory(1 / 5f, 0f, 11f / 38f, unit_hit_sounds),
-                new SpriteKey[]{queues.register(sprite_list_peon), queues.register(sprite_list_peon2)
-                },
+                new SpriteKey[]{queues.register(sprite_list_peon)},
                 shadow_diameter_peon,
                 default_shadow_list,
                 new UnitSupplyContainerFactory(MAX_UNIT_RESOURCES, viking_supply_sprite_lists),
@@ -781,8 +771,7 @@ public final class RacesResources {
                 new Abilities(Abilities.BUILD | Abilities.HARVEST | Abilities.ATTACK | Abilities.TARGET),
                 5f,
                 new InstantHitFactory(1 / 5f, 0f, 51f / 83f, unit_hit_sounds),
-                new SpriteKey[]{queues.register(sprite_list_native_peon), queues.register(sprite_list_native_peon2)
-                },
+                new SpriteKey[]{queues.register(sprite_list_native_peon)},
                 shadow_diameter_peon,
                 default_shadow_list,
                 new UnitSupplyContainerFactory(MAX_UNIT_RESOURCES, native_supply_sprite_lists),

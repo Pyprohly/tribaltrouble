@@ -98,7 +98,7 @@ public class Ship extends Building implements Movable {
 
     private ShipProxy proxy = null;
 
-    private final ShipHR ship_hr = new ShipHR();
+    private final ShipHR ship_hr;
 
     private float anim_time;
 
@@ -109,6 +109,7 @@ public class Ship extends Building implements Movable {
         float x = UnitGrid.coordinateFromGrid(grid_x);
         float y = UnitGrid.coordinateFromGrid(grid_y);
         super.setPosition(x, y);
+        ship_hr = new ShipHR(template.isVikings());
         setPositionZ(
                 Math.max(
                         unit_grid.getHeightMap().getSeaLevelMeters(),
