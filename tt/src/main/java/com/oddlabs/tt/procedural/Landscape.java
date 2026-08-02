@@ -641,12 +641,15 @@ public final class Landscape {
         if (DEBUG) slope.copy().dynamicRange().toLayer().saveAsPNG("slope");
         relheight = height.copy().relativeIntensityNormalized(Math.max(1, unit_grids_per_world >> 5));
         if (DEBUG) relheight.toLayer().saveAsPNG("relheight");
-        access = generateThresholdMap(slope, access_threshold);
+        if (Globals.SHIPS_ENABLED) {
+            access = generateThresholdMap(slope, access_threshold);
+        } else {
+            access = generateThresholdMap(slope, access_threshold).largestConnected(1f);
+        }
         resources_access = access.copy();
         access_exported = access.copy();
         if (DEBUG) access.toLayer().saveAsPNG("access");
-        build = Landscape.generateBuildMap(
-                generateThresholdMap(slope, build_threshold).channelMultiply(access));
+        build = Landscape.generateBuildMap(generateThresholdMap(slope, build_threshold).channelMultiply(access));
     }
 
     private void generateTerrainViking() {
@@ -715,12 +718,15 @@ public final class Landscape {
         if (DEBUG) slope.copy().dynamicRange().toLayer().saveAsPNG("slope");
         relheight = height.copy().relativeIntensityNormalized(Math.max(1, unit_grids_per_world >> 5));
         if (DEBUG) relheight.toLayer().saveAsPNG("relheight");
-        access = generateThresholdMap(slope, access_threshold);
+        if (Globals.SHIPS_ENABLED) {
+            access = generateThresholdMap(slope, access_threshold);
+        } else {
+            access = generateThresholdMap(slope, access_threshold).largestConnected(1f);
+        }
         resources_access = access.copy();
         access_exported = access.copy();
         if (DEBUG) access.toLayer().saveAsPNG("access");
-        build = Landscape.generateBuildMap(
-                generateThresholdMap(slope, build_threshold).channelMultiply(access));
+        build = Landscape.generateBuildMap(generateThresholdMap(slope, build_threshold).channelMultiply(access));
     }
 
     // shape beaches
@@ -1255,14 +1261,25 @@ public final class Landscape {
                     buildmap.putPixelWrap(location_armory[0] + k, location_armory[1] + l, 0f);
                 }
             }
-            int[] location_unit_start = good_starts.find((unit_grids_per_world >> 1), location_quarters[0],
-                    location_quarters[1], 1f);
+            int[] location_unit_start;
+            if (archipelago) {
+                location_unit_start = good_starts.find((unit_grids_per_world >> 1), location_quarters[0],
+                        location_quarters[1], 1f);
+            } else {
+                location_unit_start = access.find((unit_grids_per_world >> 1), location_quarters[0],
+                        location_quarters[1], 1f);
+            }
             supply_locations[i][0] = location_armory[0];
             supply_locations[i][1] = location_armory[1];
             int[] location_unit = new int[2];
             for (int u = 0; u < initial_unit_count; u++) {
-                location_unit = good_starts.find((unit_grids_per_world >> 1), location_unit_start[0],
-                        location_unit_start[1], 1f);
+                if (archipelago) {
+                    location_unit = good_starts.find((unit_grids_per_world >> 1), location_unit_start[0],
+                            location_unit_start[1], 1f);
+                } else {
+                    location_unit = access.find((unit_grids_per_world >> 1), location_unit_start[0],
+                            location_unit_start[1], 1f);
+                }
                 access.putPixelWrap(location_unit[0], location_unit[1], 0f);
                 good_starts.putPixelWrap(location_unit[0], location_unit[1], 0f);
                 player_locations[i][2 * u] = (location_unit[0] * scale);

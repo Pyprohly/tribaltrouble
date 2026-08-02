@@ -1,5 +1,6 @@
 package com.oddlabs.tt.gui;
 
+import com.oddlabs.tt.global.Globals;
 import com.oddlabs.tt.animation.Animated;
 import com.oddlabs.tt.camera.GameCamera;
 import com.oddlabs.tt.delegate.CameraDelegate;
@@ -213,15 +214,20 @@ public final class ActionButtonPanel extends GUIObject implements Animated {
 
         ship_button = new NonFocusIconButton(race_icons.shipIcon(), GameAction.UNIT_BUILD_SHIP, () -> i18n("ship_tip",
                 getBinding(GameAction.UNIT_BUILD_SHIP)));
-        peon_group.addChild(ship_button);
-        ship_button.addMouseClickListener((_, _, _, _) -> pushDelegate(new PlacingDelegate(viewer, camera.getState(),
-                Race.BUILDING_SHIP)));
+        if (Globals.SHIPS_ENABLED) {
+            peon_group.addChild(ship_button);
+            ship_button.addMouseClickListener((_, _, _, _) -> pushDelegate(new PlacingDelegate(viewer,
+                    camera.getState(),
+                    Race.BUILDING_SHIP)));
+        }
 
         gather_repair_button.place();
         quarters_button.place(gather_repair_button, Placement.BOTTOM_MID);
         armory_button.place(quarters_button, Placement.BOTTOM_MID);
         tower_button.place(armory_button, Placement.BOTTOM_MID);
-        ship_button.place(tower_button, Placement.BOTTOM_MID);
+        if (Globals.SHIPS_ENABLED) {
+            ship_button.place(tower_button, Placement.BOTTOM_MID);
+        }
         peon_group.compileCanvas(GROUP_LEFT_OFFSET, GROUP_BOTTOM_OFFSET, GROUP_RIGHT_OFFSET, 0);
 
         PlayerInterface player_interface = viewer.getPeerHub().getPlayerInterface();
@@ -675,7 +681,9 @@ public final class ActionButtonPanel extends GUIObject implements Animated {
                     quarters_button.doUpdate();
                     armory_button.doUpdate();
                     tower_button.doUpdate();
-                    ship_button.doUpdate();
+                    if (Globals.SHIPS_ENABLED) {
+                        ship_button.doUpdate();
+                    }
                 }
         if (current_unit) {
             move_button.doUpdate();
@@ -829,7 +837,9 @@ public final class ActionButtonPanel extends GUIObject implements Animated {
                     // Q - Build Quarters with Peon
                     activate(event, quarters_button);
                 } else if (current_unit && current_peon && event.consumeAction(GameAction.UNIT_BUILD_SHIP)) {
-                    activate(event, ship_button);
+                    if (Globals.SHIPS_ENABLED) {
+                        activate(event, ship_button);
+                    }
                 } else if ((current_unit || current_tower) && event.consumeAction(GameAction.UNIT_ATTACK)) {
                     if (current_unit) {
                         activate(event, attack_button);

@@ -233,7 +233,9 @@ public final class TerrainMenu extends Group {
         pulldown_size.addItem(new PulldownItem<>(ServerMessageBundler.getSizeString(Game.SIZE_MEDIUM)));
         pulldown_size.addItem(new PulldownItem<>(ServerMessageBundler.getSizeString(Game.SIZE_LARGE)));
         pulldown_size.addItem(new PulldownItem<>(ServerMessageBundler.getSizeString(Game.SIZE_ENORMOUS)));
-        pulldown_size.addItem(new PulldownItem<>(ServerMessageBundler.getSizeString(Game.SIZE_ARCHIPELAGO)));
+        if (Globals.SHIPS_ENABLED) {
+            pulldown_size.addItem(new PulldownItem<>(ServerMessageBundler.getSizeString(Game.SIZE_ARCHIPELAGO)));
+        }
 
         var pb_size = new PulldownButton<>(gui_root, pulldown_size, 1, 150);
         group_size.addChild(pb_size);
@@ -824,7 +826,7 @@ public final class TerrainMenu extends Group {
                 vegetation_amount / (float) SLIDER_MAX_VALUE,
                 supplies_amount / (float) SLIDER_MAX_VALUE,
                 seed * seed,
-                ARCHIPELAGO[pulldown_size.getChosenItemIndex()],
+                ARCHIPELAGO[pulldown_size.getChosenItemIndex()] && Globals.SHIPS_ENABLED,
                 ai_names,
                 player_count);
         game_network.getClient().getServerInterface().setPlayerSlot(0, PlayerSlot.HUMAN,
