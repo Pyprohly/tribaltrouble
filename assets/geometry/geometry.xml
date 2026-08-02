@@ -91,6 +91,10 @@
             <animation name="run" wpc="3.85" type="loop">vikings/peon/peon_run.xml</animation>
             <animation name="attack" wpc="1" type="plain">vikings/peon/peon_attack.xml</animation>
             <animation name="die" wpc="1" type="plain">vikings/peon/peon_die.xml</animation>
+            <animation name="sit" wpc="1" type="loop">vikings/peon/peon_sitting.xml</animation>
+            <animation name="steer" wpc="1" type="loop">vikings/peon/peon_steering.xml</animation>
+            <animation name="paddle_right" wpc="1" type="loop">vikings/peon/peon_right_paddle.xml</animation>
+            <animation name="paddle_left" wpc="1" type="loop">vikings/peon/peon_left_paddle.xml</animation>
         </sprite>
         <sprite name="wood_resource">
             <skeleton>vikings/peon/peon_skeleton.xml</skeleton>
@@ -102,6 +106,10 @@
             <animation name="run" wpc="3.85" type="loop">vikings/peon/peon_run.xml</animation>
             <animation name="attack" wpc="1" type="plain">vikings/peon/peon_attack.xml</animation>
             <animation name="die" wpc="1" type="plain">vikings/peon/peon_die.xml</animation>
+            <animation name="sit" wpc="1" type="loop">vikings/peon/peon_sitting.xml</animation>
+            <animation name="steer" wpc="1" type="loop">vikings/peon/peon_steering.xml</animation>
+            <animation name="paddle_right" wpc="1" type="loop">vikings/peon/peon_right_paddle.xml</animation>
+            <animation name="paddle_left" wpc="1" type="loop">vikings/peon/peon_left_paddle.xml</animation>
         </sprite>
         <sprite name="rubber_resource">
             <skeleton>vikings/peon/peon_skeleton.xml</skeleton>
@@ -113,6 +121,10 @@
             <animation name="run" wpc="3.85" type="loop">vikings/peon/peon_run.xml</animation>
             <animation name="attack" wpc="1" type="plain">vikings/peon/peon_attack.xml</animation>
             <animation name="die" wpc="1" type="plain">vikings/peon/peon_die.xml</animation>
+            <animation name="sit" wpc="1" type="loop">vikings/peon/peon_sitting.xml</animation>
+            <animation name="steer" wpc="1" type="loop">vikings/peon/peon_steering.xml</animation>
+            <animation name="paddle_right" wpc="1" type="loop">vikings/peon/peon_right_paddle.xml</animation>
+            <animation name="paddle_left" wpc="1" type="loop">vikings/peon/peon_left_paddle.xml</animation>
         </sprite>
 		<sprite name="right_paddle">
 			<skeleton>vikings/peon/peon_skeleton.xml</skeleton>
@@ -346,6 +358,10 @@
             <animation name="run" wpc="3.625" type="loop">natives/peon/peon_run.xml</animation>
             <animation name="attack" wpc="1" type="plain">natives/peon/peon_attack.xml</animation>
             <animation name="die" wpc="1" type="plain">natives/peon/peon_die.xml</animation>
+            <animation name="sit" wpc="1" type="loop">natives/peon/peon_sitting.xml</animation>
+            <animation name="steer" wpc="1" type="loop">natives/peon/peon_steering.xml</animation>
+            <animation name="paddle_right" wpc="1" type="loop">natives/peon/peon_right_paddle.xml</animation>
+            <animation name="paddle_left" wpc="1" type="loop">natives/peon/peon_left_paddle.xml</animation>
         </sprite>
         <sprite name="wood_resource">
             <skeleton>natives/peon/peon_skeleton.xml</skeleton>
@@ -357,6 +373,10 @@
             <animation name="run" wpc="3.625" type="loop">natives/peon/peon_run.xml</animation>
             <animation name="attack" wpc="1" type="plain">natives/peon/peon_attack.xml</animation>
             <animation name="die" wpc="1" type="plain">natives/peon/peon_die.xml</animation>
+            <animation name="sit" wpc="1" type="loop">natives/peon/peon_sitting.xml</animation>
+            <animation name="steer" wpc="1" type="loop">natives/peon/peon_steering.xml</animation>
+            <animation name="paddle_right" wpc="1" type="loop">natives/peon/peon_right_paddle.xml</animation>
+            <animation name="paddle_left" wpc="1" type="loop">natives/peon/peon_left_paddle.xml</animation>
         </sprite>
         <sprite name="rubber_resource">
             <skeleton>natives/peon/peon_skeleton.xml</skeleton>
@@ -368,6 +388,10 @@
             <animation name="run" wpc="3.625" type="loop">natives/peon/peon_run.xml</animation>
             <animation name="attack" wpc="1" type="plain">natives/peon/peon_attack.xml</animation>
             <animation name="die" wpc="1" type="plain">natives/peon/peon_die.xml</animation>
+            <animation name="sit" wpc="1" type="loop">natives/peon/peon_sitting.xml</animation>
+            <animation name="steer" wpc="1" type="loop">natives/peon/peon_steering.xml</animation>
+            <animation name="paddle_right" wpc="1" type="loop">natives/peon/peon_right_paddle.xml</animation>
+            <animation name="paddle_left" wpc="1" type="loop">natives/peon/peon_left_paddle.xml</animation>
 		</sprite>
 		<sprite name="right_paddle">
 			<skeleton>natives/peon/peon_skeleton.xml</skeleton>
