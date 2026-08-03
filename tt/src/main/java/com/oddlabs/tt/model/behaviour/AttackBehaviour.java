@@ -1,6 +1,7 @@
 package com.oddlabs.tt.model.behaviour;
 
 import com.oddlabs.tt.model.Selectable;
+import com.oddlabs.tt.model.Building;
 import com.oddlabs.tt.model.Ship;
 import com.oddlabs.tt.model.ShipAllocation;
 import com.oddlabs.tt.model.Unit;
@@ -25,20 +26,28 @@ public final class AttackBehaviour implements Behaviour {
 
     public AttackBehaviour(@NonNull Unit unit, @NonNull Selectable<?> target) {
         this.unit = unit;
-        this.target = target;
+        if (target instanceof Building t) {
+            this.target = t.getBase();
+        } else {
+            this.target = target;
+        }
         this.allocation = null;
         this.ship = null;
         anim_time = unit.getWeaponFactory().getSecondsPerRelease(1f / SECONDS_PER_ATTACK);
-        unit.switchAnimation(1f / SECONDS_PER_ATTACK, Unit.Animation.THROWING, 0);
+        unit.switchAnimation(1f / SECONDS_PER_ATTACK, Unit.Animation.THROWING);
     }
 
     public AttackBehaviour(@NonNull Unit unit, @NonNull Selectable target, ShipAllocation allocation, Ship ship) {
         this.unit = unit;
-        this.target = target;
+        if (target instanceof Building t) {
+            this.target = t.getBase();
+        } else {
+            this.target = target;
+        }
         this.ship = ship;
         this.allocation = allocation;
         anim_time = unit.getWeaponFactory().getSecondsPerRelease(1f / SECONDS_PER_ATTACK);
-        unit.switchAnimation(1f / SECONDS_PER_ATTACK, Unit.Animation.THROWING, 0);
+        unit.switchAnimation(1f / SECONDS_PER_ATTACK, Unit.Animation.THROWING);
     }
 
     @Override

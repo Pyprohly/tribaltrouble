@@ -57,10 +57,10 @@ public class TargetDelegate extends ControllableCameraDelegate {
     @Override
     public void mousePressed(@NonNull MouseButton button, int x, int y) {
         if (button == MouseButton.LEFT) {
-            getViewer().getPicker().pickSailingTarget(getViewer().getSelection().getCurrentSelection(),
-                    getViewer().getGUIRoot().getDelegate().getCamera().getState(),
-                    getViewer().getPeerHub().getPlayerInterface(), x, y);
             if (sailing) {
+                getViewer().getPicker().pickSailingTarget(getViewer().getSelection().getCurrentSelection(),
+                        getViewer().getGUIRoot().getDelegate().getCamera().getState(),
+                        getViewer().getPeerHub().getPlayerInterface(), x, y);
             } else {
                 getViewer().getPicker().pickTarget(getViewer().getSelection().getCurrentSelection(),
                         getViewer().getGUIRoot().getDelegate().getCamera().getState(),

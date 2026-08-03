@@ -3,6 +3,7 @@ package com.oddlabs.tt.render;
 import com.oddlabs.event.Deterministic;
 import com.oddlabs.matchmaking.Game;
 import com.oddlabs.net.NetworkSelector;
+import com.oddlabs.util.BuildInfo;
 import com.oddlabs.tt.Main;
 import com.oddlabs.tt.animation.AnimationManager;
 import com.oddlabs.tt.animation.TimerAnimation;
@@ -375,6 +376,7 @@ public final class Renderer implements AutoCloseable {
                 }
             } else if (os_name.contains("linux") || os_name.contains("unix")) {
                 Path legacyDot = userHome != null ? userHome.resolve(".tribaltrouble") : null;
+                Path omarDot = userHome != null ? userHome.resolve("." + Globals.GAME_NAME) : null;
                 Path currentDot = Path.of(".tribaltrouble");
 
                 Path xdg;
@@ -387,6 +389,7 @@ public final class Renderer implements AutoCloseable {
                 }
 
                 if (isUsable(legacyDot)) existing = legacyDot;
+                else if (isUsable(omarDot)) existing = omarDot;
                 else if (isUsable(currentDot)) existing = currentDot;
                 else if (isUsable(xdg)) existing = xdg;
 
@@ -491,6 +494,7 @@ public final class Renderer implements AutoCloseable {
         GamePaths paths = setupPaths();
         Path game_dir = paths.dataDir();
         logger.info("********** Running tt **********");
+        logger.info("version: " + BuildInfo.FULL_VERSION);
         logger.info("game dir: " + game_dir);
         logger.info("logs dir: " + paths.logDir());
         boolean eventload = false;

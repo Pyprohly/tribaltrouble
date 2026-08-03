@@ -1,20 +1,20 @@
 package com.oddlabs.tt.model;
 
 public final class ShipUnitContainer extends UnitContainer {
-    private final Ship building;
+    private final Ship ship;
 
-    public ShipUnitContainer(Ship building) {
-        super(building.getOwner().getWorld().getMaxUnitCount());
-        this.building = building;
+    public ShipUnitContainer(Ship ship) {
+        super(ship.getOwner().getWorld().getMaxUnitCount());
+        this.ship = ship;
     }
 
     public final void enter(Unit unit) {
-        ShipAllocation allocation = building.getShipHR().tryAllocate(unit);
-        unit.mountDeck(building, allocation);
+        ShipAllocation allocation = ship.getShipHR().tryAllocate(unit);
+        unit.mount(ship, allocation);
     }
 
     public final boolean canEnter(Unit unit) {
-        return building.getShipHR().canAllocate(unit);
+        return ship.getShipHR().canAllocate(unit);
     }
 
     private final int getTotalSupplies() {
@@ -22,7 +22,7 @@ public final class ShipUnitContainer extends UnitContainer {
     }
 
     public int getNumSupplies() {
-        return building.getShipHR().countUnits();
+        return ship.getShipHR().countUnits();
     }
 
     public int capAmount(int amount) {

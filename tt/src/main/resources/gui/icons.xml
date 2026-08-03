@@ -471,13 +471,13 @@
     </vikings_magic2_icon>
     <vikings_ship_icon>
         <normal>
-            <quad left="640" top="512" right="704" bottom="576"/>
+            <quad left="704" top="512" right="768" bottom="576"/>
         </normal>
         <active>
-            <quad left="640" top="576" right="704" bottom="640"/>
+            <quad left="704" top="576" right="768" bottom="640"/>
         </active>
         <disabled>
-            <quad left="640" top="640" right="704" bottom="704"/>
+            <quad left="704" top="640" right="768" bottom="704"/>
         </disabled>
     </vikings_ship_icon>
 

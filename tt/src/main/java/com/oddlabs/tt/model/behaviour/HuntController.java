@@ -15,7 +15,7 @@ public final class HuntController extends Controller {
     }
 
     private boolean canAttack() {
-        return unit.isCloseEnough(unit.getRange(target), target, target.getLayer());
+        return unit.isCloseEnough(unit.getRange(target), target);
     }
 
     @Override

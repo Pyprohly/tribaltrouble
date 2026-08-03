@@ -16,7 +16,6 @@ public final class BuildingSiteScanFilter implements ScanFilter {
     private final BuildingTemplate template;
     private final int range;
     private final boolean one_target;
-    private final int obj_radius;
     private final List<LandscapeTarget> result = new ArrayList<>();
 
     public BuildingSiteScanFilter(UnitGrid unit_grid, BuildingTemplate template, int range, boolean one_target) {
@@ -24,7 +23,6 @@ public final class BuildingSiteScanFilter implements ScanFilter {
         this.template = template;
         this.range = range;
         this.one_target = one_target;
-        this.obj_radius = template.getPlacingSize() / 2;
     }
 
     @Override
@@ -41,7 +39,7 @@ public final class BuildingSiteScanFilter implements ScanFilter {
     public boolean filter(int grid_x, int grid_y, Occupant occ) {
         boolean legal = template.isPlacingLegal(unit_grid, grid_x, grid_y);
         HeightMap map = unit_grid.getHeightMap();
-        boolean can_build = map.canBuild(grid_x, grid_y, obj_radius)
+        boolean can_build = map.canBuild(grid_x, grid_y, template.getPlacingSize())
                 && template.getType() == BuildingTemplate.TYPE_BUILDING;
         boolean can_dock = map.canDock(grid_x, grid_y) && template.getType() == BuildingTemplate.TYPE_SHIP;
         if ((can_build || can_dock) && legal) {

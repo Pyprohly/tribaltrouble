@@ -43,7 +43,7 @@ public abstract class Model extends Element<Model> {
 
     public abstract @Nullable SpriteKey getSpriteRenderer();
 
-    protected void updateBounds() {
+    private void updateBounds() {
         float x = getPositionX();
         float y = getPositionY();
         float z = getPositionZ();

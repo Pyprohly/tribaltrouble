@@ -32,7 +32,7 @@ import java.util.Map;
 import java.util.Random;
 
 public final class Landscape {
-    public static final boolean DEBUG = true;
+    public static final boolean DEBUG = false;
     private static final int STRUCTURE_SEED = 42; // must be constant; otherwise distinct repeating patterns might appear
 
     private static final int NUM_PLANT_TYPES = 4;

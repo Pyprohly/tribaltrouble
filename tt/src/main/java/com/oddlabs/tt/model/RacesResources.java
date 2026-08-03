@@ -142,7 +142,7 @@ public final class RacesResources {
             float chimney_x,
             float chimney_y,
             float chimney_z,
-            boolean near_sea,
+            boolean is_vikings,
             @NonNull String name) {
         assert hit_offset_z.length == 3;
 
@@ -191,7 +191,7 @@ public final class RacesResources {
                 chimney_x,
                 chimney_y,
                 chimney_z,
-                near_sea,
+                is_vikings,
                 name);
     }
 
@@ -642,7 +642,7 @@ public final class RacesResources {
                 new Abilities(Abilities.ATTACK | Abilities.TARGET | Abilities.THROW),
                 4f,
                 viking_warrior_rock_weapon,
-                new SpriteKey[]{queues.register(sprite_list_warrior, Race.UNIT_WARRIOR_ROCK)},
+                queues.register(sprite_list_warrior, Race.UNIT_WARRIOR_ROCK),
                 shadow_diameter_warrior,
                 default_shadow_list,
                 null,
@@ -660,7 +660,7 @@ public final class RacesResources {
                 new Abilities(Abilities.ATTACK | Abilities.TARGET | Abilities.THROW),
                 4f,
                 viking_warrior_iron_weapon,
-                new SpriteKey[]{queues.register(sprite_list_warrior, Race.UNIT_WARRIOR_IRON)},
+                queues.register(sprite_list_warrior, Race.UNIT_WARRIOR_IRON),
                 shadow_diameter_warrior,
                 default_shadow_list,
                 null,
@@ -678,7 +678,7 @@ public final class RacesResources {
                 new Abilities(Abilities.ATTACK | Abilities.TARGET | Abilities.THROW),
                 4f,
                 viking_warrior_rubber_weapon,
-                new SpriteKey[]{queues.register(sprite_list_warrior, Race.UNIT_WARRIOR_RUBBER)},
+                queues.register(sprite_list_warrior, Race.UNIT_WARRIOR_RUBBER),
                 shadow_diameter_warrior,
                 default_shadow_list,
                 null,
@@ -696,8 +696,7 @@ public final class RacesResources {
                 new Abilities(Abilities.ATTACK | Abilities.TARGET | Abilities.THROW),
                 4f,
                 native_warrior_rock_weapon,
-                new SpriteKey[]{queues.register(sprite_list_native_warrior, Race.UNIT_WARRIOR_ROCK)
-                },
+                queues.register(sprite_list_native_warrior, Race.UNIT_WARRIOR_ROCK),
                 shadow_diameter_warrior,
                 default_shadow_list,
                 null,
@@ -715,8 +714,7 @@ public final class RacesResources {
                 new Abilities(Abilities.ATTACK | Abilities.TARGET | Abilities.THROW),
                 4f,
                 native_warrior_iron_weapon,
-                new SpriteKey[]{queues.register(sprite_list_native_warrior, Race.UNIT_WARRIOR_IRON)
-                },
+                queues.register(sprite_list_native_warrior, Race.UNIT_WARRIOR_IRON),
                 shadow_diameter_warrior,
                 default_shadow_list,
                 null,
@@ -734,8 +732,7 @@ public final class RacesResources {
                 new Abilities(Abilities.ATTACK | Abilities.TARGET | Abilities.THROW),
                 4f,
                 native_warrior_rubber_weapon,
-                new SpriteKey[]{queues.register(sprite_list_native_warrior, Race.UNIT_WARRIOR_RUBBER)
-                },
+                queues.register(sprite_list_native_warrior, Race.UNIT_WARRIOR_RUBBER),
                 shadow_diameter_warrior,
                 default_shadow_list,
                 null,
@@ -753,7 +750,7 @@ public final class RacesResources {
                 new Abilities(Abilities.BUILD | Abilities.HARVEST | Abilities.ATTACK | Abilities.TARGET),
                 5f,
                 new InstantHitFactory(1 / 5f, 0f, 11f / 38f, unit_hit_sounds),
-                new SpriteKey[]{queues.register(sprite_list_peon)},
+                queues.register(sprite_list_peon),
                 shadow_diameter_peon,
                 default_shadow_list,
                 new UnitSupplyContainerFactory(MAX_UNIT_RESOURCES, viking_supply_sprite_lists),
@@ -771,7 +768,7 @@ public final class RacesResources {
                 new Abilities(Abilities.BUILD | Abilities.HARVEST | Abilities.ATTACK | Abilities.TARGET),
                 5f,
                 new InstantHitFactory(1 / 5f, 0f, 51f / 83f, unit_hit_sounds),
-                new SpriteKey[]{queues.register(sprite_list_native_peon)},
+                queues.register(sprite_list_native_peon),
                 shadow_diameter_peon,
                 default_shadow_list,
                 new UnitSupplyContainerFactory(MAX_UNIT_RESOURCES, native_supply_sprite_lists),
@@ -789,8 +786,7 @@ public final class RacesResources {
                 new Abilities(Abilities.ATTACK | Abilities.TARGET | Abilities.MAGIC),
                 4f,
                 new InstantHitFactory(3 / 4f, 0f, 75f / 119f, viking_chieftain_hit_sounds),
-                new SpriteKey[]{queues.register(sprite_list_chieftain)
-                },
+                queues.register(sprite_list_chieftain),
                 shadow_diameter_chieftain,
                 default_shadow_list,
                 null,
@@ -808,8 +804,7 @@ public final class RacesResources {
                 new Abilities(Abilities.ATTACK | Abilities.TARGET | Abilities.MAGIC),
                 4f,
                 new InstantHitFactory(3 / 4f, 0f, 75f / 129f, native_chieftain_hit_sounds),
-                new SpriteKey[]{queues.register(sprite_list_native_chieftain)
-                },
+                queues.register(sprite_list_native_chieftain),
                 shadow_diameter_chieftain,
                 default_shadow_list,
                 null,

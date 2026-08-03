@@ -85,11 +85,10 @@ public class Unit extends Selectable<UnitTemplate> implements Occupant, Movable 
      * unit is in a tower
      */
     private boolean mounted;
-    private boolean onboard = false;
+    private boolean on_ship = false;
     private float mount_offset = 0;
     private Building mounted_building;
     private float range_bonus;
-    private int current_sprite_index = 0;
 
     public Unit(@NonNull Player owner, float x, float y, @Nullable Target rally_point,
             @NonNull UnitTemplate unit_template) {
@@ -111,7 +110,6 @@ public class Unit extends Selectable<UnitTemplate> implements Occupant, Movable 
             boolean grid_targets_only) {
         super(owner, unit_template);
         this.name = name;
-        this.current_sprite_index = 0;
         getAbilities().addAbilities(unit_template.getAbilities());
         register();
         hit_points = unit_template.getMaxHitPoints();
@@ -237,7 +235,7 @@ public class Unit extends Selectable<UnitTemplate> implements Occupant, Movable 
         clearControllerStack();
         setReference(null);
         mounted = false;
-        onboard = false;
+        on_ship = false;
         mount_offset = 0;
         enable();
         if (supply_container != null) {
@@ -253,7 +251,7 @@ public class Unit extends Selectable<UnitTemplate> implements Occupant, Movable 
         clearControllerStack();
         swapController(new IdleController(this, new AttackScanFilter(getOwner(), AttackScanFilter.UNIT_RANGE), true));
         mounted = false;
-        onboard = false;
+        on_ship = false;
         mount_offset = 0;
         enable();
         Building entrance = mounted_building.getEntrance();
@@ -277,28 +275,28 @@ public class Unit extends Selectable<UnitTemplate> implements Occupant, Movable 
         swapController(new IdleController(this, new AttackScanFilter(getOwner(), AttackScanFilter.TOWER_RANGE), false));
     }
 
-    public final void mountDeck(Ship building, ShipAllocation ship_allocation) {
+    public final void mount(Ship ship, ShipAllocation ship_allocation) {
         assert !isDead();
-        mounted_building = building;
+        mounted_building = ship;
         mount_offset = ship_allocation.getOffset().z;
         disable();
         free();
         mounted = true;
-        onboard = true;
-        setReference(building);
+        on_ship = true;
+        setReference(ship);
         clearControllerStack();
         switch (ship_allocation.getRole()) {
             case ShipAllocation.FIGHTING:
                 swapController(
                         new ShipAttackController(
                                 this,
-                                building,
+                                ship,
                                 new AttackScanFilter(
                                         getOwner(), AttackScanFilter.TOWER_RANGE + 10),
                                 ship_allocation));
                 break;
             default:
-                swapController(new SittingController(this, building, ship_allocation));
+                swapController(new SittingController(this, ship, ship_allocation));
                 break;
         }
     }
@@ -332,30 +330,30 @@ public class Unit extends Selectable<UnitTemplate> implements Occupant, Movable 
 
     public final void switchToIdleAnimation() {
         assert !isDead();
-        switchAnimation(IDLE_SPEED, Animation.IDLING, 0);
+        switchAnimation(IDLE_SPEED, Animation.IDLING);
     }
 
     public final void switchToSittingAnimation() {
         assert !isDead();
-        switchAnimation(IDLE_SPEED, Animation.SITTING, 0);
+        switchAnimation(IDLE_SPEED, Animation.SITTING);
     }
 
     public final void switchToSteeringAnimation() {
         assert !isDead();
-        switchAnimation(IDLE_SPEED, Animation.STEERING, 0);
+        switchAnimation(IDLE_SPEED, Animation.STEERING);
     }
 
     public final void switchToRowingRightAnimation() {
         assert !isDead();
         assert supply_container != null;
-        switchAnimation(IDLE_SPEED, Animation.ROWING_RIGHT, 0);
+        switchAnimation(IDLE_SPEED, Animation.ROWING_RIGHT);
         supply_container.increaseSupply(1, RightPaddle.class);
     }
 
     public final void switchToRowingLeftAnimation() {
         assert !isDead();
         assert supply_container != null;
-        switchAnimation(IDLE_SPEED, Animation.ROWING_LEFT, 0);
+        switchAnimation(IDLE_SPEED, Animation.ROWING_LEFT);
         supply_container.increaseSupply(1, LeftPaddle.class);
     }
 
@@ -377,19 +375,7 @@ public class Unit extends Selectable<UnitTemplate> implements Occupant, Movable 
 
     @Override
     public final @NonNull SpriteKey getSpriteRenderer() {
-        return getTemplate().getSpriteRenderer(getSpriteIndex());
-    }
-
-    public final void setSpriteIndex(int index) {
-        this.current_sprite_index = index;
-    }
-
-    public final int getSpriteIndex() {
-        return current_sprite_index;
-    }
-
-    public final int getNumSprites() {
-        return getTemplate().getNumSpriteRenderers();
+        return getTemplate().getSpriteRenderer();
     }
 
     @Override
@@ -487,7 +473,7 @@ public class Unit extends Selectable<UnitTemplate> implements Occupant, Movable 
     @Override
     public final void hit(int damage, float direction_x, float direction_y, @NonNull Player owner) {
         super.hit(damage, direction_x, direction_y, owner);
-        if (mounted && !onboard) {
+        if (mounted && !on_ship) {
             mounted_building.hit(damage, direction_x, direction_y, owner);
         } else if (!isDead()) {
             hit_points = Math.clamp(hit_points - damage, 0, getTemplate().getMaxHitPoints());
@@ -501,7 +487,7 @@ public class Unit extends Selectable<UnitTemplate> implements Occupant, Movable 
         getOwner().unitLost();
 
         mounted = false;
-        onboard = false;
+        on_ship = false;
         mount_offset = 0;
 
         pushController(new DieController(this));
@@ -697,12 +683,7 @@ public class Unit extends Selectable<UnitTemplate> implements Occupant, Movable 
     }
 
     public final void switchAnimation(float anim_speed, @NonNull int animation) {
-        switchAnimation(anim_speed, animation, 0);
-    }
-
-    public final void switchAnimation(float anim_speed, @NonNull int animation, int sprite) {
         assert !isDead();
-        setSpriteIndex(sprite);
         if (supply_container != null) {
             supply_container.resetSupply(LeftPaddle.class);
             supply_container.resetSupply(RightPaddle.class);
@@ -711,7 +692,7 @@ public class Unit extends Selectable<UnitTemplate> implements Occupant, Movable 
         if (this.animation != animation) {
             this.animation = animation;
             this.anim_time = 0f;
-        } else if (getTemplate().getSpriteRenderer(sprite).getAnimationType(
+        } else if (getTemplate().getSpriteRenderer().getAnimationType(
                 animation) == AnimationInfo.AnimationType.PLAIN.ordinal()) {
                     this.anim_time = 0f;
                 }

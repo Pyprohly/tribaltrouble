@@ -10,7 +10,9 @@ import com.oddlabs.tt.player.PlayerInterface;
 import com.oddlabs.tt.util.Target;
 import org.jspecify.annotations.NonNull;
 
-/** A no-op player interface for spectators — all commands are ignored. */
+/**
+ * A no-op player interface for spectators — all commands are ignored.
+ */
 public final class NoOpPlayerInterface implements PlayerInterface {
     @Override
     public void deployUnits(@NonNull Building building, @NonNull DeployType type, int num_units) {

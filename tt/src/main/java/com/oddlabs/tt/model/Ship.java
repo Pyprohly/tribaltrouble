@@ -948,8 +948,7 @@ public class Ship extends Building implements Movable {
         forceDecide();
         clearControllerStack();
         free();
-        updateBounds();
-        reregister();
+        reinsert();
         occupy();
     }
 
@@ -960,8 +959,7 @@ public class Ship extends Building implements Movable {
     public final void endSlide() {
         forceDecide();
         free();
-        updateBounds();
-        reregister();
+        reinsert();
         occupy();
         slid = true;
     }
@@ -980,8 +978,7 @@ public class Ship extends Building implements Movable {
         if (isDead()) return;
         free();
         super.setPosition(x, y);
-        updateBounds();
-        reregister();
+        reinsert();
         occupy();
     }
 

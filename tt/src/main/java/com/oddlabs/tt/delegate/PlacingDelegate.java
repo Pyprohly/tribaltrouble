@@ -117,7 +117,7 @@ public final class PlacingDelegate extends ControllableCameraDelegate {
         float center_y = HeightMap.METERS_PER_UNIT_GRID * (placing_grid_y + (getTemplate().getPlacingSize() - .5f));
 
         BuildingSiteScanFilter filter = new BuildingSiteScanFilter(unit_grid, getTemplate(), GRID_RADIUS, false);
-        unit_grid.scan(filter, placing_center_grid_x, placing_center_grid_y, UnitGrid.LAND);
+        unit_grid.scan(filter, placing_center_grid_x, placing_center_grid_y);
         List<LandscapeTarget> target_list = filter.getResult();
 
         RenderContext context = Renderer.getRenderer().getRenderContext();

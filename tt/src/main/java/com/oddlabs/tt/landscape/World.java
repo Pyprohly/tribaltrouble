@@ -203,8 +203,13 @@ public final class World {
                 "****************** Finished landscape in " + ((time_stop - time_start) / 1000f) + " sec ********************");
         this.supply_managers = new SupplyManagers(this);
         this.unit_grid = new UnitGrid(world);
-        RegionBuilder.buildRegions(unit_grid, world_info.starting_locations()[0][0],
-                world_info.starting_locations()[0][1]);
+        boolean archipelago = world_info.island_locations().size() > 1;
+        if (archipelago) {
+            RegionBuilder.buildRegions(unit_grid);
+        } else {
+            RegionBuilder.buildRegions(unit_grid, world_info.starting_locations()[0][0],
+                    world_info.starting_locations()[0][1]);
+        }
         this.patch_root = new PatchGroup(this);
         this.treePositions = world_info.trees();
         this.tree_root = AbstractTreeGroup.newRoot(this, world_info.trees(), world_info.palm_trees(), terrain);
