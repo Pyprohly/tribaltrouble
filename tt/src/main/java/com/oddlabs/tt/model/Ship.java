@@ -39,8 +39,8 @@ public class Ship extends Building implements Movable {
     private static final float REMOVE_DELAY = 1f / 10f;
 
     private static final int MAX_SUPPLY_COUNT = 200;
-    private static final int OCCUPY_LENGTH_CELLS = 10;
-    private static final int OCCUPY_WIDTH_CELLS = 2;
+    private static final int OCCUPY_LENGTH_CELLS = 13;
+    private static final int OCCUPY_WIDTH_CELLS = 4;
 
     public static final Cost COST_ROCK_WEAPON = new Cost(new Class[]{TreeSupply.class, RockSupply.class},
             new int[]{2, 1});
@@ -571,13 +571,13 @@ public class Ship extends Building implements Movable {
 
     public static final boolean isPlacingLegal(
             UnitGrid unit_grid, BuildingTemplate template, int grid_x, int grid_y) {
-        return doIsPlacingLegal(unit_grid, grid_x, grid_y, 12);
+        return doIsPlacingLegal(unit_grid, grid_x, grid_y, 14);
     }
 
     public final boolean isPlacingLegal() {
         return !isDead()
                 && getOwner().canBuild(getBuildingTemplate().getTemplateID())
-                && doIsPlacingLegal(getUnitGrid(), getGridX(), getGridY(), 12);
+                && doIsPlacingLegal(getUnitGrid(), getGridX(), getGridY(), 14);
     }
 
     public final boolean isPlaced() {
@@ -599,10 +599,11 @@ public class Ship extends Building implements Movable {
         if (!unit_grid.isDockable(grid_x, grid_y)) {
             return false;
         }
-        for (int y = 0; y < size - 1; y++) {
-            for (int x = 0; x < size - 1; x++) {
-                int current_grid_x = grid_x + x - (size - 1);
-                int current_grid_y = grid_y + y - (size - 1);
+        int half = size / 2;
+        for (int y = 0; y < size; y++) {
+            for (int x = 0; x < size; x++) {
+                int current_grid_x = grid_x + x - half;
+                int current_grid_y = grid_y + y - half;
                 if (current_grid_x >= unit_grid.getGridSize()
                         || current_grid_y >= unit_grid.getGridSize()
                         || current_grid_x < 0

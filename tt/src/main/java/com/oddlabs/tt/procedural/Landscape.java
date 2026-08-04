@@ -1317,9 +1317,9 @@ public final class Landscape {
         Channel shore_line = water_map.copy().smooth(2).threshold(0.4f, 0.6f);
         if (DEBUG) shore_line.toLayer().saveAsPNG("shore_line");
         Channel beach = height.copy().threshold(
-                Globals.SEA_LEVEL,
-                Globals.SEA_LEVEL + 0.5f / height_scale);
-        dock_map = water_map.copy().smooth(5).threshold(0.0f, 0.99f).channelMultiply(beach).channelMultiply(shore_line);
+                Globals.SEA_LEVEL - 0.1f / height_scale,
+                Globals.SEA_LEVEL + 0.1f / height_scale);
+        dock_map = water_map.copy().smooth(6).threshold(0.0f, 0.99f).channelMultiply(beach).channelMultiply(shore_line);
         if (DEBUG) beach.toLayer().saveAsPNG("beach");
         if (DEBUG) dock_map.toLayer().saveAsPNG("dock_map");
         for (int y = 0; y < unit_grids_per_world; y++) {
