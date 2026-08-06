@@ -46,7 +46,7 @@ public final class ShipTrajectory {
             this.start = start;
             this.end = end;
             this.parent = parent;
-            coll = firstCollision(start, end, 6);
+            coll = firstCollision(start, end, 8);
             if (coll == null) {
                 found = true;
             }
@@ -130,8 +130,8 @@ public final class ShipTrajectory {
             if (coll != null) {
                 if (!processed) {
                     coll.setDirectionTo(end);
-                    ShipTrajectoryPoint gap1 = getNearestGap(grid, coll, coll.rotated(90).moved(1000), 20, 50, 6);
-                    ShipTrajectoryPoint gap2 = getNearestGap(grid, coll, coll.rotated(-90).moved(1000), 20, 50, 6);
+                    ShipTrajectoryPoint gap1 = getNearestGap(grid, coll, coll.rotated(90).moved(1000), 20, 50, 8);
+                    ShipTrajectoryPoint gap2 = getNearestGap(grid, coll, coll.rotated(-90).moved(1000), 20, 50, 8);
                     if (gap1 != null && gap2 != null) {
                         float d1 = gap1.distanceTo(coll);
                         float d2 = gap2.distanceTo(coll);
@@ -179,7 +179,7 @@ public final class ShipTrajectory {
             p2.move(-8);
         }
         ShipTrajectoryPoint p1 = null;
-        p1 = p0.moved(10);
+        p1 = p0.moved(2);
 
         rawPath = null;
         if (DEBUG) System.out.println("===================================");
@@ -390,7 +390,7 @@ public final class ShipTrajectory {
                 ShipTrajectoryPoint prev = path.get(i - 1);
                 ShipTrajectoryPoint next = path.get(i + 1);
 
-                if (!checkCollisionOnLine(grid, ship, prev, next, 6, state)) {
+                if (!checkCollisionOnLine(grid, ship, prev, next, 8, state)) {
                     path.remove(i);
                     changed = true;
                 } else {
@@ -431,7 +431,7 @@ public final class ShipTrajectory {
         ShipTrajectoryPoint bestGap = null;
         for (int i = 0; i < 48; i++) {
             float angle = i * 7.5f;
-            ShipTrajectoryPoint gap = getNearestGap(grid, pt, pt.rotated(angle).moved(1024), 12, 12, 6);
+            ShipTrajectoryPoint gap = getNearestGap(grid, pt, pt.rotated(angle).moved(1024), 14, 14, 8);
             if (gap != null) {
                 float dist = gap.distanceTo(pt);
                 if (dist < bestDist) {

@@ -8,6 +8,7 @@ public final class SailController extends Controller {
     private final Target target;
     private boolean backwards = false;
     private int trials = 0;
+    private int tolerance = 16;
 
     private static final int MAX_TRIALS = 2;
 
@@ -33,7 +34,7 @@ public final class SailController extends Controller {
         }
         savePose();
         if (shouldGiveUp(0)) {
-            if (trials == MAX_TRIALS) {
+            if (trials == MAX_TRIALS || arrived()) {
                 ship.popController();
             } else {
                 trials++;
@@ -47,6 +48,12 @@ public final class SailController extends Controller {
                 setBehaviour();
             }
         }
+    }
+
+    private boolean arrived() {
+        int dx = ship.getGridX() - target.getGridX();
+        int dy = ship.getGridY() - target.getGridY();
+        return dx * dx + dy * dy < tolerance;
     }
 
     private boolean moved() {

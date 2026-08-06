@@ -41,7 +41,7 @@ public final class BuildingSiteScanFilter implements ScanFilter {
         HeightMap map = unit_grid.getHeightMap();
         boolean can_build = map.canBuild(grid_x, grid_y, template.getPlacingSize())
                 && template.getType() == BuildingTemplate.TYPE_BUILDING;
-        boolean can_dock = map.canDock(grid_x, grid_y) && template.getType() == BuildingTemplate.TYPE_SHIP;
+        boolean can_dock = map.canDock(grid_x, grid_y) && (unit_grid.getRegion(grid_x, grid_y) != null) && template.getType() == BuildingTemplate.TYPE_SHIP;
         if ((can_build || can_dock) && legal) {
             result.add(new LandscapeTarget(grid_x, grid_y));
             if (one_target)
