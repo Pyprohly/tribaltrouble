@@ -130,7 +130,7 @@ public final class Landscape {
 
     private byte @NonNull [] @NonNull [] build;
     private boolean @NonNull [] @NonNull [] dock;
-    private boolean @NonNull [] @NonNull [] water;
+    private byte @NonNull [] @NonNull [] water;
     private float @NonNull [] @NonNull [] player_locations;
     private int @NonNull [] @NonNull [] supply_locations;
     private float @NonNull [] @NonNull [] plants;
@@ -1310,7 +1310,7 @@ public final class Landscape {
 
     private final void generateWaterGrid() {
         this.dock = new boolean[unit_grids_per_world][unit_grids_per_world];
-        this.water = new boolean[unit_grids_per_world][unit_grids_per_world];
+        this.water = new byte[unit_grids_per_world][unit_grids_per_world];
         water_map = height.copy().threshold(Globals.SEA_LEVEL - 10.0f, Globals.SEA_LEVEL).floodfill(0, 0, -1.0f, 0.1f,
                 new int[1]).threshold(-1.01f, -0.99f);
         if (DEBUG) water_map.toLayer().saveAsPNG("water_map");
@@ -1320,16 +1320,16 @@ public final class Landscape {
                 Globals.SEA_LEVEL - 0.1f / height_scale,
                 Globals.SEA_LEVEL + 0.1f / height_scale);
         dock_map = water_map.copy().smooth(6).threshold(0.0f, 0.99f).channelMultiply(beach).channelMultiply(shore_line);
+        Channel deep_water_map = water_map.copy().smooth(7).threshold(0.99f, 1.0f);
+        if (DEBUG) deep_water_map.toLayer().saveAsPNG("deep_water");
         if (DEBUG) beach.toLayer().saveAsPNG("beach");
         if (DEBUG) dock_map.toLayer().saveAsPNG("dock_map");
         for (int y = 0; y < unit_grids_per_world; y++) {
             for (int x = 0; x < unit_grids_per_world; x++) {
                 this.dock[y][x] = dock_map.getPixel(x, y) > 0.5f;
-            }
-        }
-        for (int y = 0; y < unit_grids_per_world; y++) {
-            for (int x = 0; x < unit_grids_per_world; x++) {
-                this.water[y][x] = water_map.getPixel(x, y) > 0.5f;
+                this.water[y][x] = 0;
+                this.water[y][x] += water_map.getPixel(x, y) > 0.5f ? 1 : 0;
+                this.water[y][x] += deep_water_map.getPixel(x, y) > 0.5f ? 1 : 0;
             }
         }
     }
@@ -1361,7 +1361,7 @@ public final class Landscape {
         return dock;
     }
 
-    public final boolean[][] getWaterGrid() {
+    public final byte[][] getWaterGrid() {
         return water;
     }
 

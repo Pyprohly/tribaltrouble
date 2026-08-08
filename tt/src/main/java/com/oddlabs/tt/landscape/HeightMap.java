@@ -23,7 +23,7 @@ public final class HeightMap {
     private final List<int @NonNull []> trees;
     private final boolean[][] access_grid;
     private final boolean[][] dock_grid;
-    private final boolean[][] water_grid;
+    private final byte[][] water_grid;
     private final List<int[]> island_locations;
     private final int[][] island_ids;
     private final Map<Integer, IslandInfo> island_info;
@@ -54,7 +54,7 @@ public final class HeightMap {
             List<int[]> trees,
             boolean[][] access_grid,
             boolean[][] dock_grid,
-            boolean[][] water_grid,
+            byte[][] water_grid,
             byte[][] build_grid,
             int[][] island_ids,
             List<IslandInfo> island_infos) {
@@ -192,7 +192,7 @@ public final class HeightMap {
         return dock_grid;
     }
 
-    public final boolean[][] getWaterGrid() {
+    public final byte[][] getWaterGrid() {
         return water_grid;
     }
 

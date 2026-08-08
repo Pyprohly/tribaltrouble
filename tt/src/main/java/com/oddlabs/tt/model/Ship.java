@@ -257,21 +257,23 @@ public class Ship extends Building implements Movable {
     @Override
     protected void doAnimate(float t) {
         if (!isDead()) {
-            UnitContainer unit_container = getUnitContainer();
-            if (unit_container != null)
-                unit_container.animate(t);
+            if (!isMoving() && proxy != null) {
+                UnitContainer unit_container = getUnitContainer();
+                if (unit_container != null)
+                    unit_container.animate(t);
 
-            int num_deploying = 0;
-            for (DeployContainer deploy_container : deploy_containers.values()) {
-                if (deploy_container.getNumSupplies() > 0) {
-                    num_deploying++;
-                }
-            }
-            if (num_deploying > 0) {
-                float amount = t / num_deploying;
+                int num_deploying = 0;
                 for (DeployContainer deploy_container : deploy_containers.values()) {
                     if (deploy_container.getNumSupplies() > 0) {
-                        deploy_container.deploy(amount);
+                        num_deploying++;
+                    }
+                }
+                if (num_deploying > 0) {
+                    float amount = t / num_deploying;
+                    for (DeployContainer deploy_container : deploy_containers.values()) {
+                        if (deploy_container.getNumSupplies() > 0) {
+                            deploy_container.deploy(amount);
+                        }
                     }
                 }
             }

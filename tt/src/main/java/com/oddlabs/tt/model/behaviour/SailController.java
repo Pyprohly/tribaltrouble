@@ -10,7 +10,7 @@ public final class SailController extends Controller {
     private int trials = 0;
     private int tolerance = 16;
 
-    private static final int MAX_TRIALS = 2;
+    private static final int MAX_TRIALS = 4;
 
     private boolean has_last_pose = false;
     private float last_position_x;
@@ -38,8 +38,8 @@ public final class SailController extends Controller {
                 ship.popController();
             } else {
                 trials++;
-                backwards = !backwards;
                 setBehaviour();
+                backwards = !backwards;
             }
         } else {
             if (!ship.slid()) {

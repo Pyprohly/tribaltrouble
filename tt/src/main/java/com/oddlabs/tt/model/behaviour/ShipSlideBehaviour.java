@@ -12,9 +12,6 @@ public final class ShipSlideBehaviour implements Behaviour {
     private final Ship ship;
     private boolean blocked = false;
     private ShipTrajectoryPoint curr;
-    private ShipTrajectoryPoint end;
-    private final float total_distance;
-    private float curr_distance;
 
     private final UnitGrid grid;
     private final int grid_size;
@@ -25,15 +22,6 @@ public final class ShipSlideBehaviour implements Behaviour {
         grid_size = grid.getGridSize();
 
         curr = new ShipTrajectoryPoint(ship);
-        end = ShipTrajectory.getNearestGap(grid, curr, curr.moved(-20), 12, 12, 6);
-
-        curr_distance = 0.0f;
-
-        if (end == null) {
-            end = curr.moved(-12);
-        }
-
-        total_distance = curr.distanceTo(end);
     }
 
     public void appendToolTip(ToolTipBox tool_tip_box) {
@@ -51,31 +39,30 @@ public final class ShipSlideBehaviour implements Behaviour {
             return State.DONE;
         }
 
+        if (t == 0.0f) {
+            return State.UNINTERRUPTIBLE;
+        }
+
         ship.setLayer(UnitGrid.SEA);
 
         ShipTrajectoryPoint shipPt = new ShipTrajectoryPoint(ship);
 
-        ShipTrajectory.CollisionState[] state = new ShipTrajectory.CollisionState[1];
-
         ShipTrajectoryPoint next = curr.moved(-1.4f * t);
 
-        if (ShipTrajectory.checkCollisionOnLine(grid, ship, curr, curr.moved(-8), 6, state)) {
-            if (state[0] == ShipTrajectory.CollisionState.SHIP) {
-                return State.UNINTERRUPTIBLE;
-            }
+        if (ShipTrajectory.checkShipsCollision(grid, ship, curr, next)) {
+            return State.UNINTERRUPTIBLE;
         }
 
         blocked = false;
 
         curr = next;
-        curr_distance += 1.4f * t;
 
         ship.free();
         ship.setPosition(curr.positionX, curr.positionY);
         ship.setGridPosition(curr.gridX, curr.gridY);
         ship.occupy();
 
-        if (total_distance <= curr_distance) {
+        if (grid.isDeepWater(curr.gridX, curr.gridY)) {
             ship.endSlide();
             return State.DONE;
         }

@@ -7,21 +7,16 @@ import com.oddlabs.tt.util.Target;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
+import java.util.HashSet;
 
 public final class ShipTrajectory {
-
-    public enum CollisionState {
-        NONE,
-        LAND,
-        SHIP
-    }
 
     private final Ship ship;
     private final UnitGrid grid;
     private final boolean DEBUG = false;
 
     private final List<ShipTrajectorySegment> trajectory;
-    private List<ShipTrajectoryPoint> rawPath;
 
     private boolean isComplete = true;
 
@@ -29,191 +24,69 @@ public final class ShipTrajectory {
     private float segmentProgress = 0.0f;
     private float totalProgress = 0.0f;
 
-    class Potential {
-        public ShipTrajectoryPoint start;
-        public ShipTrajectoryPoint end;
-        public ShipTrajectoryPoint coll;
-        public boolean processed = false;
-        public boolean found = false;
-
-        public Potential parent = null;
-        public Potential c0p0 = null;
-        public Potential c0p1 = null;
-        public Potential c1p0 = null;
-        public Potential c1p1 = null;
-
-        public Potential(ShipTrajectoryPoint start, ShipTrajectoryPoint end, Potential parent) {
-            this.start = start;
-            this.end = end;
-            this.parent = parent;
-            coll = firstCollision(start, end, 8);
-            if (coll == null) {
-                found = true;
-            }
-        }
-
-        public List<ShipTrajectoryPoint> serialize() {
-            List<ShipTrajectoryPoint> ret = new ArrayList<>();
-            if (coll == null) {
-                ret.add(start);
-                ret.add(end);
-            } else {
-                if (c0p0 != null && c0p1 != null && c0p0.found && c0p1.found) {
-                    ret.addAll(c0p0.serialize());
-                    ret.addAll(c0p1.serialize());
-                } else if (c1p0 != null && c1p1 != null && c1p0.found && c1p1.found) {
-                    ret.addAll(c1p0.serialize());
-                    ret.addAll(c1p1.serialize());
-                }
-            }
-            return ret;
-        }
-
-        public List<ShipTrajectoryPoint> partial() {
-            List<ShipTrajectoryPoint> ret = new ArrayList<>();
-            if (coll == null) {
-                ret.add(start);
-                ret.add(end);
-            } else {
-                if (c0p0 != null && c0p1 != null && c0p0.found && c0p1.found) {
-                    ret.addAll(c0p0.serialize());
-                    ret.addAll(c0p1.serialize());
-                } else if (c1p0 != null && c1p1 != null && c1p0.found && c1p1.found) {
-                    ret.addAll(c1p0.serialize());
-                    ret.addAll(c1p1.serialize());
-                } else if (c0p0 != null && c0p1 != null && c0p0.found && !c0p1.found) {
-                    ret.addAll(c0p0.serialize());
-                    ret.addAll(c0p1.partial());
-                } else if (c1p0 != null && c1p1 != null && c1p0.found && !c1p1.found) {
-                    ret.addAll(c1p0.serialize());
-                    ret.addAll(c1p1.partial());
-                } else if (c0p0 != null && c0p1 != null) {
-                    ret.addAll(c0p0.partial());
-                } else if (c1p0 != null && c1p1 != null) {
-                    ret.addAll(c1p0.partial());
-                }
-            }
-            return ret;
-        }
-
-        public void debugPrint() {
-            if (coll == null) {
-                System.out.println("GOOD " + start + " " + end);
-            } else if (!processed) {
-                System.out.println("BAD " + start + " " + coll);
-                System.out.println("BAD " + coll + " " + end);
-            } else {
-                if (c0p0 != null) c0p0.debugPrint();
-                if (c0p1 != null) c0p1.debugPrint();
-                if (c1p0 != null) c1p0.debugPrint();
-                if (c1p1 != null) c1p1.debugPrint();
-            }
-        }
-
-        public void reportFound() {
-            if (c0p0 != null && c0p1 != null) {
-                if (c0p0.found && c0p1.found) {
-                    found = true;
-                }
-            }
-            if (c1p0 != null && c1p1 != null) {
-                if (c1p0.found && c1p1.found) {
-                    found = true;
-                }
-            }
-            if (found && parent != null) {
-                parent.reportFound();
-            }
-        }
-
-        public void iterate() {
-            if (coll != null) {
-                if (!processed) {
-                    coll.setDirectionTo(end);
-                    ShipTrajectoryPoint gap1 = getNearestGap(grid, coll, coll.rotated(90).moved(1000), 20, 50, 8);
-                    ShipTrajectoryPoint gap2 = getNearestGap(grid, coll, coll.rotated(-90).moved(1000), 20, 50, 8);
-                    if (gap1 != null && gap2 != null) {
-                        float d1 = gap1.distanceTo(coll);
-                        float d2 = gap2.distanceTo(coll);
-                        if (d1 / d2 < 0.5f) {
-                            gap2 = null;
-                        } else if (d2 / d1 < 0.5f) {
-                            gap1 = null;
-                        }
-                    }
-                    if (gap1 != null) {
-                        c0p0 = new Potential(start, gap1, this);
-                        c0p1 = new Potential(gap1, end, this);
-                    }
-                    if (gap2 != null) {
-                        c1p0 = new Potential(start, gap2, this);
-                        c1p1 = new Potential(gap2, end, this);
-                    }
-                    reportFound();
-                    processed = true;
-                } else {
-                    if (c0p0 != null && c0p1 != null) {
-                        c0p0.iterate();
-                        c0p1.iterate();
-                    }
-                    if (c1p0 != null && c1p1 != null) {
-                        c1p0.iterate();
-                        c1p1.iterate();
-                    }
-                }
-            }
-        }
-    }
-
     public ShipTrajectory(Ship ship, Target t) {
         this.ship = ship;
 
         grid = ship.getUnitGrid();
 
         ShipTrajectoryPoint p0 = new ShipTrajectoryPoint(ship);
-        ShipTrajectoryPoint p3 = pickTargetPosition(grid, ship, t);
+        ShipTrajectoryPoint p1 = p0.moved(10);
+
+        boolean waterTarget = grid.isDeepWater(t.getGridX(), t.getGridY());
+        boolean waterStart = grid.isDeepWater(ship.getGridX(), ship.getGridY());
+
         ShipTrajectoryPoint p2 = null;
-        if (p3 != null) {
-            p2 = p3.clone();
-            p2.setDirectionTo(new ShipTrajectoryPoint(t));
-            p2.move(-8);
-        }
-        ShipTrajectoryPoint p1 = null;
-        p1 = p0.moved(2);
 
-        rawPath = null;
-        if (DEBUG) System.out.println("===================================");
-        if (p1 != null && p2 != null) {
-            Potential root = new Potential(p1, p2, null);
-            for (int i = 0; i < 15; i++) {
-                if (root.found) {
-                    break;
-                }
-                if (DEBUG) {
-                    System.out.println("ITER " + i);
-                    root.debugPrint();
-                }
-                root.iterate();
-            }
-            if (root.found) {
-                rawPath = root.serialize();
-            } else {
-                rawPath = root.partial();
-                isComplete = false;
-            }
+        if (waterTarget) {
+            p2 = new ShipTrajectoryPoint(t);
+        } else {
+            p2 = pickTargetPosition(grid, ship, t);
         }
-        if (DEBUG) System.out.println("===================================");
 
-        if (rawPath != null) {
-            optimizePath(rawPath);
-            if (isComplete) {
-                rawPath.add(p3);
-            }
-            rawPath.add(0, p0);
-            trajectory = createTrajectory(rawPath);
+        var regionPath = findRegionPath(p1, p2);
+
+        if (regionPath != null) {
+            optimizePath(regionPath);
+            regionPath.add(0, p0);
+            trajectory = createTrajectory(regionPath);
         } else {
             trajectory = null;
         }
+    }
+
+    private List<ShipTrajectoryPoint> findRegionPath(ShipTrajectoryPoint from, ShipTrajectoryPoint to) {
+        List<ShipTrajectoryPoint> points = new ArrayList<>();
+        if (from == null || to == null) {
+            return null;
+        }
+
+        Region src_region = findRegion(from.gridX, from.gridY);
+        Region dst_region = findRegion(to.gridX, to.gridY);
+        if (src_region == null || dst_region == null) {
+            return null;
+        }
+
+        Region path_end = PathFinder.findPathRegion(grid, src_region, dst_region);
+        if (path_end == null) {
+            return null;
+        }
+
+        RegionNode node = (RegionNode) path_end.newPath();
+        points.add(from);
+        while (node != null) {
+            ShipTrajectoryPoint pt = new ShipTrajectoryPoint(
+                    node.getRegion().getGridX(),
+                    node.getRegion().getGridY());
+            points.add(pt);
+            node = (RegionNode) node.getParent();
+        }
+        points.add(to);
+
+        return points;
+    }
+
+    private Region findRegion(int grid_x, int grid_y) {
+        return grid.getRegion(grid_x, grid_y, UnitGrid.SEA);
     }
 
     public void debugRender(HeightMap heightmap) {
@@ -231,11 +104,6 @@ public final class ShipTrajectory {
             } else {
                 drawArc(segment, z);
             }
-        }
-        for (int i = 1; i < rawPath.size(); i++) {
-            ShipTrajectoryPoint p0 = rawPath.get(i - 1);
-            ShipTrajectoryPoint p1 = rawPath.get(i);
-            DebugRender.drawLine(p0.positionX, p0.positionY, z, p1.positionX, p1.positionY, z, 1.0f, 0.0f, 0.0f);
         }
     }
 
@@ -380,8 +248,6 @@ public final class ShipTrajectory {
             return;
         }
 
-        CollisionState[] state = new CollisionState[1];
-
         boolean changed = true;
         while (changed && path.size() >= 3) {
             changed = false;
@@ -390,13 +256,42 @@ public final class ShipTrajectory {
                 ShipTrajectoryPoint prev = path.get(i - 1);
                 ShipTrajectoryPoint next = path.get(i + 1);
 
-                if (!checkCollisionOnLine(grid, ship, prev, next, 8, state)) {
+                if (!checkLandCollision(grid, prev, next)) {
                     path.remove(i);
                     changed = true;
                 } else {
                     i++;
                 }
             }
+        }
+    }
+
+    static class DeepWaterFinder implements ScanFilter {
+        private final UnitGrid grid;
+        private ShipTrajectoryPoint pt = null;
+
+        public DeepWaterFinder(UnitGrid grid) {
+            this.grid = grid;
+        }
+
+        public int getMinRadius() {
+            return 0;
+        }
+
+        public int getMaxRadius() {
+            return grid.getGridSize();
+        }
+
+        public boolean filter(int grid_x, int grid_y, Occupant occ) {
+            if (grid.isDeepWater(grid_x, grid_y)) {
+                pt = new ShipTrajectoryPoint(grid_x, grid_y);
+                return true;
+            }
+            return false;
+        }
+
+        public ShipTrajectoryPoint result() {
+            return pt;
         }
     }
 
@@ -426,200 +321,137 @@ public final class ShipTrajectory {
     }
 
     public static ShipTrajectoryPoint pickTargetPosition(UnitGrid grid, Occupant self, Target target) {
-        ShipTrajectoryPoint pt = new ShipTrajectoryPoint(target);
-        float bestDist = 2000.0f;
-        ShipTrajectoryPoint bestGap = null;
-        for (int i = 0; i < 48; i++) {
-            float angle = i * 7.5f;
-            ShipTrajectoryPoint gap = getNearestGap(grid, pt, pt.rotated(angle).moved(1024), 14, 14, 8);
-            if (gap != null) {
-                float dist = gap.distanceTo(pt);
-                if (dist < bestDist) {
-                    bestGap = gap;
-                    bestDist = dist;
-                }
-            }
-        }
-        return bestGap;
+        DeepWaterFinder finder = new DeepWaterFinder(grid);
+        grid.scan(finder, target.getGridX(), target.getGridY(), UnitGrid.SEA);
+        return finder.result();
     }
 
-    public static ShipTrajectoryPoint getNearestGap(
-            UnitGrid grid, ShipTrajectoryPoint p0, ShipTrajectoryPoint p1, int minSize, int maxSize, int thickness) {
-        int grid_size = grid.getGridSize();
-
-        int dx = p1.gridX - p0.gridX;
-        int dy = p1.gridY - p0.gridY;
-        float line_len = (float) StrictMath.sqrt(dx * dx + dy * dy);
-
-        float perp_x;
-        float perp_y;
-        if (line_len < 0.001f) {
-            perp_x = 1.0f;
-            perp_y = 0.0f;
-        } else {
-            float dir_x = dx / line_len;
-            float dir_y = dy / line_len;
-            perp_x = -dir_y;
-            perp_y = dir_x;
+    public static boolean checkLandCollision(UnitGrid grid, ShipTrajectoryPoint p0, ShipTrajectoryPoint p1) {
+        if (p0.gridX == p1.gridX && p0.gridY == p1.gridY) {
+            return !grid.isDeepWater(p0.gridX, p0.gridY);
         }
-
-        int current_x = p0.gridX;
-        int current_y = p0.gridY;
-        int step_x = p0.gridX < p1.gridX ? 1 : -1;
-        int step_y = p0.gridY < p1.gridY ? 1 : -1;
-        int abs_dx = StrictMath.abs(dx);
-        int abs_dy = StrictMath.abs(dy);
-        int err = abs_dx - abs_dy;
-
-        int run_length = 0;
-        int run_start_x = p0.gridX;
-        int run_start_y = p0.gridY;
-
-        ShipTrajectoryPoint result = null;
-
-        while (true) {
-            boolean is_water_strip = true;
-            float half_span = (thickness - 1) * 0.5f;
-            for (int i = 0; i < thickness; i++) {
-                float offset = i - half_span;
-                int check_x = (int) StrictMath.round(current_x + perp_x * offset);
-                int check_y = (int) StrictMath.round(current_y + perp_y * offset);
-                if (check_x < 0
-                        || check_x >= grid_size
-                        || check_y < 0
-                        || check_y >= grid_size
-                        || !grid.isWater(check_x, check_y)
-                        || grid.isDockable(check_x, check_y)) {
-                    is_water_strip = false;
-                    break;
-                }
+        int dx = Math.abs(p1.gridX - p0.gridX);
+        int dy = Math.abs(p1.gridY - p0.gridY);
+        float total = p0.distanceTo(p1);
+        float step = total / Math.max(dx, dy);
+        int s = grid.getGridSize();
+        int n = (int) StrictMath.round(total / step);
+        var origin = p0.clone();
+        origin.setDirectionTo(p1);
+        for (int i = 0; i <= n; i++) {
+            ShipTrajectoryPoint sample = origin.moved(i * step);
+            if (sample.gridX < 0 || sample.gridX >= s || sample.gridY < 0 || sample.gridY >= s) {
+                return true;
             }
-
-            if (is_water_strip) {
-                if (run_length == 0) {
-                    run_start_x = current_x;
-                    run_start_y = current_y;
-                }
-                run_length++;
-                if (run_length >= minSize) {
-                    result = new ShipTrajectoryPoint(
-                            (int) StrictMath.round((run_start_x + current_x) * 0.5f),
-                            (int) StrictMath.round((run_start_y + current_y) * 0.5f));
-                    if (run_length >= maxSize) {
-                        return result;
-                    }
-                }
-            } else {
-                run_length = 0;
-            }
-
-            if (current_x == p1.gridX && current_y == p1.gridY) {
-                break;
-            }
-
-            int e2 = err * 2;
-            if (e2 > -abs_dy) {
-                err -= abs_dy;
-                current_x += step_x;
-            }
-            if (e2 < abs_dx) {
-                err += abs_dx;
-                current_y += step_y;
+            if (!grid.isDeepWater(sample.gridX, sample.gridY)) {
+                return true;
             }
         }
-
-        return result;
-    }
-
-    private static boolean collisionOnCell(UnitGrid grid, Occupant self, int x, int y, CollisionState[] mode) {
-        int grid_size = grid.getGridSize();
-        if (x < 0 || x >= grid_size || y < 0 || y >= grid_size) {
-            mode[0] = CollisionState.LAND;
-            return true;
-        }
-        if (!grid.isWater(x, y) || grid.isDockable(x, y)) {
-            mode[0] = CollisionState.LAND;
-            return true;
-        }
-        Occupant occ = grid.getOccupant(x, y, UnitGrid.SEA);
-        if (self != null && occ != null && occ != self) {
-            mode[0] = CollisionState.SHIP;
-            return true;
-        }
-        mode[0] = CollisionState.NONE;
         return false;
     }
 
-    public final boolean checkCollisionOnLine(
-            ShipTrajectoryPoint p0, ShipTrajectoryPoint p1, int thickness, CollisionState[] state) {
-        return checkCollisionOnLine(grid, ship, p0, p1, thickness, state);
-    }
-
-    public ShipTrajectoryPoint firstCollision(ShipTrajectoryPoint p0, ShipTrajectoryPoint p1, int thickness,
-            CollisionState[] mode) {
-        return firstCollision(grid, ship, p0, p1, thickness, mode);
-    }
-
-    public ShipTrajectoryPoint firstCollision(ShipTrajectoryPoint p0, ShipTrajectoryPoint p1, int thickness) {
-        CollisionState[] mode = new CollisionState[1];
-        return firstCollision(grid, ship, p0, p1, thickness, mode);
-    }
-
-    public static ShipTrajectoryPoint firstCollision(
-            UnitGrid grid, Occupant self, ShipTrajectoryPoint p0, ShipTrajectoryPoint p1, int thickness,
-            CollisionState[] mode) {
-
-        final int half_thickness = thickness / 2;
-
-        float dir_x = p1.gridX - p0.gridX;
-        float dir_y = p1.gridY - p0.gridY;
-        float length = (float) StrictMath.sqrt(dir_x * dir_x + dir_y * dir_y);
-
-        if (length < 0.001f) {
-            for (int ox = -half_thickness; ox <= half_thickness; ox++) {
-                for (int oy = -half_thickness; oy <= half_thickness; oy++) {
-                    if (ox * ox + oy * oy > half_thickness * half_thickness) {
-                        continue;
-                    }
-                    if (collisionOnCell(grid, self, p0.gridX + ox, p0.gridY + oy, mode)) {
-                        return p0;
+    public static boolean polygonCollision(ShipTrajectoryPoint[] poly0, ShipTrajectoryPoint[] poly1) {
+        for (int i = 0; i < poly0.length; i++) {
+            var p0_a = poly0[i];
+            var p0_b = poly0[(i + 1) % poly0.length];
+            var min_x = Math.min(p0_a.positionX, p0_b.positionX);
+            var max_x = Math.max(p0_a.positionX, p0_b.positionX);
+            var min_y = Math.min(p0_a.positionY, p0_b.positionY);
+            var max_y = Math.max(p0_a.positionY, p0_b.positionY);
+            for (int j = 0; j < poly1.length; j++) {
+                var p1_a = poly1[j];
+                var p1_b = poly1[(j + 1) % poly1.length];
+                var inter = p0_a.intersection(p1_a);
+                if (inter != null) {
+                    if (inter.positionX >= min_x && inter.positionX <= max_x
+                            && inter.positionY >= min_y && inter.positionY <= max_y) {
+                        return true;
                     }
                 }
             }
-            return null;
+        }
+        return false;
+    }
+
+    private static ShipTrajectoryPoint[] shipToPolygon(Ship s) {
+        ShipTrajectoryPoint[] poly = new ShipTrajectoryPoint[4];
+
+        ShipTrajectoryPoint center = new ShipTrajectoryPoint(s);
+        poly[0] = center.moved(-7).rotated(90).moved(3);
+        poly[1] = poly[0].moved(-6);
+        poly[2] = center.moved(7).rotated(-90).moved(3);
+        poly[3] = poly[2].moved(-6);
+
+        poly[0].setDirectionTo(poly[1]);
+        poly[1].setDirectionTo(poly[2]);
+        poly[2].setDirectionTo(poly[3]);
+        poly[3].setDirectionTo(poly[0]);
+
+        return poly;
+    }
+
+    static class ShipFinder implements ScanFilter {
+        private final int radius;
+        private Set<Ship> ships = new HashSet<>();
+        private Ship self;
+
+        public ShipFinder(int radius, Ship self) {
+            this.radius = radius;
+            this.self = self;
         }
 
-        dir_x /= length;
-        dir_y /= length;
-        float perp_x = -dir_y;
-        float perp_y = dir_x;
+        public int getMinRadius() {
+            return 0;
+        }
 
-        for (float distance = 0.0f; distance <= length; distance += 0.5f) {
-            float center_x = p0.gridX + dir_x * distance;
-            float center_y = p0.gridY + dir_y * distance;
-            for (int offset = -half_thickness; offset <= half_thickness; offset++) {
-                int check_x = (int) StrictMath.round(center_x + perp_x * offset);
-                int check_y = (int) StrictMath.round(center_y + perp_y * offset);
-                if (collisionOnCell(grid, self, check_x, check_y, mode)) {
-                    return new ShipTrajectoryPoint(check_x, check_y);
+        public int getMaxRadius() {
+            return radius;
+        }
+
+        public boolean filter(int grid_x, int grid_y, Occupant occ) {
+            if (occ instanceof Ship s && s != self) {
+                ships.add(s);
+            }
+            return false;
+        }
+
+        public Set<Ship> results() {
+            return ships;
+        }
+    }
+
+    public static boolean checkShipsCollision(UnitGrid grid, Ship ship, ShipTrajectoryPoint p0,
+            ShipTrajectoryPoint p1) {
+        ShipTrajectoryPoint[] poly = new ShipTrajectoryPoint[4];
+        ShipTrajectoryPoint center0 = p0.clone();
+        center0.setDirectionTo(p1);
+        poly[0] = center0.moved(-7).rotated(90).moved(3);
+        poly[1] = poly[0].moved(-6);
+        ShipTrajectoryPoint center1 = p1.clone();
+        center1.copyDirection(center0);
+        poly[2] = center1.moved(7).rotated(-90).moved(3);
+        poly[3] = poly[2].moved(-6);
+        poly[0].setDirectionTo(poly[1]);
+        poly[1].setDirectionTo(poly[2]);
+        poly[2].setDirectionTo(poly[3]);
+        poly[3].setDirectionTo(poly[0]);
+
+        int center_x = (p0.gridX + p1.gridX) / 2;
+        int center_y = (p0.gridY + p1.gridY) / 2;
+        int radius = (int) StrictMath.round(poly[0].gridDistanceTo(poly[2])) + 10;
+        ShipFinder finder = new ShipFinder(radius, ship);
+        grid.scan(finder, center_x, center_y, UnitGrid.SEA);
+        for (Ship otherShip : finder.results()) {
+            int dist_dx = ship.getGridX() - otherShip.getGridX();
+            int dist_dy = ship.getGridY() - otherShip.getGridY();
+            if (dist_dx * dist_dx + dist_dy * dist_dy < 14 * 14) {
+                var otherPoly = shipToPolygon(otherShip);
+                if (polygonCollision(poly, otherPoly)) {
+                    return true;
                 }
             }
         }
 
-        for (int offset = -half_thickness; offset <= half_thickness; offset++) {
-            int check_x = (int) StrictMath.round(p1.gridX + perp_x * offset);
-            int check_y = (int) StrictMath.round(p1.gridY + perp_y * offset);
-            if (collisionOnCell(grid, self, check_x, check_y, mode)) {
-                return new ShipTrajectoryPoint(check_x, check_y);
-            }
-        }
-
-        return null;
-    }
-
-    public static boolean checkCollisionOnLine(
-            UnitGrid grid, Occupant self, ShipTrajectoryPoint p0, ShipTrajectoryPoint p1, int thickness,
-            CollisionState[] mode) {
-        return firstCollision(grid, self, p0, p1, thickness, mode) != null;
+        return false;
     }
 }

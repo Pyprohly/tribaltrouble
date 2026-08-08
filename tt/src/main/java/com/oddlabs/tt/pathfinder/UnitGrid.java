@@ -150,7 +150,11 @@ public final class UnitGrid {
     }
 
     public final boolean isWater(int grid_x, int grid_y) {
-        return heightmap.getWaterGrid()[grid_y][grid_x];
+        return heightmap.getWaterGrid()[grid_y][grid_x] != 0;
+    }
+
+    public final boolean isDeepWater(int grid_x, int grid_y) {
+        return heightmap.getWaterGrid()[grid_y][grid_x] == 2;
     }
 
     public final boolean isDockable(int grid_x, int grid_y) {

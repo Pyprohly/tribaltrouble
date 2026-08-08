@@ -60,6 +60,10 @@ public final class SailBehaviour implements Behaviour {
             return State.DONE;
         }
 
+        if (t == 0.0f) {
+            return State.UNINTERRUPTIBLE;
+        }
+
         ship.setLayer(UnitGrid.SEA);
 
         if (!trajectory.exists()) {
@@ -84,17 +88,14 @@ public final class SailBehaviour implements Behaviour {
 
         ShipTrajectoryPoint fromPoint = new ShipTrajectoryPoint(ship);
 
-        ShipTrajectory.CollisionState[] state = new ShipTrajectory.CollisionState[1];
-        if (trajectory.checkCollisionOnLine(fromPoint.moved(4), next_pose.moved(8), 6, state)) {
-            if (state[0] == ShipTrajectory.CollisionState.LAND) {
+        var grid = ship.getUnitGrid();
+
+        if (ShipTrajectory.checkShipsCollision(grid, ship, fromPoint, next_pose.moved(4))) {
+            timer += t;
+            if (timer >= 0.5f) {
                 return endTrip();
             } else {
-                timer += t;
-                if (timer >= 0.5f) {
-                    return endTrip();
-                } else {
-                    return State.UNINTERRUPTIBLE;
-                }
+                return State.UNINTERRUPTIBLE;
             }
         }
 
