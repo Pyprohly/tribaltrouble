@@ -2,9 +2,10 @@ name: Sync Translations
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "main", "translations-sheet-sync" ]  # temporary test trigger
     paths:
       - 'tt/src/main/resources/**/*.properties'
+      - '.github/workflows/sync-translations.yml'
   schedule:
     - cron: '0 9 * * *'  # daily 09:00 UTC
   workflow_dispatch:
