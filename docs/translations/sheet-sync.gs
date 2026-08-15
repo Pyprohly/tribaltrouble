@@ -71,8 +71,10 @@ function doPost(e) {
         if (padded[r][c] === '' && padded[r][2] !== '' && padded[r][2].charAt(0) !== '/') {
           drafts.push([r, c]);
           bg = MT_COLOR;
-        } else if (padded[r][c] !== '' && mtCells[cellKey_(padded[r][0], padded[r][1], padded[0][c])]) {
-          bg = MT_COLOR; // frozen machine draft, still unreviewed
+        } else if (padded[r][c] !== '' && mtCells[cellKey_(padded[r][0], padded[r][1], padded[0][c])] === padded[r][c]) {
+          // same text the draft had: still unreviewed. A differing value means the merge
+          // chose a human edit from the code side, so the machine tint is cleared.
+          bg = MT_COLOR;
         }
       }
       rowBg.push(bg);
@@ -88,7 +90,7 @@ function doPost(e) {
   return ContentService.createTextOutput('OK ' + (padded.length - 1) + ' rows, ' + drafts.length + ' drafts');
 }
 
-// set of File/Key/language cells currently tinted as machine-translated
+// File/Key/language -> current text of every cell tinted as machine-translated
 function machineTintedCells_(sheet) {
   var out = {};
   var dataRange = sheet.getDataRange();
@@ -98,7 +100,7 @@ function machineTintedCells_(sheet) {
   for (var r = 1; r < rows.length; r++) {
     for (var c = 3; c < rows[0].length; c++) {
       if (bgs[r][c].toLowerCase() === MT_COLOR) {
-        out[cellKey_(rows[r][0], rows[r][1], rows[0][c])] = true;
+        out[cellKey_(rows[r][0], rows[r][1], rows[0][c])] = rows[r][c];
       }
     }
   }
