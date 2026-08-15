@@ -2,7 +2,7 @@ name: Sync Translations
 
 on:
   push:
-    branches: [ "main", "translations-sheet-sync" ]  # temporary test trigger
+    branches: [ "main" ]
     paths:
       - 'tt/src/main/resources/**/*.properties'
       - '.github/workflows/sync-translations.yml'
