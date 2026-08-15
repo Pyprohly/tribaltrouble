@@ -53,7 +53,8 @@ function doPost(e) {
     for (var c = 0; c < width; c++) {
       var bg = null;
       if (r > 0 && c >= 3 && LANGS[padded[0][c]]) {
-        if (padded[r][c] === '' && padded[r][2] !== '') {
+        // resource paths (values like /textures/gui/...) are localized by hand, never drafted
+        if (padded[r][c] === '' && padded[r][2] !== '' && padded[r][2].charAt(0) !== '/') {
           drafts.push([r, c]);
           bg = MT_COLOR;
         } else if (padded[r][c] !== '' && mtCells[cellKey_(padded[r][0], padded[r][1], padded[0][c])]) {
