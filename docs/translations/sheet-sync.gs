@@ -1,6 +1,9 @@
-// Google Apps Script for the translations sheet. Paste into Extensions > Apps Script,
-// set a SYNC_TOKEN script property, then Deploy > New deployment > Web app
-// (Execute as: Me, Who has access: Anyone). See README.md in this directory.
+// Google Apps Script for the translations sheet. Paste into a STANDALONE project
+// (script.google.com > New project), NOT into the sheet's Extensions > Apps Script:
+// a script bound to the sheet is fully editable (token included) by anyone with edit
+// access to the sheet. Set SYNC_TOKEN and SHEET_ID script properties, then
+// Deploy > New deployment > Web app (Execute as: Me, Who has access: Anyone).
+// See README.md in this directory.
 //
 // GET  ?token=...  returns the first sheet as CSV
 // POST ?token=...  replaces the first sheet with the CSV in the request body, then
@@ -125,7 +128,9 @@ function placeholders_(s) {
 }
 
 function sheet_() {
-  return SpreadsheetApp.getActiveSpreadsheet().getSheets()[0];
+  var id = PropertiesService.getScriptProperties().getProperty('SHEET_ID');
+  if (!id) throw new Error('Set the SHEET_ID script property to the spreadsheet id');
+  return SpreadsheetApp.openById(id).getSheets()[0];
 }
 
 function csvField_(v) {

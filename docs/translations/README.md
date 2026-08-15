@@ -48,11 +48,15 @@ CSV, so the manual flow (download sheet as CSV, run the task, re-import) always 
 
 ## One-time setup
 
-1. Create an empty Google Sheet.
-2. Extensions > Apps Script, replace the default code with `sheet-sync.gs` from this
-   directory, and save.
-3. In the Apps Script editor: Project Settings > Script Properties > add property
-   `SYNC_TOKEN` with a long random value (e.g. from a password generator).
+1. Create an empty Google Sheet and note its id (the long token in the URL between
+   `/d/` and `/edit`).
+2. Create a **standalone** Apps Script project (script.google.com > New project) and
+   paste in `sheet-sync.gs` from this directory. Do not use the sheet's own
+   Extensions > Apps Script: a script bound to the sheet is fully editable, token
+   included, by anyone given edit access to the sheet.
+3. In the Apps Script editor: Project Settings > Script Properties > add two properties:
+   `SYNC_TOKEN` with a long random value (e.g. from a password generator), and
+   `SHEET_ID` with the spreadsheet id from step 1.
 4. Deploy > New deployment > type "Web app", Execute as: **Me**, Who has access:
    **Anyone**. Authorize when prompted and copy the web app URL (ends in `/exec`).
    Access is gated by the token, not the link.
