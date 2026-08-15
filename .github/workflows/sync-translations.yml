@@ -74,7 +74,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          if [ -z "$(git status --porcelain -- tt/src)" ]; then
+          if [ -z "$(git status --porcelain -- tt/src tt/translations-baseline.csv)" ]; then
             echo "No translation changes"
             exit 0
           fi
@@ -82,7 +82,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git checkout -B "$BRANCH"
-          git add tt/src/main/resources
+          git add tt/src/main/resources tt/translations-baseline.csv
           git commit -m "Update translations from sheet"
           git push -f origin "$BRANCH"
 

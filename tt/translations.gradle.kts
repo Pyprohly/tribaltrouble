@@ -4,8 +4,9 @@
 //       Collects every string from src/main/resources and writes build/translations.csv
 //       for import into Google Sheets (File > Import > Replace spreadsheet).
 //       When -PsheetCsv is given, translations are merged cell by cell: a value present on
-//       only one side is kept; when both sides differ the sheet wins and a conflict is printed.
-//       Keys and English text always come from the code.
+//       only one side is kept, and the baseline (translations-baseline.csv) decides which
+//       side edited when both have values. Only when both sides changed since the last sync
+//       does the sheet win, with a CONFLICT printed. Keys and English always come from code.
 //
 //   importTranslations -PsheetCsv=<downloaded sheet .csv>
 //       Rewrites the locale .properties files from the sheet. Files whose content is
@@ -148,6 +149,10 @@ fun readSheetCsv(path: String): SheetData {
     return SheetData(values, extraHeaders, extras)
 }
 
+// Snapshot of the last synced state, written by importTranslations and committed with it.
+// Lets the merge tell which side actually changed a translation instead of guessing.
+val baselineFile = file("translations-baseline.csv")
+
 tasks.register("exportTranslations") {
     group = "translations"
     description = "Write build/translations.csv from the game strings, merging -PsheetCsv if given"
@@ -156,6 +161,7 @@ tasks.register("exportTranslations") {
     doLast {
         val sheetData = sheetCsv?.let { readSheetCsv(it) }
         val sheet = sheetData?.values ?: linkedMapOf()
+        val base = baselineFile.takeIf { it.isFile }?.let { readSheetCsv(it.absolutePath).values }
         val extraHeaders = sheetData?.extraHeaders ?: emptyList()
         val seen = mutableSetOf<Pair<String, String>>()
         val conflicts = mutableListOf<String>()
@@ -173,9 +179,12 @@ tasks.register("exportTranslations") {
                 val merged = locales.indices.map { i ->
                     val code = localeEntries[i][key] ?: ""
                     val fromSheet = sheetRow?.get(i) ?: ""
+                    val baseVal = base?.get(bundle to key)?.get(i)
                     when {
                         fromSheet.isEmpty() -> code
                         code.isEmpty() || code == fromSheet -> fromSheet
+                        baseVal == code -> fromSheet // only the sheet changed since last sync
+                        baseVal == fromSheet -> code // only the code changed since last sync
                         else -> {
                             conflicts.add("CONFLICT: $bundle/$key [${locales[i]}]\n    code:  $code\n    sheet: $fromSheet")
                             fromSheet
@@ -200,7 +209,7 @@ tasks.register("exportTranslations") {
         }
         if (conflicts.isNotEmpty()) {
             logger.warn("${conflicts.size} conflict(s), sheet value kept. Rerun import/export after resolving in the sheet:")
-            conflicts.forEach { logger.warn("  $it") }
+            conflicts.forEach { logger.warn(it) }
         }
         if (sheet.isNotEmpty()) println("$newKeys new key(s) not yet in the sheet")
         println("Wrote ${lines.size - 1} strings to $out")
@@ -220,10 +229,15 @@ tasks.register("importTranslations") {
             logger.warn("Sheet row for unknown bundle, ignored: ${it.first}/${it.second}")
         }
         var written = 0
+        val baselineLines = mutableListOf(csvHeader.joinToString(",") { csvField(it) })
         bundles.forEach { (bundle, baseFile) ->
             val english = parseProperties(baseFile)
             sheet.keys.filter { it.first == bundle && it.second !in english }.forEach {
                 logger.warn("Sheet row for unknown key, ignored: $bundle/${it.second}")
+            }
+            english.forEach { (key, en) ->
+                val row = listOf(bundle, key, en) + (sheet[bundle to key] ?: locales.map { "" })
+                baselineLines.add(row.joinToString(",") { csvField(it) })
             }
             locales.forEachIndexed { i, loc ->
                 val desired = LinkedHashMap<String, String>()
@@ -247,6 +261,7 @@ tasks.register("importTranslations") {
                 }
             }
         }
+        baselineFile.writeText("\uFEFF" + baselineLines.joinToString("\r\n") + "\r\n", Charsets.UTF_8)
         println(if (written == 0) "All locale files already up to date" else "$written locale file(s) updated")
     }
 }

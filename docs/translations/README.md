@@ -11,8 +11,14 @@ Every sync is a two-way merge, never a blind overwrite:
 
 - Keys and English text always come from the code. New keys appear in the sheet as new
   rows with blank translation cells; rows for deleted keys are dropped (and reported).
-- Translation cells merge value by value. A value present on only one side wins. If both
-  sides changed the same cell, the sheet wins and the conflict is listed in the PR body.
+- Translation cells merge value by value. A value present on only one side wins. When
+  both sides have different values, the baseline (`tt/translations-baseline.csv`, a
+  snapshot of the last synced state committed by each sync PR) decides: whichever side
+  actually changed since the last sync wins, so a translation edit in a code PR sticks
+  just like a sheet edit does. Only if both sides changed the same cell does the sheet
+  win, with the conflict listed in the PR body.
+- Deleting a translation does not stick from either side: empty never overrides a value,
+  so the deleted value flows back from the other side.
 - Empty cells mean "untranslated"; the game falls back to English at runtime.
 - Locale files are rewritten only when their content actually changes, in the English
   base file's key order.
