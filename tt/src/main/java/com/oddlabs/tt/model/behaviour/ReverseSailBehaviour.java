@@ -49,7 +49,8 @@ public final class ReverseSailBehaviour implements Behaviour {
         }
 
         // If it's clear infront of the ship
-        if (!ShipTrajectory.checkLandCollision(grid, shipPt, shipPt.moved(20))) {
+        if (!ShipTrajectory.checkLandCollision(grid, shipPt, shipPt.moved(20))
+                && !ShipTrajectory.checkShipsCollision(grid, ship, shipPt, shipPt.moved(20))) {
             ship.reportStuck();
             return State.INTERRUPTIBLE;
         }
@@ -60,7 +61,7 @@ public final class ReverseSailBehaviour implements Behaviour {
         if (ShipTrajectory.checkLandCollision(grid, shipPt, next)) {
             ship.reportStuck();
             return State.INTERRUPTIBLE;
-        } else if (ShipTrajectory.checkShipsCollision(grid, ship, shipPt, next)) {
+        } else if (ShipTrajectory.checkShipsCollision(grid, ship, shipPt, next.moved(-8))) {
             return State.UNINTERRUPTIBLE;
         }
 

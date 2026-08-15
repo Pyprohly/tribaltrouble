@@ -46,6 +46,7 @@ public final class SailController extends Controller {
                 ship.setBehaviour(new ShipSlideBehaviour(ship));
             } else {
                 setBehaviour();
+                backwards = !backwards;
             }
         }
     }

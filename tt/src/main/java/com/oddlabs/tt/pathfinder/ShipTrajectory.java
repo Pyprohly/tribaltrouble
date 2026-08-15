@@ -93,7 +93,7 @@ public final class ShipTrajectory {
         if (trajectory == null) {
             return;
         }
-        final float OFFSET = 2.0f;
+        final float OFFSET = 0.1f;
         float z = heightmap.getSeaLevelMeters() + OFFSET;
         for (ShipTrajectorySegment segment : trajectory) {
             if (segment.isStraight) {
@@ -354,17 +354,23 @@ public final class ShipTrajectory {
         for (int i = 0; i < poly0.length; i++) {
             var p0_a = poly0[i];
             var p0_b = poly0[(i + 1) % poly0.length];
-            var min_x = Math.min(p0_a.positionX, p0_b.positionX);
-            var max_x = Math.max(p0_a.positionX, p0_b.positionX);
-            var min_y = Math.min(p0_a.positionY, p0_b.positionY);
-            var max_y = Math.max(p0_a.positionY, p0_b.positionY);
+            var min_x0 = Math.min(p0_a.positionX, p0_b.positionX);
+            var max_x0 = Math.max(p0_a.positionX, p0_b.positionX);
+            var min_y0 = Math.min(p0_a.positionY, p0_b.positionY);
+            var max_y0 = Math.max(p0_a.positionY, p0_b.positionY);
             for (int j = 0; j < poly1.length; j++) {
                 var p1_a = poly1[j];
                 var p1_b = poly1[(j + 1) % poly1.length];
+                var min_x1 = Math.min(p1_a.positionX, p1_b.positionX);
+                var max_x1 = Math.max(p1_a.positionX, p1_b.positionX);
+                var min_y1 = Math.min(p1_a.positionY, p1_b.positionY);
+                var max_y1 = Math.max(p1_a.positionY, p1_b.positionY);
                 var inter = p0_a.intersection(p1_a);
                 if (inter != null) {
-                    if (inter.positionX >= min_x && inter.positionX <= max_x
-                            && inter.positionY >= min_y && inter.positionY <= max_y) {
+                    if (inter.positionX >= min_x0 && inter.positionX <= max_x0
+                            && inter.positionY >= min_y0 && inter.positionY <= max_y0
+                            && inter.positionX >= min_x1 && inter.positionX <= max_x1
+                            && inter.positionY >= min_y1 && inter.positionY <= max_y1) {
                         return true;
                     }
                 }
@@ -425,11 +431,11 @@ public final class ShipTrajectory {
         ShipTrajectoryPoint[] poly = new ShipTrajectoryPoint[4];
         ShipTrajectoryPoint center0 = p0.clone();
         center0.setDirectionTo(p1);
-        poly[0] = center0.moved(-7).rotated(90).moved(3);
+        poly[0] = center0.rotated(90).moved(3);
         poly[1] = poly[0].moved(-6);
         ShipTrajectoryPoint center1 = p1.clone();
         center1.copyDirection(center0);
-        poly[2] = center1.moved(7).rotated(-90).moved(3);
+        poly[2] = center1.rotated(-90).moved(3);
         poly[3] = poly[2].moved(-6);
         poly[0].setDirectionTo(poly[1]);
         poly[1].setDirectionTo(poly[2]);

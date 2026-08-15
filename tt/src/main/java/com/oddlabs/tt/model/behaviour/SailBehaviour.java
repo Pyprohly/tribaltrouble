@@ -90,7 +90,7 @@ public final class SailBehaviour implements Behaviour {
 
         var grid = ship.getUnitGrid();
 
-        if (ShipTrajectory.checkShipsCollision(grid, ship, fromPoint, next_pose.moved(4))) {
+        if (ShipTrajectory.checkShipsCollision(grid, ship, fromPoint, next_pose.moved(8))) {
             timer += t;
             if (timer >= 0.5f) {
                 return endTrip();
