@@ -7,7 +7,7 @@ on:
       - 'tt/src/main/resources/**/*.properties'
       - '.github/workflows/sync-translations.yml'
   schedule:
-    - cron: '0 9 * * *'  # daily 09:00 UTC
+    - cron: '0 9 * * 1'  # Mondays 09:00 UTC
   workflow_dispatch:
 
 permissions:

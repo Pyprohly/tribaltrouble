@@ -3,7 +3,7 @@
 Game strings live in `.properties` bundles under `tt/src/main/resources/com/oddlabs/tt/`.
 Translations are edited in a Google Sheet; a GitHub Actions workflow keeps the two in
 sync and opens a PR when translations change. It runs on every push to `main` that
-touches `.properties` files, on a daily schedule, and on demand via Run workflow.
+touches `.properties` files, on a weekly schedule (Mondays 09:00 UTC), and on demand via Run workflow.
 
 ## How it works
 
@@ -27,7 +27,7 @@ stays, so machine-drafted strings remain identifiable until a human reviews the 
 (fix the text if needed and clear the tint).
 
 So a new key added in code reaches translated `.properties` files in two runs: the
-first run adds the row and the draft formulas; the next one (the daily run, or a manual
+first run adds the row and the draft formulas; the next one (the weekly run, or a manual
 Run workflow) imports the computed drafts and opens the PR. Cells that are still
 loading, errored, or where the draft mangled a `{0}`-style placeholder are exported as
 empty rather than shipped broken.
@@ -56,7 +56,7 @@ CSV, so the manual flow (download sheet as CSV, run the task, re-import) always 
    - `TRANSLATIONS_SHEET_SYNC_TOKEN` = the token from step 3
 6. Run the "Sync Translations" workflow once by hand (Actions > Sync Translations >
    Run workflow). It sees the empty sheet, seeds it with all current strings, and from
-   then on runs daily.
+   then on runs weekly.
 
 If you later edit the Apps Script, use Deploy > Manage deployments > edit > new version;
 creating a brand-new deployment changes the URL and the secret must be updated.
