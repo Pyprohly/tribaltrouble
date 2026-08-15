@@ -112,27 +112,40 @@ fun parseCsv(rawText: String): List<List<String>> {
     return rows
 }
 
-// (bundle, key) -> values in `locales` order. Columns are matched by header name so a
-// newly added language (missing from the sheet) reads as untranslated instead of failing.
-fun readSheetCsv(path: String): LinkedHashMap<Pair<String, String>, List<String>> {
+// Sheet contents: `values` holds the known locales in `locales` order; `extras` holds
+// columns for languages not (yet) registered in `localeNames`, passed through the sync
+// verbatim so translator-added columns survive until the language is wired into the game.
+class SheetData(
+    val values: LinkedHashMap<Pair<String, String>, List<String>>,
+    val extraHeaders: List<String>,
+    val extras: Map<Pair<String, String>, List<String>>,
+)
+
+// Columns are matched by header name so a newly added language (missing from the sheet)
+// reads as untranslated instead of failing.
+fun readSheetCsv(path: String): SheetData {
     val csvFile = File(path).takeIf { it.isAbsolute } ?: rootDir.resolve(path)
     val rows = parseCsv(csvFile.readText(Charsets.UTF_8))
     val header = rows.firstOrNull() ?: emptyList()
     require(header.take(3) == listOf("File", "Key", "English")) {
         "Unexpected header in $path.\nExpected to start with: File,Key,English\nFound: $header"
     }
-    header.drop(3).filter { it !in localeNames }.forEach {
-        logger.warn("Sheet column \"$it\" is not a known language; its values will be dropped")
+    val extraHeaders = header.drop(3).filter { it !in localeNames }
+    extraHeaders.forEach {
+        logger.warn("Sheet column \"$it\" is not a registered language; passing it through unsynced")
     }
     val columns = localeNames.map { header.indexOf(it) }
     columns.forEachIndexed { i, c ->
         if (c < 0) logger.warn("Sheet has no ${localeNames[i]} column yet; treating it as untranslated")
     }
-    val map = LinkedHashMap<Pair<String, String>, List<String>>()
+    val extraColumns = extraHeaders.map { header.indexOf(it) }
+    val values = LinkedHashMap<Pair<String, String>, List<String>>()
+    val extras = LinkedHashMap<Pair<String, String>, List<String>>()
     rows.drop(1).filter { it.size >= 2 && it[0].isNotEmpty() }.forEach { r ->
-        map[r[0] to r[1]] = columns.map { c -> if (c >= 0) r.getOrElse(c) { "" } else "" }
+        values[r[0] to r[1]] = columns.map { c -> if (c >= 0) r.getOrElse(c) { "" } else "" }
+        extras[r[0] to r[1]] = extraColumns.map { c -> r.getOrElse(c) { "" } }
     }
-    return map
+    return SheetData(values, extraHeaders, extras)
 }
 
 tasks.register("exportTranslations") {
@@ -141,11 +154,13 @@ tasks.register("exportTranslations") {
     val sheetCsv = providers.gradleProperty("sheetCsv").orNull
     val output = layout.buildDirectory.file("translations.csv")
     doLast {
-        val sheet = sheetCsv?.let { readSheetCsv(it) } ?: linkedMapOf()
+        val sheetData = sheetCsv?.let { readSheetCsv(it) }
+        val sheet = sheetData?.values ?: linkedMapOf()
+        val extraHeaders = sheetData?.extraHeaders ?: emptyList()
         val seen = mutableSetOf<Pair<String, String>>()
         val conflicts = mutableListOf<String>()
         var newKeys = 0
-        val lines = mutableListOf(csvHeader.joinToString(",") { csvField(it) })
+        val lines = mutableListOf((csvHeader + extraHeaders).joinToString(",") { csvField(it) })
         findBundles().forEach { (bundle, baseFile) ->
             val english = parseProperties(baseFile)
             val localeEntries = locales.map { loc ->
@@ -167,7 +182,8 @@ tasks.register("exportTranslations") {
                         }
                     }
                 }
-                lines.add((listOf(bundle, key, en) + merged).joinToString(",") { csvField(it) })
+                val extra = sheetData?.extras?.get(bundle to key) ?: extraHeaders.map { "" }
+                lines.add((listOf(bundle, key, en) + merged + extra).joinToString(",") { csvField(it) })
             }
         }
         val out = output.get().asFile
@@ -194,7 +210,7 @@ tasks.register("importTranslations") {
     val sheetCsv = providers.gradleProperty("sheetCsv").orNull
     doLast {
         requireNotNull(sheetCsv) { "Pass the downloaded sheet: -PsheetCsv=path/to/sheet.csv" }
-        val sheet = readSheetCsv(sheetCsv)
+        val sheet = readSheetCsv(sheetCsv).values
         val bundles = findBundles()
         sheet.keys.filter { it.first !in bundles }.forEach {
             logger.warn("Sheet row for unknown bundle, ignored: ${it.first}/${it.second}")

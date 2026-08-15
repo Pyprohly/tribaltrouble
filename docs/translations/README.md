@@ -75,8 +75,12 @@ creating a brand-new deployment changes the URL and the secret must be updated.
 
 The sheet itself needs no manual migration: columns are matched by header name, a
 missing column just reads as untranslated, and the next sync writes the sheet back with
-the new column in place (machine drafts included). Renaming or hand-adding sheet columns
-is not supported; unknown column names are dropped with a warning in the workflow log.
+the new column in place (machine drafts included). Translators can also start a language
+by hand: a column whose header is not a registered language is passed through the sync
+untouched (kept in the sheet, no machine drafts, not imported into the game) until the
+language is registered as above, using the same column name. Renaming a registered
+column is not supported; its values would stop syncing and be treated as an unregistered
+language instead.
 
 ## Translating
 
