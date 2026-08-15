@@ -61,8 +61,9 @@ jobs:
         run: |
           # note: no -X POST; it would pin the method through Apps Script's 302 redirect
           # and drop the body, causing a 411 from Google
+          LANGS=$(python3 -c "import urllib.parse; print(urllib.parse.quote(open('tt/build/sheet-langs.txt').read(), safe=''))")
           RESPONSE=$(curl -sSfL --data-binary @tt/build/translations.csv \
-            -H "Content-Type: text/csv" "${SHEET_URL}?token=${SHEET_TOKEN}")
+            -H "Content-Type: text/csv" "${SHEET_URL}?token=${SHEET_TOKEN}&langs=${LANGS}")
           echo "$RESPONSE"
           echo "$RESPONSE" | grep -q '^OK ' || { echo "::error::Sheet update failed"; exit 1; }
 

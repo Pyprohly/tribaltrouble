@@ -10,8 +10,21 @@
 //                  next sync freezes the formula into plain text, so machine vs human
 //                  authorship stays visible. Clear the tint when a human reviews a cell.
 
+// Fallback column-name -> Google Translate code map, used only when a POST does not
+// carry a ?langs= parameter (the sync workflow always sends one, generated from the
+// registered languages in tt/translations.gradle.kts, so new languages need no edit here).
 var LANGS = { Danish: 'da', German: 'de', Spanish: 'es', Italian: 'it', Portuguese: 'pt' };
 var MT_COLOR = '#fff2cc';
+
+function langsFrom_(e) {
+  if (!e.parameter.langs) return LANGS;
+  var out = {};
+  e.parameter.langs.split(',').forEach(function (pair) {
+    var i = pair.indexOf(':');
+    if (i > 0) out[pair.slice(0, i)] = pair.slice(i + 1);
+  });
+  return out;
+}
 
 function doGet(e) {
   checkToken_(e);
@@ -36,6 +49,7 @@ function doPost(e) {
     while (row.length < width) row.push('');
     return row.slice(0, width);
   });
+  var langs = langsFrom_(e);
   var sheet = sheet_();
   var mtCells = machineTintedCells_(sheet); // remember authorship before wiping
   sheet.clearContents();
@@ -52,7 +66,7 @@ function doPost(e) {
     var rowBg = [];
     for (var c = 0; c < width; c++) {
       var bg = null;
-      if (r > 0 && c >= 3 && LANGS[padded[0][c]]) {
+      if (r > 0 && c >= 3 && langs[padded[0][c]]) {
         // resource paths (values like /textures/gui/...) are localized by hand, never drafted
         if (padded[r][c] === '' && padded[r][2] !== '' && padded[r][2].charAt(0) !== '/') {
           drafts.push([r, c]);
@@ -69,7 +83,7 @@ function doPost(e) {
   drafts.forEach(function (rc) {
     sheet.getRange(rc[0] + 1, rc[1] + 1)
       .setNumberFormat('General')
-      .setFormula('=GOOGLETRANSLATE($C' + (rc[0] + 1) + ', "en", "' + LANGS[padded[0][rc[1]]] + '")');
+      .setFormula('=GOOGLETRANSLATE($C' + (rc[0] + 1) + ', "en", "' + langs[padded[0][rc[1]]] + '")');
   });
   return ContentService.createTextOutput('OK ' + (padded.length - 1) + ' rows, ' + drafts.length + ' drafts');
 }

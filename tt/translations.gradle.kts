@@ -189,6 +189,10 @@ tasks.register("exportTranslations") {
         val out = output.get().asFile
         out.parentFile.mkdirs()
         out.writeText("\uFEFF" + lines.joinToString("\r\n") + "\r\n", Charsets.UTF_8)
+        // column-name -> Google Translate code mapping, sent along by the sync workflow so
+        // the sheet's Apps Script needs no edit when a language is registered here
+        out.resolveSibling("sheet-langs.txt")
+            .writeText(locales.indices.joinToString(",") { "${localeNames[it]}:${locales[it]}" })
         val dropped = sheet.keys.filter { it !in seen }
         if (dropped.isNotEmpty()) {
             logger.warn("Dropped ${dropped.size} sheet row(s) whose key no longer exists in the code:")

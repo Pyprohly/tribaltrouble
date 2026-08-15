@@ -64,11 +64,10 @@ creating a brand-new deployment changes the URL and the secret must be updated.
 ## Adding a language
 
 1. Add the locale code and column name to `locales`/`localeNames` in
-   `tt/translations.gradle.kts`.
-2. Add the column name and Google Translate code to `LANGS` in the sheet's Apps Script
-   (Deploy > Manage deployments > edit > new version; the URL stays the same). Without
-   this the column still syncs, it just gets no machine drafts.
-3. Game support is separate: add the locale to `tt/src/main/java/com/oddlabs/tt/gui/Languages.java`
+   `tt/translations.gradle.kts`. That's the only sync-side change: the workflow passes
+   the mapping to the sheet on every sync, and the locale code doubles as the Google
+   Translate code for the machine drafts.
+2. Game support is separate: add the locale to `tt/src/main/java/com/oddlabs/tt/gui/Languages.java`
    (code + native name) and a flag icon to the skin, and check the font atlases cover the
    language's characters (`assets/build.gradle.kts` bakes codepoints 0-1199; Latin-script
    languages are fine, other scripts need the range or `additional_chars` extended).
