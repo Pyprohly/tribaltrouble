@@ -50,8 +50,7 @@ jobs:
             ./gradlew :tt:exportTranslations -PsheetCsv=sheet.csv | tee merge-log.txt
           else
             echo "::error::Sheet response is neither empty nor a translations CSV:"
-            wc -c sheet.csv
-            od -c sheet.csv | head -10
+            head -3 sheet.csv
             exit 1
           fi
 
