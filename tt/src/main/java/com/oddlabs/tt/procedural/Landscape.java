@@ -641,7 +641,7 @@ public final class Landscape {
         if (DEBUG) slope.copy().dynamicRange().toLayer().saveAsPNG("slope");
         relheight = height.copy().relativeIntensityNormalized(Math.max(1, unit_grids_per_world >> 5));
         if (DEBUG) relheight.toLayer().saveAsPNG("relheight");
-        if (Globals.SHIPS_ENABLED) {
+        if (archipelago) {
             access = generateThresholdMap(slope, access_threshold);
         } else {
             access = generateThresholdMap(slope, access_threshold).largestConnected(1f);
@@ -718,7 +718,7 @@ public final class Landscape {
         if (DEBUG) slope.copy().dynamicRange().toLayer().saveAsPNG("slope");
         relheight = height.copy().relativeIntensityNormalized(Math.max(1, unit_grids_per_world >> 5));
         if (DEBUG) relheight.toLayer().saveAsPNG("relheight");
-        if (Globals.SHIPS_ENABLED) {
+        if (archipelago) {
             access = generateThresholdMap(slope, access_threshold);
         } else {
             access = generateThresholdMap(slope, access_threshold).largestConnected(1f);
