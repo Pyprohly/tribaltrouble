@@ -410,6 +410,8 @@ public final class Client implements MatchmakingServerInterface, ConnectionInter
                 GameHost[] game_hosts_chunk = new GameHost[CHUNK_SIZE];
                 while (it.hasNext()) {
                     Client client = (Client) it.next();
+                    // Only advertise games this client can actually play
+                    if (client.getSimVersion() != sim_version) continue;
                     Game game = client.getCurrentGame();
                     int host_id = client.getHostID();
                     game_hosts_chunk[chunk_index++] = new GameHost(game, host_id, client.getSimVersion());
@@ -479,7 +481,9 @@ public final class Client implements MatchmakingServerInterface, ConnectionInter
         HostSequenceID host_seq_id = new HostSequenceID(getHostID(), seq);
         Client client = server.getClientFromID(address_to);
         tunnels.put(host_seq_id, client);
-        if (client != null) {
+        // Refuse tunnels to sim-incompatible game hosts; the filtered game list
+        // already hides them, this guards clients that bypass it
+        if (client != null && (!game_hosts.contains(client) || client.getSimVersion() == sim_version)) {
             client.tunnelOpened(host_seq_id, remote_address, local_remote_address, active_profile, this);
         } else
             tunnelClosed(host_seq_id);
