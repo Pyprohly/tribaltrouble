@@ -2,7 +2,7 @@ name: Sync Translations
 
 on:
   push:
-    branches: [ "main", "translations-sheet-sync" ]  # temporary test trigger (retry)
+    branches: [ "main" ]
     paths:
       - 'tt/src/main/resources/**/*.properties'
       - '.github/workflows/sync-translations.yml'
@@ -52,7 +52,7 @@ jobs:
             ./gradlew :tt:exportTranslations -PsheetCsv=sheet.csv | tee merge-log.txt
           else
             echo "::error::Sheet response is neither empty nor a translations CSV:"
-            wc -c sheet.csv; tail -c 400 sheet.csv; echo
+            head -3 sheet.csv
             exit 1
           fi
 
