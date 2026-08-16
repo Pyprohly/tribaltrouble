@@ -5,6 +5,20 @@ Translations are edited in a Google Sheet; a GitHub Actions workflow keeps the t
 sync and opens a PR when translations change. It runs on every push to `main` that
 touches `.properties` files, on a weekly schedule (Mondays 09:00 UTC), and on demand via Run workflow.
 
+## Contributing translations
+
+Translations live in a shared Google Sheet:
+<https://docs.google.com/spreadsheets/d/1fzArq902HrH9MXd2ohS89Ypvo5ZcJxqJCTWD7MtwYjE>
+
+Edit access is granted on request: join the [Discord](https://discord.gg/tribaltrouble)
+or open a GitHub issue, and say which language(s) you want to work on.
+
+Once you have access, only type in the language columns. Yellow cells are unreviewed
+machine drafts: fix the wording where needed, then clear the fill color to mark the
+cell human-approved. The "instructions" tab in the sheet has the full rules. Edits flow
+into the game automatically; the sync opens a pull request that a maintainer reviews,
+so nothing ships unseen.
+
 ## How it works
 
 Every sync is a two-way merge, never a blind overwrite:
