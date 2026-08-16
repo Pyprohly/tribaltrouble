@@ -169,6 +169,26 @@ public final class DBInterface {
         }
     }
 
+    /**
+     * Returns [word, match_type] rows from banned_words. Fails open (empty list) so a missing or
+     * broken table degrades to no filtering instead of blocking logins and profile creation.
+     */
+    public static List<String[]> getBannedWords() {
+        List<String[]> words = new ArrayList<>();
+        try (Connection conn = DBUtils.createDatabaseConnection(); PreparedStatement stmt = conn.prepareStatement(
+                "SELECT word, match_type FROM banned_words")) {
+            try (ResultSet result = stmt.executeQuery()) {
+                while (result.next()) {
+                    words.add(new String[]{result.getString("word"), result.getString("match_type")});
+                }
+            }
+        } catch (SQLException e) {
+            System.out.println("Exception: " + e);
+            MatchmakingServer.getLogger().throwing(DBInterface.class.getName(), "getBannedWords", e);
+        }
+        return words;
+    }
+
     public static void saveGameReport(int game_id, int tick, int[] team_score) {
         try (Connection conn = DBUtils.createDatabaseConnection(); PreparedStatement stmt = conn.prepareStatement(
                 "INSERT INTO game_report_teams (game_id, tick, team_index, score) VALUES (?, ?, ?, ?)")) {

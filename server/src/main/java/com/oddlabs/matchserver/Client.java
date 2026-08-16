@@ -621,10 +621,12 @@ public final class Client implements MatchmakingServerInterface, ConnectionInter
                 if (getProfile().getNick().toLowerCase().equals(nick.toLowerCase())) {
                     checkForRegisterProfileToDiscordResponse(nick, msg);
                 }
+                // Chat log keeps the uncensored message as moderation evidence
                 server.getChatLogger().info("To " + nick + ": " + formatChat(msg));
-                client.getClientInterface().receivePrivateMessage(getProfile().getNick(), msg);
+                String censored_msg = BannedWordFilter.censorChatMessage(msg);
+                client.getClientInterface().receivePrivateMessage(getProfile().getNick(), censored_msg);
                 if (client != this)
-                    getClientInterface().receivePrivateMessage(getProfile().getNick(), msg);
+                    getClientInterface().receivePrivateMessage(getProfile().getNick(), censored_msg);
             } else
                 getClientInterface().error(MatchmakingClientInterface.CHAT_ERROR_NO_SUCH_NICK);
         }
@@ -660,12 +662,13 @@ public final class Client implements MatchmakingServerInterface, ConnectionInter
                 client_interface.receivePrivateMessage("Server", "Sorry, only registered users are able to chat.");
                 return;
             }
-            String formatted_message = formatChat(msg);
-            server.getChatLogger().info(formatted_message);
-            current_room.sendMessage(getProfile().getNick(), msg);
+            // Chat log keeps the uncensored message as moderation evidence
+            server.getChatLogger().info(formatChat(msg));
+            String censored_msg = BannedWordFilter.censorChatMessage(msg);
+            current_room.sendMessage(getProfile().getNick(), censored_msg);
             DiscordBotService.getInstance().getChatroomCoordinator().ifPresent(
                     coordinator -> coordinator.sendDiscordMessage(current_room, getProfile().getNick(),
-                            formatted_message));
+                            formatChat(censored_msg)));
         }
     }
 
