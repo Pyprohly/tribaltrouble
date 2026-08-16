@@ -16,6 +16,12 @@ import java.nio.ByteBuffer
 import java.nio.charset.CharacterCodingException
 import java.nio.charset.CodingErrorAction
 import java.nio.charset.StandardCharsets
+import org.apache.commons.csv.CSVFormat
+
+buildscript {
+    repositories { mavenCentral() }
+    dependencies { classpath("org.apache.commons:commons-csv:1.14.0") }
+}
 
 val locales = listOf("da", "de", "es", "it", "pt")
 val localeNames = listOf("Danish", "German", "Spanish", "Italian", "Portuguese")
@@ -85,33 +91,9 @@ fun csvField(s: String): String =
         "\"" + s.replace("\"", "\"\"") + "\""
     } else s
 
-fun parseCsv(rawText: String): List<List<String>> {
-    val text = rawText.removePrefix("\uFEFF")
-    val rows = mutableListOf<List<String>>()
-    val row = mutableListOf<String>()
-    val field = StringBuilder()
-    var inQuotes = false
-    var i = 0
-    while (i < text.length) {
-        val c = text[i]
-        if (inQuotes) {
-            when {
-                c == '"' && text.getOrNull(i + 1) == '"' -> { field.append('"'); i++ }
-                c == '"' -> inQuotes = false
-                else -> field.append(c)
-            }
-        } else when (c) {
-            '"' -> inQuotes = true
-            ',' -> { row.add(field.toString()); field.setLength(0) }
-            '\r' -> {}
-            '\n' -> { row.add(field.toString()); field.setLength(0); rows.add(row.toList()); row.clear() }
-            else -> field.append(c)
-        }
-        i++
-    }
-    if (field.isNotEmpty() || row.isNotEmpty()) { row.add(field.toString()); rows.add(row.toList()) }
-    return rows
-}
+fun parseCsv(rawText: String): List<List<String>> =
+    CSVFormat.RFC4180.parse(java.io.StringReader(rawText.removePrefix("\uFEFF")))
+        .map { record -> record.toList() }
 
 // Sheet contents: `values` holds the known locales in `locales` order; `extras` holds
 // columns for languages not (yet) registered in `localeNames`, passed through the sync
