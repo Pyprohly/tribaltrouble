@@ -24,7 +24,7 @@ Everything below assumes you're working from `main` with the changes ready to sh
 
 ### 1. Bump version metadata if needed
 
-The release tag is `v<MAJOR>.<MINOR>.<PATCH>-<API>` (see [Versioning](#versioning)).
+The release tag is `v<MAJOR>.<MINOR>.<PATCH>-<API>.<SIM>` (see [Versioning](#versioning)).
 
 - **New minor or major release** (e.g., `2.0` → `2.1`): edit `version = "..."` in the root `build.gradle.kts`. PATCH resets to `0` automatically.
 - **API/protocol change**: bump `API_VERSION` in `common/src/main/java/com/oddlabs/util/Compatibility.java`. The `api-guard` CI job will fail your build if you changed a wire-protocol interface without bumping this. If the interface change is wire compatible (e.g., an addition old clients never call) and doesn't warrant a bump, a maintainer can instead record that decision with an empty ack commit:
@@ -60,7 +60,7 @@ Test on the prerelease as long as you want. When you're confident, move on.
 
 ### 4. Promote to stable
 
-Open the GitHub Actions tab → **Promote Release to Stable** → **Run workflow**. Enter the tag (e.g. `v2.0.14-103`). You can copy the tag from the GitHub Releases page or the workflow run that produced it.
+Open the GitHub Actions tab → **Promote Release to Stable** → **Run workflow**. Enter the tag (e.g. `v2.0.14-103.1`). You can copy the tag from the GitHub Releases page or the workflow run that produced it.
 
 The workflow:
 
@@ -83,24 +83,25 @@ Find the build matching the tag you promoted, change its branch from `prerelease
 
 To re-deploy an older release (e.g., the just-promoted one breaks something):
 
-1. Run **Promote Release to Stable** again with the previous good tag (e.g. `v2.0.13-103`).
+1. Run **Promote Release to Stable** again with the previous good tag (e.g. `v2.0.13-103.1`).
 2. On the Steam partner dashboard, move the older build back to `default`.
 
 The promote workflow always pulls from GitHub Release assets, so any past release tag is a valid rollback target. No rebuild needed; rollback takes ~2 minutes plus the manual Steam click.
 
 ## Versioning
 
-The canonical release identifier is **`v<MAJOR>.<MINOR>.<PATCH>-<API>`** (e.g., `v2.0.3-102`) and shows up everywhere: git tags, GitHub Release titles, artifact names, Steam build descriptions, the in-game About screen, and the matchmaker server logs.
+The canonical release identifier is **`v<MAJOR>.<MINOR>.<PATCH>-<API>.<SIM>`** (e.g., `v2.0.3-103.1`) and shows up everywhere: git tags, GitHub Release titles, artifact names, Steam build descriptions, the in-game About screen, and the matchmaker server logs.
 
-It's built from three sources:
+It's built from four sources:
 
 - **MAJOR.MINOR**: `version = "2.0"` in the root `build.gradle.kts`. Bump manually for a minor or major release.
 - **PATCH**: auto-computed as the number of commits since the commit that introduced the current `version = "<MAJOR>.<MINOR>"` line in `build.gradle.kts`. Every commit on top of the bump advances it by one.
-- **API**: `public static final int API_VERSION = 102;` in `common/src/main/java/com/oddlabs/util/Compatibility.java`. Bump only when the wire protocol between client and server changes (mismatched clients get rejected at login).
+- **API**: `API_VERSION` in `common/src/main/java/com/oddlabs/util/Compatibility.java`. Bump only when the wire protocol between client and server changes incompatibly (mismatched clients get rejected at login; a bump requires a server deploy from the bumped ref).
+- **SIM**: `SIM_VERSION` in the same file. Bump when a change alters lockstep simulation behavior (model, pathfinding, landscape generation, behaviours). Needs no server deploy; the server only lists and joins games between clients with equal sim versions. Clients too old to report one are treated as sim `0` (legacy).
 
 Both Gradle and CI compute PATCH from the same git history using identical logic (`git log -G'version = .<BASE>.' -- build.gradle.kts | head -1` as the anchor, then `git rev-list --count <anchor>..HEAD`), so the value the game and servers log (from the generated `BuildInfo.java` under `common/build/generated/sources/buildinfo/`) always matches the git tag and Steam build description of the build it came from.
 
-When you bump `MAJOR.MINOR` (say `2.0` → `2.1`), that bump commit becomes the new anchor. PATCH is `0` at the bump (yielding `v2.1.0-102`), `1` after the next commit (`v2.1.1-102`), and so on.
+When you bump `MAJOR.MINOR` (say `2.0` → `2.1`), that bump commit becomes the new anchor. PATCH is `0` at the bump (yielding `v2.1.0-103.1`), `1` after the next commit (`v2.1.1-103.1`), and so on.
 
 ## Required repository configuration
 
