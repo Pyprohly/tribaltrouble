@@ -113,16 +113,16 @@ public class BannedWordsCommand extends DiscordCommand {
                 .required(true)
                 .build();
         ApplicationCommandOptionChoiceData substring_choice = ApplicationCommandOptionChoiceData.builder()
-                .name("substring - matches anywhere, only for words with no innocent uses")
+                .name("substring")
                 .value(BannedWordFilter.MATCH_SUBSTRING)
                 .build();
         ApplicationCommandOptionChoiceData exact_choice = ApplicationCommandOptionChoiceData.builder()
-                .name("exact - matches whole names/words only")
+                .name("exact")
                 .value(BannedWordFilter.MATCH_EXACT)
                 .build();
         ApplicationCommandOptionData match_type_option = ApplicationCommandOptionData.builder()
                 .name(command_option_match_type)
-                .description("How the word is matched")
+                .description("substring matches anywhere (only for words with no innocent uses); exact matches whole names/words")
                 .type(ApplicationCommandOption.Type.STRING.getValue())
                 .required(true)
                 .addChoice(substring_choice)
