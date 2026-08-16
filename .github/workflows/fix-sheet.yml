@@ -1,0 +1,48 @@
+name: One-off sheet cell fix
+
+on:
+  push:
+    branches: [ "translations-sheet-sync" ]
+    paths:
+      - '.github/workflows/fix-sheet.yml'
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Blank the bad logo_file cells
+        env:
+          SHEET_URL: ${{ secrets.TRANSLATIONS_SHEET_URL }}
+          SHEET_TOKEN: ${{ secrets.TRANSLATIONS_SHEET_SYNC_TOKEN }}
+        shell: bash
+        run: |
+          TOKEN=$(python3 -c "import urllib.parse, os; print(urllib.parse.quote(os.environ['SHEET_TOKEN'], safe=''))")
+          curl -sSfL "${SHEET_URL}?token=${TOKEN}" -o sheet.csv
+          head -1 sheet.csv | grep -q '^File,Key,English' || { echo "::error::Unexpected sheet response"; exit 1; }
+
+          python3 - <<'EOF'
+          import csv, io
+          from pathlib import Path
+          text = Path('sheet.csv').read_text(encoding='utf-8')
+          rows = list(csv.reader(io.StringIO(text.lstrip('\ufeff'))))
+          header = rows[0]
+          da, es = header.index('Danish'), header.index('Spanish')
+          fixed = 0
+          for r in rows[1:]:
+              if len(r) > max(da, es) and r[0] == 'delegate/MainMenu' and r[1] == 'logo_file':
+                  print('before:', r)
+                  r[da] = ''
+                  r[es] = ''
+                  fixed += 1
+          assert fixed == 1, f"expected exactly one logo_file row, found {fixed}"
+          buf = io.StringIO()
+          csv.writer(buf, lineterminator='\r\n').writerows(rows)
+          Path('sheet.csv').write_text(buf.getvalue(), encoding='utf-8', newline='')
+          EOF
+
+          RESPONSE=$(curl -sSfL --data-binary @sheet.csv -H "Content-Type: text/csv" "${SHEET_URL}?token=${TOKEN}")
+          echo "$RESPONSE"
+          echo "$RESPONSE" | grep -q '^OK ' || { echo "::error::Sheet update failed"; exit 1; }
+
+          curl -sSfL "${SHEET_URL}?token=${TOKEN}" | grep ",logo_file," || true
+          echo "verify: row above should have empty Danish and Spanish cells"
