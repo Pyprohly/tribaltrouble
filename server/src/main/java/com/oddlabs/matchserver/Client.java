@@ -562,7 +562,7 @@ public final class Client implements MatchmakingServerInterface, ConnectionInter
             current_game = game;
             game_hosts.add(this);
             MatchmakingServer.getLogger().info("Game registered, name = " + current_game.getName());
-            DBInterface.createGame(game, getProfile().getNick());
+            DBInterface.createGame(game, getProfile().getNick(), sim_version);
 
             if (current_room != null) {
                 String formatted_message = getProfile().getNick() + " has created a game called \"" + current_game.getName() + "\".";
