@@ -55,8 +55,19 @@ function doPost(e) {
   var langs = langsFrom_(e);
   var sheet = sheet_();
   var mtCells = machineTintedCells_(sheet); // remember authorship before wiping
+  var oldRows = sheet.getLastRow();
+  var oldCols = sheet.getLastColumn();
   sheet.clearContents();
-  sheet.clearFormats();
+  // User formatting (wrapping, bold headers, ...) is deliberately preserved. Fill
+  // colors inside the data range stay reserved for the sync: setBackgrounds below
+  // rewrites them all every run. Only strips the data no longer covers need clearing,
+  // so stale tints cannot linger when the sheet shrinks.
+  if (oldRows > padded.length) {
+    sheet.getRange(padded.length + 1, 1, oldRows - padded.length, oldCols).clearFormat();
+  }
+  if (oldCols > width) {
+    sheet.getRange(1, width + 1, Math.max(oldRows, padded.length), oldCols - width).clearFormat();
+  }
   var range = sheet.getRange(1, 1, padded.length, width);
   range.setNumberFormat('@'); // plain text, so values like "1.1" don't become dates
   range.setValues(padded);
