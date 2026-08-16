@@ -88,6 +88,10 @@ To re-deploy an older release (e.g., the just-promoted one breaks something):
 
 The promote workflow always pulls from GitHub Release assets, so any past release tag is a valid rollback target. No rebuild needed; rollback takes ~2 minutes plus the manual Steam click.
 
+## Publishing feature betas to Steam
+
+Dispatch **Steam Publish** (`steam-publish.yml`) with a git ref and a target Steam branch to put a feature preview (archipelago, p2p, ...) on Steam without touching the release pipeline. The feature's configuration (flag flips, `SIM_VERSION` bump) lives as commits on the ref being built, not as pipeline options. The Steam branch must already exist on the partner dashboard, `prerelease` and `default` are refused, and the upload waits on the same `release` environment approval as everything else. Main game only; the demo needs its own steam-deploy step if ever wanted.
+
 ## Versioning
 
 The canonical release identifier is **`v<MAJOR>.<MINOR>.<PATCH>-<API>.<SIM>`** (e.g., `v2.0.3-103.1`) and shows up everywhere: git tags, GitHub Release titles, artifact names, Steam build descriptions, the in-game About screen, and the matchmaker server logs.
@@ -138,13 +142,13 @@ Create under **Settings → Environments → release** with required reviewers s
 
 ## Security notes
 
-- `game-ci/steam-deploy` is pinned to a commit SHA, not the `v3` tag, so a compromised upstream release can't silently swap action code under our `STEAM_CONFIG_VDF`. To bump: `gh api repos/game-ci/steam-deploy/git/refs/tags/v3 --jq '.object.sha'`, update both pin sites in `gradle.yml`, and leave the tag in a `# v3` trailing comment.
+- `game-ci/steam-deploy` is pinned to a commit SHA, not the `v3` tag, so a compromised upstream release can't silently swap action code under our `STEAM_CONFIG_VDF`. To bump: `gh api repos/game-ci/steam-deploy/git/refs/tags/v3 --jq '.object.sha'`, update the pin sites in `gradle.yml` and `steam-publish.yml`, and leave the tag in a `# v3` trailing comment.
 - First-party `actions/*` (checkout, setup-java, download-artifact, etc.) are conventionally trusted at major-version tags and aren't pinned.
 - Branch protection should restrict who can push to `release`. The `prerelease-gate` approval is defense-in-depth, not the primary access control.
 
 ## Where to find things
 
-- **Workflows**: `.github/workflows/gradle.yml`, `.github/workflows/promote-release.yml`
+- **Workflows**: `.github/workflows/gradle.yml`, `.github/workflows/promote-release.yml`, `.github/workflows/steam-publish.yml`
 - **Build version logic**: `build.gradle.kts` (root, computes BuildInfo) + `version` job in `gradle.yml`
 - **API guard**: tracked wire-protocol interfaces are listed in the `api-guard` job's `INTERFACE_FILES` array; compatible changes can be acknowledged without a bump via `[api-compat-ack]` commits (see [Cutting a release](#1-bump-version-metadata-if-needed))
 - **Website homepage** (download links pointing at the stable URLs): upstream `Tribal-Trouble/tribaltrouble` → branch `new_main` → `website/index.html`
