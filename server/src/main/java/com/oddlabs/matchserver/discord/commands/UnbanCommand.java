@@ -37,10 +37,19 @@ public class UnbanCommand extends DiscordCommand {
 
     @Override
     public ApplicationCommandRequest getCommand() {
-        ApplicationCommandOptionData nick_option = ApplicationCommandOptionData.builder().name(
-                command_option_nick).description("The in-game profile nick whose account to unban").type(
-                        ApplicationCommandOption.Type.STRING.getValue()).required(true).build();
-        return ApplicationCommandRequest.builder().name(command_name).description(
-                command_description).defaultMemberPermissions(BAN_MEMBERS_PERMISSION).addOption(nick_option).build();
+        // spotless:off
+        ApplicationCommandOptionData nick_option = ApplicationCommandOptionData.builder()
+                .name(command_option_nick)
+                .description("The in-game profile nick whose account to unban")
+                .type(ApplicationCommandOption.Type.STRING.getValue())
+                .required(true)
+                .build();
+        return ApplicationCommandRequest.builder()
+                .name(command_name)
+                .description(command_description)
+                .defaultMemberPermissions(BAN_MEMBERS_PERMISSION)
+                .addOption(nick_option)
+                .build();
+        // spotless:on
     }
 }

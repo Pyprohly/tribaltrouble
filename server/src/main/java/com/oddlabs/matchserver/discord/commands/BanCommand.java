@@ -44,14 +44,26 @@ public class BanCommand extends DiscordCommand {
 
     @Override
     public ApplicationCommandRequest getCommand() {
-        ApplicationCommandOptionData nick_option = ApplicationCommandOptionData.builder().name(
-                command_option_nick).description("The in-game profile nick whose account to ban").type(
-                        ApplicationCommandOption.Type.STRING.getValue()).required(true).build();
-        ApplicationCommandOptionData reason_option = ApplicationCommandOptionData.builder().name(
-                command_option_reason).description("Reason shown to the player and logged").type(
-                        ApplicationCommandOption.Type.STRING.getValue()).required(false).build();
-        return ApplicationCommandRequest.builder().name(command_name).description(
-                command_description).defaultMemberPermissions(BAN_MEMBERS_PERMISSION).addOption(nick_option).addOption(
-                        reason_option).build();
+        // spotless:off
+        ApplicationCommandOptionData nick_option = ApplicationCommandOptionData.builder()
+                .name(command_option_nick)
+                .description("The in-game profile nick whose account to ban")
+                .type(ApplicationCommandOption.Type.STRING.getValue())
+                .required(true)
+                .build();
+        ApplicationCommandOptionData reason_option = ApplicationCommandOptionData.builder()
+                .name(command_option_reason)
+                .description("Reason shown to the player and logged")
+                .type(ApplicationCommandOption.Type.STRING.getValue())
+                .required(false)
+                .build();
+        return ApplicationCommandRequest.builder()
+                .name(command_name)
+                .description(command_description)
+                .defaultMemberPermissions(BAN_MEMBERS_PERMISSION)
+                .addOption(nick_option)
+                .addOption(reason_option)
+                .build();
+        // spotless:on
     }
 }

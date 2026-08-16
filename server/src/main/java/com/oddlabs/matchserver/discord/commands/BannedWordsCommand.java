@@ -105,30 +105,55 @@ public class BannedWordsCommand extends DiscordCommand {
 
     @Override
     public ApplicationCommandRequest getCommand() {
-        ApplicationCommandOptionData word_option = ApplicationCommandOptionData.builder().name(
-                command_option_word).description("The word, plain letters/digits only").type(
-                        ApplicationCommandOption.Type.STRING.getValue()).required(true).build();
-        ApplicationCommandOptionChoiceData substring_choice = ApplicationCommandOptionChoiceData.builder().name(
-                "substring - matches anywhere, only for words with no innocent uses").value(
-                        BannedWordFilter.MATCH_SUBSTRING).build();
-        ApplicationCommandOptionChoiceData exact_choice = ApplicationCommandOptionChoiceData.builder().name(
-                "exact - matches whole names/words only").value(BannedWordFilter.MATCH_EXACT).build();
-        ApplicationCommandOptionData match_type_option = ApplicationCommandOptionData.builder().name(
-                command_option_match_type).description("How the word is matched").type(
-                        ApplicationCommandOption.Type.STRING.getValue()).required(true).addChoice(
-                                substring_choice).addChoice(exact_choice).build();
-        ApplicationCommandOptionData add_subcommand = ApplicationCommandOptionData.builder().name(
-                subcommand_add).description("Adds a word to the banned word list").type(
-                        ApplicationCommandOption.Type.SUB_COMMAND.getValue()).addOption(word_option).addOption(
-                                match_type_option).build();
-        ApplicationCommandOptionData remove_subcommand = ApplicationCommandOptionData.builder().name(
-                subcommand_remove).description("Removes a word from the banned word list").type(
-                        ApplicationCommandOption.Type.SUB_COMMAND.getValue()).addOption(word_option).build();
-        ApplicationCommandOptionData list_subcommand = ApplicationCommandOptionData.builder().name(
-                subcommand_list).description("Shows the banned word list").type(
-                        ApplicationCommandOption.Type.SUB_COMMAND.getValue()).build();
-        return ApplicationCommandRequest.builder().name(command_name).description(
-                command_description).defaultMemberPermissions(BAN_MEMBERS_PERMISSION).addOption(
-                        add_subcommand).addOption(remove_subcommand).addOption(list_subcommand).build();
+        // spotless:off
+        ApplicationCommandOptionData word_option = ApplicationCommandOptionData.builder()
+                .name(command_option_word)
+                .description("The word, plain letters/digits only")
+                .type(ApplicationCommandOption.Type.STRING.getValue())
+                .required(true)
+                .build();
+        ApplicationCommandOptionChoiceData substring_choice = ApplicationCommandOptionChoiceData.builder()
+                .name("substring - matches anywhere, only for words with no innocent uses")
+                .value(BannedWordFilter.MATCH_SUBSTRING)
+                .build();
+        ApplicationCommandOptionChoiceData exact_choice = ApplicationCommandOptionChoiceData.builder()
+                .name("exact - matches whole names/words only")
+                .value(BannedWordFilter.MATCH_EXACT)
+                .build();
+        ApplicationCommandOptionData match_type_option = ApplicationCommandOptionData.builder()
+                .name(command_option_match_type)
+                .description("How the word is matched")
+                .type(ApplicationCommandOption.Type.STRING.getValue())
+                .required(true)
+                .addChoice(substring_choice)
+                .addChoice(exact_choice)
+                .build();
+        ApplicationCommandOptionData add_subcommand = ApplicationCommandOptionData.builder()
+                .name(subcommand_add)
+                .description("Adds a word to the banned word list")
+                .type(ApplicationCommandOption.Type.SUB_COMMAND.getValue())
+                .addOption(word_option)
+                .addOption(match_type_option)
+                .build();
+        ApplicationCommandOptionData remove_subcommand = ApplicationCommandOptionData.builder()
+                .name(subcommand_remove)
+                .description("Removes a word from the banned word list")
+                .type(ApplicationCommandOption.Type.SUB_COMMAND.getValue())
+                .addOption(word_option)
+                .build();
+        ApplicationCommandOptionData list_subcommand = ApplicationCommandOptionData.builder()
+                .name(subcommand_list)
+                .description("Shows the banned word list")
+                .type(ApplicationCommandOption.Type.SUB_COMMAND.getValue())
+                .build();
+        return ApplicationCommandRequest.builder()
+                .name(command_name)
+                .description(command_description)
+                .defaultMemberPermissions(BAN_MEMBERS_PERMISSION)
+                .addOption(add_subcommand)
+                .addOption(remove_subcommand)
+                .addOption(list_subcommand)
+                .build();
+        // spotless:on
     }
 }
