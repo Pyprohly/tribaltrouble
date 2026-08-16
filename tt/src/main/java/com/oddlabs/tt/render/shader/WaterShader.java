@@ -22,6 +22,10 @@ public final class WaterShader extends ShaderProgram implements FogShader, LitSh
         String CAMERA_POS = "u_cameraPos";
         String WATER_HEIGHT = "u_waterHeight";
 
+        String WAVE_DIR_LENGTH = "u_waveDirLength";
+        String WAVE_AMP_STEEP = "u_waveAmpSteep";
+        String WAVE_TIME = "u_waveTime";
+
         String HEIGHT_MAP = "u_HeightMap";
         String WORLD_SIZE = "u_WorldSize";
         String DEPTH_SCALE = "u_depthScale";
@@ -41,7 +45,7 @@ public final class WaterShader extends ShaderProgram implements FogShader, LitSh
             #version 410 core
             """ + GLOBAL_STATE_BLOCK + """
             layout(location = 0) in vec3 in_Position;
-            layout(location = 4) in vec2 in_InstanceOffset;
+            layout(location = 4) in vec3 in_InstanceOffset;
 
             uniform mat4 u_modelViewMatrix;
             uniform mat4 u_reflectionVP;
@@ -51,6 +55,9 @@ public final class WaterShader extends ShaderProgram implements FogShader, LitSh
             uniform vec2 u_scrollOffset1;
             uniform float u_waterHeight;
             uniform float u_WorldSize;
+            uniform vec4 u_waveDirLength[3];
+            uniform vec4 u_waveAmpSteep[3];
+            uniform float u_waveTime;
 
             out vec2 v_texCoord0;
             out vec2 v_texCoord1;
@@ -59,8 +66,54 @@ public final class WaterShader extends ShaderProgram implements FogShader, LitSh
             out vec3 v_worldPos;
             out vec4 v_reflectionClipPos;
 
+            const float PI = 3.14159265358979;
+            const float GRAVITY = 9.81;
+
+            void addGerstnerWave(int i, vec2 baseXY, float waveScale, inout vec3 disp, inout vec3 normal) {
+                float waveLength = u_waveDirLength[i].z;
+                vec2 waveDir = u_waveDirLength[i].xy;
+                float waveAmplitude = u_waveAmpSteep[i].x;
+                float waveSteepness = u_waveAmpSteep[i].y;
+
+                float k = 2.0 * PI / waveLength;
+                float omega = sqrt(GRAVITY * k);
+                float phase = k * dot(waveDir, baseXY) - omega * u_waveTime;
+                float s = sin(phase);
+                float c = cos(phase);
+                float A = waveAmplitude * waveScale;
+
+                disp.x += waveSteepness * A * waveDir.x * c;
+                disp.y += waveSteepness * A * waveDir.y * c;
+                disp.z += A * s;
+
+                float WA = k * A;
+                normal.x -= WA * waveDir.x * c;
+                normal.y -= WA * waveDir.y * c;
+                normal.z -= waveSteepness * WA * s;
+            }
+
             void main() {
-                vec3 worldPos = vec3(in_InstanceOffset + in_Position.xy, u_waterHeight + in_Position.z);
+                vec2 baseXY = in_InstanceOffset.xy + in_Position.xy;
+                float baseZ = u_waterHeight + in_Position.z;
+
+                vec3 disp = vec3(0.0);
+                vec3 normal = vec3(0.0, 0.0, 1.0);
+
+                // If amplitude is 0, waves are effectively disabled for that channel
+                if (u_waveAmpSteep[0].x > 0.0001 && in_InstanceOffset.z > 0.0) {
+                    float distToEdgeX = min(baseXY.x, u_WorldSize - baseXY.x);
+                    float distToEdgeY = min(baseXY.y, u_WorldSize - baseXY.y);
+                    float distToEdge = min(distToEdgeX, distToEdgeY);
+
+                    float waveScale = clamp(distToEdge / 16.0, 0.0, 1.0);
+                    waveScale *= in_InstanceOffset.z;
+
+                    addGerstnerWave(0, baseXY, waveScale, disp, normal);
+                    addGerstnerWave(1, baseXY, waveScale, disp, normal);
+                    addGerstnerWave(2, baseXY, waveScale, disp, normal);
+                }
+
+                vec3 worldPos = vec3(baseXY + disp.xy, baseZ + disp.z);
                 v_worldPos = worldPos;
 
                 vec4 viewPosition = u_modelViewMatrix * vec4(worldPos, 1.0);

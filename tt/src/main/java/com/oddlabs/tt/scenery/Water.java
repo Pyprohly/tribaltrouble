@@ -49,9 +49,40 @@ public final class Water implements AutoCloseable {
     /** Depth scale (in meters) over which Viking (Northern) water alpha transitions. */
     private static final float VIKING_DEPTH_SCALE = 2.0f;
     /** Minimum alpha (transparency) of Viking water at the shoreline. */
-    private static final float VIKING_MIN_ALPHA = 0.35f;
+    private static final float VIKING_MIN_ALPHA = 0.05f;
     /** Maximum alpha (transparency) of Viking water in deep ocean. */
     private static final float VIKING_MAX_ALPHA = 0.60f;
+
+    public static final int WAVE_COUNT = 3;
+    public static final float WAVE_AMPLITUDE_BASE = 0.15f;
+    public static final float WAVE_STEEPNESS_BASE = 0.5f;
+
+    public static final float WAVE_AMPLITUDE_SCALE_2 = 0.53f;
+    public static final float WAVE_AMPLITUDE_SCALE_3 = 0.27f;
+
+    public static final float VIKING_AMPLITUDE_MULTIPLIER = 1.5f;
+    public static final float VIKING_STEEPNESS_MULTIPLIER = 1.2f;
+    public static final float VIKING_WAVE_SPEED = 0.8f;
+
+    public static final float NATIVE_WAVE_SPEED = 0.4f;
+
+    public static final float WAVE_DIR_X_1 = 1.0f;
+    public static final float WAVE_DIR_X_2 = 0.707f;
+    public static final float WAVE_DIR_X_3 = -0.5f;
+    public static final float WAVE_DIR_Y_1 = 0.0f;
+    public static final float WAVE_DIR_Y_2 = 0.707f;
+    public static final float WAVE_DIR_Y_3 = 0.866f;
+
+    public static final float NATIVE_WAVE_LEN_1 = 60.0f;
+    public static final float NATIVE_WAVE_LEN_2 = 35.0f;
+    public static final float NATIVE_WAVE_LEN_3 = 18.0f;
+
+    public static final float VIKING_WAVE_LEN_1 = 50.0f;
+    public static final float VIKING_WAVE_LEN_2 = 28.0f;
+    public static final float VIKING_WAVE_LEN_3 = 14.0f;
+
+    private static final float[] WAVE_DIRS_X = new float[]{WAVE_DIR_X_1, WAVE_DIR_X_2, WAVE_DIR_X_3};
+    private static final float[] WAVE_DIRS_Y = new float[]{WAVE_DIR_Y_1, WAVE_DIR_Y_2, WAVE_DIR_Y_3};
 
     private final Landscape.@NonNull TerrainType terrain;
     private final @NonNull Sky sky;
@@ -84,9 +115,38 @@ public final class Water implements AutoCloseable {
     private float lastTime = 0f;
     private final Random random = new Random();
 
+    private float waveTime = 0f;
+    private final float @NonNull [] waveAmplitudes;
+    private final float @NonNull [] waveSteepness;
+    private final float @NonNull [] waveLengths;
+    private final float waveSpeed;
+
     public Water(@NonNull HeightMap heightmap, Landscape.@NonNull TerrainType terrain, @NonNull Sky sky,
             @NonNull MatrixStack modelViewStack, @NonNull MatrixStack projectionStack) {
         this.terrain = terrain;
+        waveAmplitudes = switch (terrain) {
+            case VIKING ->
+                new float[]{WAVE_AMPLITUDE_BASE * VIKING_AMPLITUDE_MULTIPLIER, WAVE_AMPLITUDE_BASE * VIKING_AMPLITUDE_MULTIPLIER * WAVE_AMPLITUDE_SCALE_2, WAVE_AMPLITUDE_BASE * VIKING_AMPLITUDE_MULTIPLIER * WAVE_AMPLITUDE_SCALE_3
+                };
+            case NATIVE ->
+                new float[]{WAVE_AMPLITUDE_BASE, WAVE_AMPLITUDE_BASE * WAVE_AMPLITUDE_SCALE_2, WAVE_AMPLITUDE_BASE * WAVE_AMPLITUDE_SCALE_3
+                };
+        };
+        waveSteepness = switch (terrain) {
+            case VIKING ->
+                new float[]{WAVE_STEEPNESS_BASE * VIKING_STEEPNESS_MULTIPLIER, WAVE_STEEPNESS_BASE * VIKING_STEEPNESS_MULTIPLIER, WAVE_STEEPNESS_BASE * VIKING_STEEPNESS_MULTIPLIER
+                };
+            case NATIVE -> new float[]{WAVE_STEEPNESS_BASE, WAVE_STEEPNESS_BASE, WAVE_STEEPNESS_BASE
+            };
+        };
+        waveLengths = switch (terrain) {
+            case VIKING -> new float[]{VIKING_WAVE_LEN_1, VIKING_WAVE_LEN_2, VIKING_WAVE_LEN_3};
+            case NATIVE -> new float[]{NATIVE_WAVE_LEN_1, NATIVE_WAVE_LEN_2, NATIVE_WAVE_LEN_3};
+        };
+        waveSpeed = switch (terrain) {
+            case VIKING -> VIKING_WAVE_SPEED;
+            case NATIVE -> NATIVE_WAVE_SPEED;
+        };
         TextureGenerator ocean_desc = new GeneratorOcean(terrain);
         ocean = Resources.findResource(ocean_desc);
         this.heightMap = heightmap;
@@ -235,6 +295,14 @@ public final class Water implements AutoCloseable {
             waterShader.setUniform(WaterShader.Uniforms.MIN_ALPHA, minAlpha);
             waterShader.setUniform(WaterShader.Uniforms.MAX_ALPHA, maxAlpha);
 
+            for (int i = 0; i < WAVE_COUNT; i++) {
+                waterShader.setUniform(WaterShader.Uniforms.WAVE_DIR_LENGTH + "[" + i + "]", WAVE_DIRS_X[i],
+                        WAVE_DIRS_Y[i], waveLengths[i], 0f);
+                waterShader.setUniform(WaterShader.Uniforms.WAVE_AMP_STEEP + "[" + i + "]", waveAmplitudes[i],
+                        waveSteepness[i], 0f, 0f);
+            }
+            waterShader.setUniform(WaterShader.Uniforms.WAVE_TIME, waveTime * waveSpeed);
+
             // Render Sky Water (Infinite Plane). u_waterHeight = 0 because Z is baked in.
             waterShader.setUniform(WaterShader.Uniforms.WATER_HEIGHT, heightMap.getSeaLevelMeters());
             skyWaterVao.bind();
@@ -257,10 +325,10 @@ public final class Water implements AutoCloseable {
                         float worldX = px * patchSize;
                         float worldY = py * patchSize;
                         if (oceanPatches.get(py * patchesPerWorld + px)) {
-                            oceanInstanceBuffer = addInstance(oceanInstanceBuffer, worldX, worldY);
+                            oceanInstanceBuffer = addInstance(oceanInstanceBuffer, worldX, worldY, 1.0f);
                             oceanCount++;
                         } else {
-                            inlandInstanceBuffer = addInstance(inlandInstanceBuffer, worldX, worldY);
+                            inlandInstanceBuffer = addInstance(inlandInstanceBuffer, worldX, worldY, 0.0f);
                             inlandCount++;
                         }
                     }
@@ -286,6 +354,7 @@ public final class Water implements AutoCloseable {
         float dt = currentTime - lastTime;
         if (dt < 0 || dt > 1.0f) dt = 0.016f;
         lastTime = currentTime;
+        waveTime += dt;
 
         timeSinceChange += dt;
         if (timeSinceChange > changeInterval) {
@@ -325,8 +394,8 @@ public final class Water implements AutoCloseable {
     /**
      * Appends instance offsets to the buffer, resizing the buffer if necessary.
      */
-    private @NonNull FloatBuffer addInstance(@NonNull FloatBuffer buffer, float x, float y) {
-        if (buffer.remaining() < 2) {
+    private @NonNull FloatBuffer addInstance(@NonNull FloatBuffer buffer, float x, float y, float z) {
+        if (buffer.remaining() < 3) {
             int newCapacity = buffer.capacity() * 2;
             FloatBuffer newBuffer = BufferUtils.createFloatBuffer(newCapacity);
             buffer.flip();
@@ -335,6 +404,7 @@ public final class Water implements AutoCloseable {
         }
         buffer.put(x);
         buffer.put(y);
+        buffer.put(z);
         return buffer;
     }
 
@@ -344,7 +414,7 @@ public final class Water implements AutoCloseable {
     private @NonNull FloatVBO uploadAndDraw(int count, @NonNull FloatBuffer buffer, @NonNull FloatVBO vbo) {
         buffer.flip();
 
-        int requiredBytes = count * 2 * Float.BYTES;
+        int requiredBytes = count * 3 * Float.BYTES;
         if (vbo.capacity() < requiredBytes) {
             vbo.close();
             //noinspection resource
@@ -359,7 +429,7 @@ public final class Water implements AutoCloseable {
         // Setup instance attribute (Location 4: in_InstanceOffset)
         int offsetLoc = 4;
         GL20.glEnableVertexAttribArray(offsetLoc);
-        GL20.glVertexAttribPointer(offsetLoc, 2, GL11.GL_FLOAT, false, 0, 0);
+        GL20.glVertexAttribPointer(offsetLoc, 3, GL11.GL_FLOAT, false, 0, 0);
         GL33.glVertexAttribDivisor(offsetLoc, 1);
 
         patchMesh.drawInstanced(count);
