@@ -189,6 +189,44 @@ public final class DBInterface {
         return words;
     }
 
+    public static boolean addBannedWord(String word, String match_type) {
+        try (Connection conn = DBUtils.createDatabaseConnection(); PreparedStatement stmt = conn.prepareStatement(
+                "INSERT IGNORE INTO banned_words (word, match_type) VALUES (?, ?)")) {
+            stmt.setString(1, word);
+            stmt.setString(2, match_type);
+            return stmt.executeUpdate() > 0;
+        } catch (SQLException e) {
+            System.out.println("Exception: " + e);
+            MatchmakingServer.getLogger().throwing(DBInterface.class.getName(), "addBannedWord", e);
+            throw new RuntimeException(e);
+        }
+    }
+
+    public static boolean removeBannedWord(String word) {
+        try (Connection conn = DBUtils.createDatabaseConnection(); PreparedStatement stmt = conn.prepareStatement(
+                "DELETE FROM banned_words WHERE word = ?")) {
+            stmt.setString(1, word);
+            return stmt.executeUpdate() > 0;
+        } catch (SQLException e) {
+            System.out.println("Exception: " + e);
+            MatchmakingServer.getLogger().throwing(DBInterface.class.getName(), "removeBannedWord", e);
+            throw new RuntimeException(e);
+        }
+    }
+
+    public static boolean setBannedByNick(String nick, boolean banned) {
+        try (Connection conn = DBUtils.createDatabaseConnection(); PreparedStatement stmt = conn.prepareStatement(
+                "UPDATE registrations R INNER JOIN profiles P ON P.reg_id = R.id SET" + " R.banned = ? WHERE lower(P.nick) = lower(?)")) {
+            stmt.setBoolean(1, banned);
+            stmt.setString(2, nick);
+            return stmt.executeUpdate() > 0;
+        } catch (SQLException e) {
+            System.out.println("Exception: " + e);
+            MatchmakingServer.getLogger().throwing(DBInterface.class.getName(), "setBannedByNick", e);
+            throw new RuntimeException(e);
+        }
+    }
+
     public static void saveGameReport(int game_id, int tick, int[] team_score) {
         try (Connection conn = DBUtils.createDatabaseConnection(); PreparedStatement stmt = conn.prepareStatement(
                 "INSERT INTO game_report_teams (game_id, tick, team_index, score) VALUES (?, ?, ?, ?)")) {
