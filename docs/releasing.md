@@ -27,7 +27,7 @@ Everything below assumes you're working from `main` with the changes ready to sh
 The release tag is `v<MAJOR>.<MINOR>.<PATCH>-<API>.<SIM>` (see [Versioning](#versioning)).
 
 - **New minor or major release** (e.g., `2.0` → `2.1`): edit `version = "..."` in the root `build.gradle.kts`. PATCH resets to `0` automatically.
-- **API/protocol change**: bump `API_VERSION` in `common/src/main/java/com/oddlabs/util/Compatibility.java`. The `api-guard` CI job will fail your build if you changed a wire-protocol interface without bumping this. If the interface change is wire compatible (e.g., an addition old clients never call) and doesn't warrant a bump, a maintainer can instead record that decision with an empty ack commit:
+- **API/protocol change**: bump `API_VERSION` in `common/src/main/java/com/oddlabs/util/Compatibility.java`. The `api-guard` CI job will fail your build if you changed a wire-protocol interface without bumping this. If the interface change is wire compatible and doesn't warrant a bump, a maintainer can instead record that decision with an empty ack commit. (ARMI dispatches by index into the interface's methods sorted by name, so an added method is only compatible if its name sorts after every method ever shipped in that interface; anything else shifts old clients' indices and needs the bump.)
 
   ```bash
   git commit --allow-empty -m "<why the change is compatible> [api-compat-ack]"
@@ -102,6 +102,12 @@ It's built from four sources:
 Both Gradle and CI compute PATCH from the same git history using identical logic (`git log -G'version = .<BASE>.' -- build.gradle.kts | head -1` as the anchor, then `git rev-list --count <anchor>..HEAD`), so the value the game and servers log (from the generated `BuildInfo.java` under `common/build/generated/sources/buildinfo/`) always matches the git tag and Steam build description of the build it came from.
 
 When you bump `MAJOR.MINOR` (say `2.0` → `2.1`), that bump commit becomes the new anchor. PATCH is `0` at the bump (yielding `v2.1.0-103.1`), `1` after the next commit (`v2.1.1-103.1`), and so on.
+
+### Bumping SIM_VERSION
+
+No CI guard is practical for sim compatibility; it is a review judgment. Rule of thumb: any change under `model/`, `pathfinder/`, `behaviour/`, or landscape/procedural generation that alters how game state evolves needs a `SIM_VERSION` bump. A bump needs no server deploy and locks nobody out; clients on different sim versions simply stop seeing each other's games. The number is a global claim of compatibility: every build that ships a given sim version promises bit-identical simulation with every other build shipping it, so concurrent feature betas must each take their own value.
+
+Sim versions are client-reported and unauthenticated. This is a coordination fence for honest clients, not a security boundary; a modified client that lies ends up in desynced (invalid) games, which is a moderation problem, not a protocol one.
 
 ## Required repository configuration
 
