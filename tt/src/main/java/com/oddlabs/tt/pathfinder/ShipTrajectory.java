@@ -86,6 +86,10 @@ public final class ShipTrajectory {
     }
 
     private Region findRegion(int grid_x, int grid_y) {
+        int size = grid.getGridSize();
+        if (grid_x < 0 || grid_x >= size || grid_y < 0 || grid_y >= size) {
+            return null;
+        }
         return grid.getRegion(grid_x, grid_y, UnitGrid.SEA);
     }
 

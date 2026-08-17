@@ -628,6 +628,7 @@ public class Ship extends Building implements Movable {
     protected void setTarget(@NonNull Target target, @NonNull Action action, boolean aggressive) {
         forceDecide();
         clearControllerStack();
+        pushController(new NullController(this));
         pushController(new SailController(this, target));
         free();
         occupy();
@@ -950,6 +951,7 @@ public class Ship extends Building implements Movable {
     public final void endTrip() {
         forceDecide();
         clearControllerStack();
+        pushController(new NullController(this));
         free();
         reinsert();
         occupy();

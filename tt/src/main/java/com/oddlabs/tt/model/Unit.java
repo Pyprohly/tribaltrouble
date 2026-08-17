@@ -158,7 +158,11 @@ public class Unit extends Selectable<UnitTemplate> implements Occupant, Movable 
 
     @Override
     protected final float getZError() {
-        return getLandscapeError();
+        if (on_ship) {
+            return 0.0f;
+        } else {
+            return getLandscapeError();
+        }
     }
 
     @Override
