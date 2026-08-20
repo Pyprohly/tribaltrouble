@@ -60,7 +60,7 @@ public final class ShipHR {
             alloc = new ShipAllocation(new Vector3f(x, y, z), new Vector2f(0.0f, 1.0f), ShipAllocation.STEERING);
             var owner = ship.getOwner();
             unit = new Unit(owner, x, y, null, owner.getRace().getUnitTemplate(Race.UNIT_PEON), null, false, false,
-                    false);
+                    true);
             unit.mount(ship, alloc);
         }
 
