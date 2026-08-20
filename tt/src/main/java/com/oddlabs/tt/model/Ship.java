@@ -429,7 +429,7 @@ public class Ship extends Building implements Movable {
     }
 
     private Unit createUnit(Target rally_point, @NonNull UnitTemplate template) {
-        if (proxy != null) {
+        if (proxy != null && ship_hr != null) {
             Unit unit = ship_hr.exitUnit(template);
             if (unit != null && rally_point != null) {
                 unit.setTarget(rally_point, Action.MOVE, false);
@@ -665,7 +665,9 @@ public class Ship extends Building implements Movable {
         forceDecide();
 
         // If it's a ship and it's destroyed, kill everyone on board
-        ship_hr.killCrew();
+        if (ship_hr != null) {
+            ship_hr.killCrew();
+        }
 
         new RandomVelocityEmitter(
                 getOwner().getWorld(),
@@ -851,7 +853,7 @@ public class Ship extends Building implements Movable {
     public final void hit(int damage, float dir_x, float dir_y, @NonNull Player owner) {
         World world = getOwner().getWorld();
         float prob = world.getRandom().nextFloat();
-        if (ship_hr.pickVictim(prob, damage, dir_x, dir_y, owner)) {
+        if (ship_hr != null && ship_hr.pickVictim(prob, damage, dir_x, dir_y, owner)) {
             return;
         }
         super.hit(damage, dir_x, dir_y, owner);

@@ -69,7 +69,7 @@ public final class Landscape {
         VIKING
     }
 
-    private static final int MIN_ISLAND_AREA = 2000;
+    private static final int MIN_ISLAND_AREA = 500;
 
     private final @NonNull Random random;
     private final @NonNull BlendInfo @NonNull [] blend_infos;
@@ -256,9 +256,9 @@ public final class Landscape {
             } else {
                 IslandInfo info = new IslandInfo(last_id, count[0], pos[0], pos[1]);
                 island_info.put(last_id, info);
+                island_locations.add(pos);
             }
             last_id++;
-            island_locations.add(pos);
         }
         if (DEBUG) {
             island_ids.copy().multiply(1.0f / last_id).toLayer().saveAsPNG("island_ids");
