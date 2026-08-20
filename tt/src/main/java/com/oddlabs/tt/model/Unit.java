@@ -442,10 +442,12 @@ public class Unit extends Selectable<UnitTemplate> implements Occupant, Movable 
         if (getAbilities().hasAbilities(Abilities.MAGIC)) {
             getOwner().setActiveChieftain(null);
         }
-        free();
-        if (!getAbilities().hasAbilities(Abilities.MAGIC)) {
-            int result = getOwner().getUnitCountContainer().increaseSupply(-1);
-            assert result == -1;
+        if (!imaginary) {
+            free();
+            if (!getAbilities().hasAbilities(Abilities.MAGIC)) {
+                int result = getOwner().getUnitCountContainer().increaseSupply(-1);
+                assert result == -1;
+            }
         }
         if (stun_marker != null) {
             stun_marker.done();
