@@ -5,21 +5,40 @@ public final class ShipTrajectorySegment {
     public final ShipTrajectoryPoint p1;
     public final ShipTrajectoryPoint center;
     public final boolean isStraight;
+    public final boolean isPivot;
     public final float radius;
+    public final float deltaAngle;
     public final float length;
     public final float cost;
     public final int angle_sign;
     public float progress = 0.0f;
 
     public ShipTrajectorySegment(ShipTrajectoryPoint p0, ShipTrajectoryPoint p1) {
-        this.p0 = p0;
-        this.p1 = p1;
-        this.isStraight = true;
+        this.p0 = p0.clone();
+        this.p1 = p1.clone();
+        if (p0.gridX == p1.gridX && p0.gridY == p1.gridY) {
+            this.isPivot = true;
+            this.isStraight = false;
+            this.length = 0.0f;
+            float delta = p1.angleDeg() - p0.angleDeg();
+            if (delta > 180.0f) {
+                delta -= 360.0f;
+            } else if (delta < -180.0f) {
+                delta += 360.0f;
+            }
+            this.deltaAngle = delta;
+            this.cost = Math.abs(delta) * 0.1f;
+            this.angle_sign = delta >= 0.0f ? 1 : -1;
+        } else {
+            this.isStraight = true;
+            this.isPivot = false;
+            this.length = p0.distanceTo(p1);
+            this.cost = this.length;
+            this.angle_sign = 1;
+            this.deltaAngle = 0.0f;
+        }
         this.radius = 0.0f;
         this.center = null;
-        this.length = p0.distanceTo(p1);
-        this.cost = this.length;
-        this.angle_sign = 1;
     }
 
     public ShipTrajectorySegment(
@@ -30,17 +49,14 @@ public final class ShipTrajectorySegment {
         this.p0 = p0;
         this.p1 = p1;
         this.isStraight = false;
+        this.isPivot = false;
         this.radius = radius;
         this.center = center;
         float swept = wrapToPi(center.angleRadTo(p1) - center.angleRadTo(p0));
         this.angle_sign = swept >= 0.0f ? +1 : -1;
-        float speed_factor = 1.0f;
-        float cost_offset = 0.0f;
-        if (radius < 10.0f) {
-            speed_factor = 0.1f;
-        }
         this.length = StrictMath.abs(swept) * radius;
-        this.cost = length / speed_factor;
+        this.cost = length;
+        this.deltaAngle = 0.0f;
     }
 
     private static float wrapToPi(float angle) {
@@ -59,6 +75,10 @@ public final class ShipTrajectorySegment {
             pose.setPosition(p0);
             pose.setDirectionTo(p1);
             pose.move(progress);
+        } else if (isPivot) {
+            float percent = progress / this.cost;
+            pose.copyFrom(p0);
+            pose.rotate(percent * deltaAngle);
         } else {
             float percent = progress / this.cost;
             pose.copyFrom(center);

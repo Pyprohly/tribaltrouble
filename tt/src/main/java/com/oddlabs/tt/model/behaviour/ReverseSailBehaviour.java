@@ -42,12 +42,6 @@ public final class ReverseSailBehaviour implements Behaviour {
 
         ShipTrajectoryPoint shipPt = new ShipTrajectoryPoint(ship);
 
-        int rowers = ship.getShipHR().countRowers();
-        if (rowers == 0) {
-            ship.endTrip();
-            return State.DONE;
-        }
-
         // If it's clear infront of the ship
         if (!ShipTrajectory.checkLandCollision(grid, shipPt, shipPt.moved(20))
                 && !ShipTrajectory.checkShipsCollision(grid, ship, shipPt, shipPt.moved(20))) {
@@ -55,7 +49,8 @@ public final class ReverseSailBehaviour implements Behaviour {
             return State.INTERRUPTIBLE;
         }
 
-        float step = rowers * 0.2f * t;
+        int rowers = ship.getShipHR().countRowers() + 1;
+        float step = rowers * 0.3f * t;
         var next = shipPt.moved(-step);
 
         if (ShipTrajectory.checkLandCollision(grid, shipPt, next)) {

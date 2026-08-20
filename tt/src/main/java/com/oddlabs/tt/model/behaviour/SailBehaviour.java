@@ -44,16 +44,6 @@ public final class SailBehaviour implements Behaviour {
         }
     }
 
-    private State endTrip() {
-        if (!trajectory.isComplete() || !trajectory.almostReachedGoal()) {
-            ship.reportStuck();
-            return State.INTERRUPTIBLE;
-        } else {
-            ship.endTrip();
-            return State.DONE;
-        }
-    }
-
     @Override
     public @NonNull State animate(float t) {
         if (ship.isDead()) {
@@ -67,15 +57,11 @@ public final class SailBehaviour implements Behaviour {
         ship.setLayer(UnitGrid.SEA);
 
         if (!trajectory.exists()) {
-            ship.reportStuck();
+            ship.endTrip();
             return State.INTERRUPTIBLE;
         }
 
-        int rowers = ship.getShipHR().countRowers();
-        if (rowers == 0) {
-            ship.endTrip();
-            return State.DONE;
-        }
+        int rowers = ship.getShipHR().countRowers() + 1;
 
         if (next_pose == null) {
             float speed = rowers * SHIP_SPEED;
@@ -83,7 +69,8 @@ public final class SailBehaviour implements Behaviour {
         }
 
         if (trajectory.reachedGoal()) {
-            return endTrip();
+            ship.endTrip();
+            return State.DONE;
         }
 
         ShipTrajectoryPoint fromPoint = new ShipTrajectoryPoint(ship);
@@ -91,12 +78,8 @@ public final class SailBehaviour implements Behaviour {
         var grid = ship.getUnitGrid();
 
         if (ShipTrajectory.checkShipsCollision(grid, ship, fromPoint, next_pose.moved(8))) {
-            timer += t;
-            if (timer >= 0.5f) {
-                return endTrip();
-            } else {
-                return State.UNINTERRUPTIBLE;
-            }
+            ship.endTrip();
+            return State.INTERRUPTIBLE;
         }
 
         timer = 0.0f;
