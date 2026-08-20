@@ -151,9 +151,6 @@ public final class Picker implements Updatable<TimerAnimation> {
         setupPicking(camera, x * scale, y * scale, PICK_SIZE, PICK_SIZE);
         pickObjects();
         Target nearest_pickable = getNearestPick(element_pick_list, Target.class);
-        if (nearest_pickable instanceof Building) {
-            nearest_pickable = ((Building) nearest_pickable).getEntrance();
-        }
         Selectable<?>[] selection = selected_army.filter(Abilities.TARGET);
         if (nearest_pickable != null) {
             if (!(nearest_pickable instanceof SceneryModel) || ((SceneryModel) nearest_pickable).isOccupying())
