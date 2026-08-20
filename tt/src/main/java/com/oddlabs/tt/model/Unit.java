@@ -298,8 +298,10 @@ public class Unit extends Selectable<UnitTemplate> implements Occupant, Movable 
         assert !isDead();
         mounted_building = ship;
         mount_offset = ship_allocation.getOffset().z;
-        disable();
-        free();
+        if (!imaginary) {
+            disable();
+            free();
+        }
         mounted = true;
         on_ship = true;
         setReference(ship);
