@@ -1,6 +1,7 @@
 package com.oddlabs.tt.pathfinder;
 
 import com.oddlabs.tt.form.ProgressForm;
+import com.oddlabs.tt.landscape.IslandInfo;
 import com.oddlabs.tt.util.PocketList;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
@@ -64,7 +65,7 @@ public final class RegionBuilder {
     /* Building regions with multiple islands */
     public static void buildRegions(@NonNull UnitGrid unit_grid) {
         boolean[][] access_grid = unit_grid.getHeightMap().getAccessGrid();
-        List<int[]> island_locations = unit_grid.getHeightMap().getIslandLocations();
+        List<IslandInfo> island_infos = unit_grid.getHeightMap().getIslandInfos();
         int grid_size = access_grid.length;
 
         RegionBuilderNode[][] dir_finder_grid = new RegionBuilderNode[grid_size][grid_size];
@@ -83,16 +84,15 @@ public final class RegionBuilder {
         ProgressForm.progress(.5f);
 
         int actual_num_regions = 0;
-        for (Object item : island_locations) {
-            int[] pos = (int[]) item;
-            RegionBuilderNode start_node = dir_finder_grid[pos[1]][pos[0]];
+        for (IslandInfo island_info : island_infos) {
+            RegionBuilderNode start_node = dir_finder_grid[island_info.y()][island_info.x()];
             QueueArray start_nodes = new QueueArray(grid_size * grid_size);
-            PocketList region_nodes = new PocketList(grid_size);
+            PocketList<RegionBuilderNode> region_nodes = new PocketList<>(grid_size);
             start_nodes.addLast(start_node);
             while ((start_node = findStartNode(unit_grid, region_nodes, start_nodes)) != null) {
                 assert !unit_grid.isGridOccupied(
                         start_node.getGridX(),
-                        start_node.getGridY()) : "Starting location (" + pos[0] + "," + pos[1] + ") occupied";
+                        start_node.getGridY()) : "Starting location (" + island_info.x() + "," + island_info.y() + ") occupied";
                 Region region = new Region();
                 addRegionNodes(
                         unit_grid,

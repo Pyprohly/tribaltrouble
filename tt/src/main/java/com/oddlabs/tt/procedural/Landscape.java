@@ -254,10 +254,11 @@ public final class Landscape {
                 // If not big enough, put it back
                 island_ids.floodfill(pos[0], pos[1], 0.0f, 0.01f, count);
             } else {
-                IslandInfo info = new IslandInfo(last_id, count[0], pos[0], pos[1]);
-                island_info.put(last_id, info);
                 island_locations.add(pos);
             }
+            IslandInfo info = new IslandInfo(last_id, count[0], pos[0], pos[1]);
+            island_info.put(last_id, info);
+
             last_id++;
         }
         if (DEBUG) {
@@ -1363,10 +1364,6 @@ public final class Landscape {
 
     public final byte[][] getWaterGrid() {
         return water;
-    }
-
-    public final List<int[]> getIslandLocations() {
-        return island_locations;
     }
 
     public int[][] getIslandIds() {

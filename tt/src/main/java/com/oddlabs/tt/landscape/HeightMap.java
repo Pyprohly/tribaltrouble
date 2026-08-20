@@ -24,7 +24,6 @@ public final class HeightMap {
     private final boolean[][] access_grid;
     private final boolean[][] dock_grid;
     private final byte[][] water_grid;
-    private final List<int[]> island_locations;
     private final int[][] island_ids;
     private final Map<Integer, IslandInfo> island_info;
     private final byte[][] build_grid;
@@ -50,7 +49,6 @@ public final class HeightMap {
             int texels_per_colormap,
             int chunks_per_colormap,
             float @NonNull [] @NonNull [] world,
-            List<int[]> island_locations,
             List<int[]> trees,
             boolean[][] access_grid,
             boolean[][] dock_grid,
@@ -65,7 +63,6 @@ public final class HeightMap {
         this.dock_grid = dock_grid;
         this.water_grid = water_grid;
         this.build_grid = build_grid;
-        this.island_locations = island_locations;
         this.island_ids = island_ids;
         Map<Integer, IslandInfo> island_info_map = new LinkedHashMap<>();
         for (IslandInfo info : island_infos)
@@ -196,10 +193,6 @@ public final class HeightMap {
         return water_grid;
     }
 
-    public final List<int[]> getIslandLocations() {
-        return island_locations;
-    }
-
     public final int[][] getIslandIdGrid() {
         return island_ids;
     }
@@ -214,6 +207,10 @@ public final class HeightMap {
 
     public final IslandInfo getIslandInfo(int island_id) {
         return island_info.get(island_id);
+    }
+
+    public final @NonNull List<IslandInfo> getIslandInfos() {
+        return new ArrayList<>(island_info.values());
     }
 
     public final int getIslandTreeCount(int island_id) {

@@ -186,7 +186,7 @@ public final class World {
 
         world = new HeightMap(this, world_info.meters_per_world(), world_info.sea_level_meters(),
                 world_info.texels_per_colormap(), world_info.chunks_per_colormap(), world_info.heightmap(),
-                world_info.island_locations(), world_info.trees(), world_info.access_grid(), world_info.dock_grid(),
+                world_info.trees(), world_info.access_grid(), world_info.dock_grid(),
                 world_info.water_grid(), world_info.build_grid(), world_info.island_ids(),
                 world_info.island_infos());
 
@@ -203,7 +203,7 @@ public final class World {
                 "****************** Finished landscape in " + ((time_stop - time_start) / 1000f) + " sec ********************");
         this.supply_managers = new SupplyManagers(this);
         this.unit_grid = new UnitGrid(world);
-        boolean archipelago = world_info.island_locations().size() > 1;
+        boolean archipelago = world_info.island_infos().size() > 1;
         if (archipelago) {
             RegionBuilder.buildRegions(unit_grid);
         } else {
