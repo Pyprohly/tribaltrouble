@@ -444,7 +444,8 @@ public final class Picker implements Updatable<TimerAnimation> {
     }
 
     private float getHeight(float x, float y) {
-        return local_player.getWorld().getHeightMap().getNearestHeight(x, y);
+        return Math.max(local_player.getWorld().getHeightMap().getNearestHeight(x, y),
+                local_player.getWorld().getHeightMap().getSeaLevelMeters());
     }
 
     public void pickMapGoto(int x, int y, @NonNull MapCamera camera) {
