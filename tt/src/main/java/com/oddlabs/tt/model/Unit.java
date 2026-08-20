@@ -388,7 +388,6 @@ public class Unit extends Selectable<UnitTemplate> implements Occupant, Movable 
 
     @Override
     public final float getSize() {
-        assert !isDead();
         return 1.9f;
     }
 
@@ -784,6 +783,10 @@ public class Unit extends Selectable<UnitTemplate> implements Occupant, Movable 
         h_max = Math.max(h_max, hm.getNearestHeight(x - d, y - d));
 
         return Math.max(0f, h_max - h_center);
+    }
+
+    public final float getHitError() {
+        return on_ship ? 1.2f : 0.0f;
     }
 
     public final void debugRender() {

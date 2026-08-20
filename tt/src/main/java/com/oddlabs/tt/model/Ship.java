@@ -650,7 +650,6 @@ public class Ship extends Building implements Movable {
     }
 
     public final float getSize() {
-        assert !isDead();
         float radius = (getBuildingTemplate().getPlacingSize() - 1);
         return (float) StrictMath.sqrt(2) * radius + .1f;
     }
