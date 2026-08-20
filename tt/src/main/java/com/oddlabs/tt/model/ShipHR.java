@@ -56,24 +56,24 @@ public final class ShipHR {
         private Unit unit = null;
         private ShipAllocation alloc;
 
-        public Rudder(float x, float y, float z) {
+        public Rudder(Ship ship, float x, float y, float z) {
             alloc = new ShipAllocation(new Vector3f(x, y, z), new Vector2f(0.0f, 1.0f), ShipAllocation.STEERING);
+            var owner = ship.getOwner();
+            unit = new Unit(owner, x, y, null, owner.getRace().getUnitTemplate(Race.UNIT_PEON), null, false, false,
+                    false);
+            unit.mount(ship, alloc);
         }
 
         public boolean canFit(Unit unit) {
-            return !unit.isWarrior() && this.unit == null;
+            return false;
         }
 
         public void seat(Unit unit) {
-            if (canFit(unit)) {
-                this.unit = unit;
-            }
+            assert (false);
         }
 
         public void exit(Unit unit) {
-            if (this.unit == unit) {
-                this.unit = null;
-            }
+            assert (false);
         }
 
         public ShipAllocation getAllocation(Unit unit) {
@@ -85,30 +85,20 @@ public final class ShipHR {
         }
 
         public void killAll() {
-            if (this.unit != null) {
-                this.unit.drown();
-                this.unit = null;
-            }
+            unit.drown();
+            unit = null;
         }
 
         public List<Unit> allUnits() {
-            ArrayList<Unit> ret = new ArrayList<>();
-            if (this.unit != null) {
-                ret.add(this.unit);
-            }
-            return ret;
+            return new ArrayList<Unit>();
         }
 
         public Unit findUnit(UnitTemplate template) {
-            if (this.unit != null && this.unit.getTemplate() == template) {
-                return this.unit;
-            } else {
-                return null;
-            }
+            return null;
         }
 
         public boolean needRowers() {
-            return this.unit == null;
+            return false;
         }
 
         public int countRowers() {
@@ -368,10 +358,10 @@ public final class ShipHR {
 
     private ArrayList<Row> rows = new ArrayList<>();
 
-    public ShipHR(boolean vikings) {
+    public ShipHR(Ship ship, boolean vikings) {
         this.vikings = vikings;
         if (vikings) {
-            rows.add(new Rudder(-11.14f, -0.43f, +0.54f));
+            rows.add(new Rudder(ship, -11.14f, -0.43f, +0.54f));
             rows.add(new LowerDeckRow(-9.62f, -1.98f, +1.98f, 0.42f, true, true));
             rows.add(new LowerDeckRow(-8.18f, -2.31f, +2.31f, 0.42f, true, true));
             rows.add(new LowerDeckRow(-6.71f, -2.54f, +2.54f, 0.43f, true, true));
@@ -402,7 +392,7 @@ public final class ShipHR {
             rows.add(new UpperDeckRow(-8.99f, +1.31f, +2.99f));
             rows.add(new UpperDeckRow(-10.49f, +1.00f, +2.99f));
         } else {
-            rows.add(new Rudder(-11.4f, +0.87f, +2.455f));
+            rows.add(new Rudder(ship, -11.4f, +0.87f, +2.455f));
             rows.add(new LowerDeckRow(-9.39f, -2.88f, +2.88f, +0.37f, true, true));
             rows.add(new LowerDeckRow(-7.92f, -2.88f, +2.88f, +0.37f, true, true));
             rows.add(new LowerDeckRow(-6.47f, -2.88f, +2.88f, +0.37f, true, true));
