@@ -119,9 +119,7 @@ public class Unit extends Selectable<UnitTemplate> implements Occupant, Movable 
         this.name = name;
         this.imaginary = imaginary;
         getAbilities().addAbilities(unit_template.getAbilities());
-        if (!imaginary) {
-            register();
-        }
+        register();
         hit_points = unit_template.getMaxHitPoints();
         this.path_tracker = new PathTracker(getUnitGrid(), this);
         UnitSupplyContainerFactory factory = unit_template.getUnitSupplyContainerFactory();
