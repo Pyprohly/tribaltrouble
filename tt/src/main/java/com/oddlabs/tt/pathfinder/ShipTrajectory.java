@@ -41,29 +41,6 @@ public final class ShipTrajectory {
         }
     }
 
-    private ShipTrajectoryPoint findStart(ShipTrajectoryPoint p) {
-        ShipTrajectoryPoint tmp = p.clone();
-        tmp.move(2);
-        if (grid.isDeepWater(tmp.gridX, tmp.gridY)) {
-            return tmp;
-        }
-        tmp.move(-4);
-        tmp.rotate(90);
-        tmp.move(2);
-        tmp.rotate(-90);
-        if (grid.isDeepWater(tmp.gridX, tmp.gridY)) {
-            return tmp;
-        }
-        tmp.rotate(-90);
-        tmp.move(4);
-        tmp.rotate(90);
-        if (grid.isDeepWater(tmp.gridX, tmp.gridY)) {
-            return tmp;
-        }
-        return p;
-    }
-
-
     private List<ShipTrajectoryPoint> findRegionPath(ShipTrajectoryPoint from, ShipTrajectoryPoint to) {
         List<ShipTrajectoryPoint> points = new ArrayList<>();
         if (from == null || to == null) {
@@ -466,6 +443,7 @@ public final class ShipTrajectory {
         int radius = (int) StrictMath.round(poly[0].gridDistanceTo(poly[2])) + 10;
         ShipFinder finder = new ShipFinder(radius, ship);
         grid.scan(finder, center_x, center_y, UnitGrid.SEA);
+        grid.scan(finder, center_x, center_y, UnitGrid.LAND);
         for (Ship otherShip : finder.results()) {
             int dist_dx = ship.getGridX() - otherShip.getGridX();
             int dist_dy = ship.getGridY() - otherShip.getGridY();

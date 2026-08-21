@@ -7,6 +7,7 @@ import com.oddlabs.tt.audio.AudioParameters;
 import com.oddlabs.tt.audio.AudioPlayer;
 import com.oddlabs.tt.model.Accessories;
 import com.oddlabs.tt.model.Selectable;
+import com.oddlabs.tt.model.Ship;
 import com.oddlabs.tt.model.Unit;
 import com.oddlabs.tt.model.UnitTemplate;
 import com.oddlabs.tt.player.Player;
@@ -81,6 +82,12 @@ public abstract class ThrowingWeapon extends Accessories implements Animated {
     }
 
     protected final void setTarget(@NonNull Selectable<?> target) {
+        if (target instanceof Ship ship) {
+            Selectable shipVictim = ship.pickVictim();
+            if (shipVictim != null) {
+                target = shipVictim;
+            }
+        }
         this.target = target;
         float hit_error = unit.getHitError();
         miss_x = hit_error * (owner.getWorld().getRandom().nextFloat() - 0.5f) * 2.0f;

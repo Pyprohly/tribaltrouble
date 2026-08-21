@@ -850,15 +850,20 @@ public class Ship extends Building implements Movable {
         removeProxy();
     }
 
-    public final void hit(int damage, float dir_x, float dir_y, @NonNull Player owner) {
-        World world = getOwner().getWorld();
-        float prob = world.getRandom().nextFloat();
-        if (ship_hr != null && ship_hr.pickVictim(prob, damage, dir_x, dir_y, owner)) {
-            return;
+    public final Unit pickVictim() {
+        if (ship_hr != null) {
+            World world = getOwner().getWorld();
+            float prob = world.getRandom().nextFloat();
+            return ship_hr.pickVictim(prob);
         }
+        return null;
+    }
+
+    public final void hit(int damage, float dir_x, float dir_y, @NonNull Player owner) {
         super.hit(damage, dir_x, dir_y, owner);
         if (!isDead()) {
             setHitPoints(hit_points - damage);
+            World world = getOwner().getWorld();
             world.getAudio().newAudio(
                     new AudioParameters(
                             world.getRacesResources().getBuildingHitSound(world.getRandom()),

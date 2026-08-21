@@ -7,9 +7,6 @@ import com.oddlabs.tt.model.weapon.RockSpearWeapon;
 import com.oddlabs.tt.model.weapon.RubberAxeWeapon;
 import com.oddlabs.tt.model.weapon.RubberSpearWeapon;
 
-import com.oddlabs.tt.player.Player;
-
-import org.jspecify.annotations.NonNull;
 
 import org.joml.Vector2f;
 import org.joml.Vector3f;
@@ -473,6 +470,15 @@ public final class ShipHR {
         }
     }
 
+    public void removeUnit(Unit unit) {
+        if (unit2row.containsKey(unit)) {
+            Row row = unit2row.get(unit);
+            row.exit(unit);
+            unit.setReference(null);
+            unit2row.remove(unit);
+        }
+    }
+
     public Unit exitUnit(UnitTemplate template) {
         boolean warrior = (template.getWeaponFactory() != null);
         if (warrior) {
@@ -563,10 +569,10 @@ public final class ShipHR {
         return result;
     }
 
-    public boolean pickVictim(float random, int damage, float dir_x, float dir_y, @NonNull Player owner) {
+    public Unit pickVictim(float random) {
         int index = StrictMath.round(random * 120);
         if (index >= unit2row.size()) {
-            return false;
+            return null;
         }
         Iterator<Map.Entry<Unit, Row>> it = unit2row.entrySet().iterator();
         Map.Entry<Unit, Row> victim = it.next();
@@ -575,11 +581,7 @@ public final class ShipHR {
         }
         Unit unit = victim.getKey();
         Row row = victim.getValue();
-        if (unit.absorbHit(damage, dir_x, dir_y, owner)) {
-            row.exit(unit);
-            unit2row.remove(unit);
-        }
-        return true;
+        return unit;
     }
 
     public int countRowers() {
