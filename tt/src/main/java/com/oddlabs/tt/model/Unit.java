@@ -252,7 +252,9 @@ public class Unit extends Selectable<UnitTemplate> implements Occupant, Movable 
         mounted = false;
         on_ship = false;
         mount_offset = 0;
-        enable();
+        if (!imaginary) {
+            enable();
+        }
         if (supply_container != null) {
             supply_container.resetSupply(LeftPaddle.class);
             supply_container.resetSupply(RightPaddle.class);
