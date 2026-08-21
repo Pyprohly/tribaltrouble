@@ -186,12 +186,13 @@ public final class ShipTrajectoryPoint {
     }
 
     public ShipTrajectoryPoint intersection(ShipTrajectoryPoint pt) {
-        if (pt.directionX == this.directionX || pt.directionY == this.directionY) {
+        float cross = pt.directionX * this.directionY - pt.directionY * this.directionX;
+        if (StrictMath.abs(cross) < 0.0001f) {
             return null;
         }
 
         ShipTrajectoryPoint intr = new ShipTrajectoryPoint();
-        float t = (pt.positionY * this.directionX - this.positionY * this.directionX - pt.positionX * this.directionY + this.positionX * this.directionY) / (pt.directionX * this.directionY - pt.directionY * this.directionX);
+        float t = (pt.positionY * this.directionX - this.positionY * this.directionX - pt.positionX * this.directionY + this.positionX * this.directionY) / cross;
         intr.positionX = pt.positionX + t * pt.directionX;
         intr.positionY = pt.positionY + t * pt.directionY;
         intr.gridX = UnitGrid.toGridCoordinate(intr.positionX);
