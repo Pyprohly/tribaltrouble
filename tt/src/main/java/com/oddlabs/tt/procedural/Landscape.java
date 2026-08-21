@@ -172,7 +172,7 @@ public final class Landscape {
             case 2048 -> {
                 size_multiplier = 40;
                 height_scale = 56;
-                access_threshold = 0.025f;
+                access_threshold = 0.0325f;
             }
             default -> {
                 size_multiplier = 0;
@@ -643,7 +643,8 @@ public final class Landscape {
         relheight = height.copy().relativeIntensityNormalized(Math.max(1, unit_grids_per_world >> 5));
         if (DEBUG) relheight.toLayer().saveAsPNG("relheight");
         if (archipelago) {
-            access = generateThresholdMap(slope, access_threshold);
+            Channel inv = water_map.copy().invert();
+            access = generateThresholdMap(slope, access_threshold).channelMultiply(inv);
         } else {
             access = generateThresholdMap(slope, access_threshold).largestConnected(1f);
         }
@@ -720,7 +721,8 @@ public final class Landscape {
         relheight = height.copy().relativeIntensityNormalized(Math.max(1, unit_grids_per_world >> 5));
         if (DEBUG) relheight.toLayer().saveAsPNG("relheight");
         if (archipelago) {
-            access = generateThresholdMap(slope, access_threshold);
+            Channel inv = water_map.copy().invert();
+            access = generateThresholdMap(slope, access_threshold).channelMultiply(inv);
         } else {
             access = generateThresholdMap(slope, access_threshold).largestConnected(1f);
         }
