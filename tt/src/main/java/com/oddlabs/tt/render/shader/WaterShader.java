@@ -124,7 +124,7 @@ public final class WaterShader extends ShaderProgram implements FogShader, LitSh
 
                 v_texCoord0 = (worldPos.xy * u_waterRepeatRate * scaleFix) + u_scrollOffset0;
                 v_texCoord1 = (worldPos.xy * u_waterRepeatRate * scaleFix * 1.3) + u_scrollOffset1;
-                v_texCoordHeightmap = (worldPos.xy + 1.0) / u_WorldSize;
+                v_texCoordHeightmap = (baseXY + 1.0) / u_WorldSize;
 
                 v_fogDist = length(viewPosition.xyz);
                 v_reflectionClipPos = u_reflectionVP * vec4(worldPos, 1.0);

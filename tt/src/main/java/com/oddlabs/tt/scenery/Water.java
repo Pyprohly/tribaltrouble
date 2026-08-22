@@ -162,10 +162,10 @@ public final class Water implements AutoCloseable {
         skyWaterVao.unbind();
 
         this.patchMesh = new PatchMesh();
-        this.oceanInstanceVBO = new FloatVBO(GL15.GL_STREAM_DRAW, 1024 * 2 * Float.BYTES); // Initial capacity
-        this.oceanInstanceBuffer = BufferUtils.createFloatBuffer(1024 * 2);
-        this.inlandInstanceVBO = new FloatVBO(GL15.GL_STREAM_DRAW, 1024 * 2 * Float.BYTES);
-        this.inlandInstanceBuffer = BufferUtils.createFloatBuffer(1024 * 2);
+        this.oceanInstanceVBO = new FloatVBO(GL15.GL_STREAM_DRAW, 1024 * 3 * Float.BYTES); // Initial capacity
+        this.oceanInstanceBuffer = BufferUtils.createFloatBuffer(1024 * 3);
+        this.inlandInstanceVBO = new FloatVBO(GL15.GL_STREAM_DRAW, 1024 * 3 * Float.BYTES);
+        this.inlandInstanceBuffer = BufferUtils.createFloatBuffer(1024 * 3);
 
         // Flood fill from the map border to distinguish ocean patches from enclosed inland water
         int patchesPerWorld = heightmap.getPatchesPerWorld();
