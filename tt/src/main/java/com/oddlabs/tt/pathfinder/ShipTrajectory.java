@@ -279,7 +279,7 @@ public final class ShipTrajectory {
         }
 
         public boolean filter(int grid_x, int grid_y, Occupant occ) {
-            if (grid.isDeepWater(grid_x, grid_y)) {
+            if (grid.isDeepWater(grid_x, grid_y) && grid.getRegion(grid_x, grid_y, UnitGrid.SEA) != null) {
                 pt = new ShipTrajectoryPoint(grid_x, grid_y);
                 return true;
             }
@@ -411,7 +411,7 @@ public final class ShipTrajectory {
         }
 
         public boolean filter(int grid_x, int grid_y, Occupant occ) {
-            if (occ instanceof Ship s && s != self) {
+            if (occ instanceof Ship s && s != self && !s.isDead()) {
                 ships.add(s);
             }
             return false;

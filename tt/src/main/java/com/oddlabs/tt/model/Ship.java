@@ -942,7 +942,10 @@ public class Ship extends Building implements Movable {
 
     public final void debugRender() {
         if (getCurrentBehaviour() instanceof SailBehaviour sail) {
-            sail.getTrajectory().debugRender(getUnitGrid().getHeightMap());
+            var traj = sail.getTrajectory();
+            if (traj != null) {
+                traj.debugRender(getUnitGrid().getHeightMap());
+            }
         }
     }
 
