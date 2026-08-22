@@ -16,6 +16,7 @@ import com.oddlabs.tt.model.Abilities;
 import com.oddlabs.tt.model.Action;
 import com.oddlabs.tt.model.Army;
 import com.oddlabs.tt.model.Building;
+import com.oddlabs.tt.model.Unit;
 import com.oddlabs.tt.model.ModelToolTip;
 import com.oddlabs.tt.model.SceneryModel;
 import com.oddlabs.tt.model.Selectable;
@@ -135,8 +136,11 @@ public final class Picker implements Updatable<TimerAnimation> {
             int y) {
         setupPicking(camera, x, y, PICK_SIZE, PICK_SIZE);
         pickObjects();
-        if (nearestLandscape(x, y)) {
-            Selectable[] selection = selected_army.filter(Abilities.SAIL);
+        Target target = getNearestPick(element_pick_list, Target.class);
+        Selectable[] selection = selected_army.filter(Abilities.SAIL);
+        if (target instanceof Unit || target instanceof Building) {
+            player_interface.setSailingTarget(selection, target);
+        } else if (nearestLandscape(x, y)) {
             UnitGrid grid = local_player.getWorld().getUnitGrid();
             int grid_x = UnitGrid.toGridCoordinate(patch_hit_x);
             int grid_y = UnitGrid.toGridCoordinate(patch_hit_y);
@@ -250,9 +254,9 @@ public final class Picker implements Updatable<TimerAnimation> {
         if (nearest != null) {
             if (clicks > 1) {
                 if (nearest.getAbilities().hasAbilities(Abilities.THROW)) {
-                    return pickAll(camera, Abilities.THROW);
+                    return pickAll(camera, Abilities.THROW, nearest.getIslandId());
                 } else if (nearest.getAbilities().hasAbilities(Abilities.HARVEST)) {
-                    return pickAll(camera, Abilities.HARVEST);
+                    return pickAll(camera, Abilities.HARVEST, nearest.getIslandId());
                 } else {
                     return Selectable.newArray(nearest);
                 }
@@ -271,10 +275,11 @@ public final class Picker implements Updatable<TimerAnimation> {
         return array;
     }
 
-    private @NonNull Selectable<?> @NonNull [] pickAll(@NonNull CameraState camera, int ability_filter) {
+    private @NonNull Selectable<?> @NonNull [] pickAll(@NonNull CameraState camera, int ability_filter, int island) {
         Selectable<?>[] complete_list = pickBoxed(camera, 0, 0, gui_root.getWidth() - 1, gui_root.getHeight() - 1, 2);
-        return Arrays.stream(complete_list).filter(s -> s.getAbilities().hasAbilities(ability_filter)).toArray(
-                Selectable::newArray);
+        return Arrays.stream(complete_list).filter(s -> s.getAbilities().hasAbilities(ability_filter)
+                && s.getIslandId() == island).toArray(
+                        Selectable::newArray);
     }
 
     public void pickRotate(@NonNull GameCamera camera) {

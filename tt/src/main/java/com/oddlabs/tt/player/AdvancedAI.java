@@ -54,10 +54,10 @@ public final class AdvancedAI extends AI {
     private static final int[] UNITS_PER_TOWER1 = new int[]{1000, 1000, 90};
     private static final int[] UNITS_PER_TOWER2 = new int[]{1000, 1000, 120};
 
-    private static final int SHIP_PEONS = 34;
+    private static final int SHIP_PEONS = 26;
     private static final int SHIP_WARRIORS = 26;
     private static final int SHIP_BUILDERS = 20;
-    private static final float SHIP_MIN_HEALTH = .75f;
+    private static final float SHIP_MIN_HEALTH = 0.5f;
     private static final int SHIP_HOME_RANGE = 50;
     private static final int FLEET_SIZE = 3;
 
@@ -524,14 +524,49 @@ public final class AdvancedAI extends AI {
         if (ship.isDead() || !ship.isComplete() || ship.isMoving())
             return;
 
-        Selectable<?> nearest_enemy = shipBattleReady(ship) ? getOwner().findNearestEnemy(ship.getGridX(),
-                ship.getGridY(), null, Ship.class) : null;
-        if (nearest_enemy instanceof Ship enemy_ship && !enemy_ship.isDead() && enemy_ship.isComplete()) {
-            getOwner().setTarget(Selectable.newArray(ship), enemy_ship, Action.MOVE, true);
-        } else if (!shipAtHome(ship)) {
+        boolean at_home = shipAtHome(ship);
+        boolean should_escape = shipShouldEscape(ship);
+        boolean battle_ready = (shipBattleReady(ship) && at_home) || !should_escape;
+
+        if (battle_ready) {
+            Selectable<?> sea_enemy = getOwner().findNearestEnemyShip(ship.getGridX(), ship.getGridY());
+            if (sea_enemy != null && sea_enemy.isDead()) {
+                sea_enemy = null;
+            }
+            Selectable<?> beach_enemy = getOwner().findNearestEnemyOnBeach(ship.getGridX(), ship.getGridY());
+            if (beach_enemy != null && beach_enemy.isDead()) {
+                beach_enemy = null;
+            }
+            Selectable<?> enemy = null;
+            if (beach_enemy != null && sea_enemy != null) {
+                int sea_dx = sea_enemy.getGridX() - ship.getGridX();
+                int sea_dy = sea_enemy.getGridY() - ship.getGridY();
+                int sea_d2 = sea_dx * sea_dx + sea_dy * sea_dy;
+                int beach_dx = beach_enemy.getGridX() - ship.getGridX();
+                int beach_dy = beach_enemy.getGridY() - ship.getGridY();
+                int beach_d2 = beach_dx * beach_dx + beach_dy * beach_dy;
+                if (sea_d2 > beach_d2) {
+                    enemy = beach_enemy;
+                } else {
+                    enemy = sea_enemy;
+                }
+            } else if (beach_enemy != null) {
+                enemy = beach_enemy;
+            } else {
+                enemy = sea_enemy;
+            }
+
+            if (enemy != null) {
+                getOwner().setTarget(Selectable.newArray(ship), enemy, Action.MOVE, true);
+                return;
+            }
+        }
+
+        if (!at_home) {
             Building origin = homeBuilding();
-            if (origin != null)
+            if (origin != null) {
                 getOwner().setTarget(Selectable.newArray(ship), origin, Action.MOVE, false);
+            }
         }
     }
 
@@ -539,14 +574,28 @@ public final class AdvancedAI extends AI {
         return shipFullyCrewed(ship) && !shipNeedsRepair(ship);
     }
 
-    private boolean shipNeedsRepair(@NonNull Ship ship) {
+    private boolean shipShouldEscape(@NonNull Ship ship) {
+        return shipTooDamaged(ship) || !shipCrewedEnough(ship);
+    }
+
+    private boolean shipTooDamaged(@NonNull Ship ship) {
         return ship.getHitPoints() < SHIP_MIN_HEALTH * ship.getBuildingTemplate().getMaxHitPoints();
+    }
+
+    private boolean shipNeedsRepair(@NonNull Ship ship) {
+        return ship.getHitPoints() < ship.getBuildingTemplate().getMaxHitPoints();
     }
 
     private boolean shipFullyCrewed(@NonNull Ship ship) {
         int peons = ship.getShipHR().countPeons();
         int warriors = ship.getShipHR().countUnits() - peons;
-        return peons >= (SHIP_PEONS - SHIP_WARRIORS) && warriors >= SHIP_WARRIORS;
+        return peons >= SHIP_PEONS && warriors >= SHIP_WARRIORS;
+    }
+
+    private boolean shipCrewedEnough(@NonNull Ship ship) {
+        int peons = ship.getShipHR().countPeons();
+        int warriors = ship.getShipHR().countUnits() - peons;
+        return peons >= SHIP_PEONS / 2 && warriors >= SHIP_WARRIORS / 3;
     }
 
     private @Nullable Building homeBuilding() {

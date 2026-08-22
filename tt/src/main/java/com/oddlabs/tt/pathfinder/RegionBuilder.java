@@ -85,14 +85,14 @@ public final class RegionBuilder {
 
         int actual_num_regions = 0;
         for (IslandInfo island_info : island_infos) {
-            RegionBuilderNode start_node = dir_finder_grid[island_info.y()][island_info.x()];
+            RegionBuilderNode start_node = dir_finder_grid[island_info.startY()][island_info.startX()];
             QueueArray start_nodes = new QueueArray(grid_size * grid_size);
             PocketList<RegionBuilderNode> region_nodes = new PocketList<>(grid_size);
             start_nodes.addLast(start_node);
             while ((start_node = findStartNode(unit_grid, region_nodes, start_nodes)) != null) {
                 assert !unit_grid.isGridOccupied(
                         start_node.getGridX(),
-                        start_node.getGridY()) : "Starting location (" + island_info.x() + "," + island_info.y() + ") occupied";
+                        start_node.getGridY()) : "Starting location (" + island_info.startX() + "," + island_info.startY() + ") occupied";
                 Region region = new Region();
                 addRegionNodes(
                         unit_grid,

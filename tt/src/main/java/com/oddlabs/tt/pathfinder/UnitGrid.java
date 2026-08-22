@@ -158,7 +158,7 @@ public final class UnitGrid {
     }
 
     public final boolean isDockable(int grid_x, int grid_y) {
-        return heightmap.getDockGrid()[grid_y][grid_x];
+        return heightmap.canDock(grid_x, grid_y);
     }
 
     public final int getIslandId(int grid_x, int grid_y) {

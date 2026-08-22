@@ -22,7 +22,7 @@ public final class HeightMap {
     private final LandscapeLeaf @NonNull [] @NonNull [] landscape_leaves;
     private final List<int @NonNull []> trees;
     private final boolean[][] access_grid;
-    private final boolean[][] dock_grid;
+    private final byte[][] dock_grid;
     private final byte[][] water_grid;
     private final int[][] island_ids;
     private final Map<Integer, IslandInfo> island_info;
@@ -51,7 +51,7 @@ public final class HeightMap {
             float @NonNull [] @NonNull [] world,
             List<int[]> trees,
             boolean[][] access_grid,
-            boolean[][] dock_grid,
+            byte[][] dock_grid,
             byte[][] water_grid,
             byte[][] build_grid,
             int[][] island_ids,
@@ -185,7 +185,7 @@ public final class HeightMap {
         return access_grid;
     }
 
-    public final boolean[][] getDockGrid() {
+    public final byte[][] getDockGrid() {
         return dock_grid;
     }
 
@@ -338,7 +338,7 @@ public final class HeightMap {
     public final boolean canDock(int grid_x, int grid_y) {
         grid_x = wrapGridCoord(grid_x);
         grid_y = wrapGridCoord(grid_y);
-        return dock_grid[grid_y][grid_x];
+        return dock_grid[grid_y][grid_x] == 1;
     }
 
     public float getWrappedHeight(int grid_x, int grid_y) {
