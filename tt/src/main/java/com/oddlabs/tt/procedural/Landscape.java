@@ -69,7 +69,7 @@ public final class Landscape {
         VIKING
     }
 
-    private static final int MIN_ISLAND_AREA = 500;
+    private static final int MIN_ISLAND_AREA = 2000;
 
     private final @NonNull Random random;
     private final @NonNull BlendInfo @NonNull [] blend_infos;
