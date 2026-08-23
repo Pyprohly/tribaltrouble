@@ -129,7 +129,7 @@ public final class Landscape {
     private final boolean archipelago;
 
     private byte @NonNull [] @NonNull [] build;
-    private boolean @NonNull [] @NonNull [] dock;
+    private byte @NonNull [] @NonNull [] dock;
     private byte @NonNull [] @NonNull [] water;
     private float @NonNull [] @NonNull [] player_locations;
     private int @NonNull [] @NonNull [] supply_locations;
@@ -171,8 +171,8 @@ public final class Landscape {
             }
             case 2048 -> {
                 size_multiplier = 40;
-                height_scale = 76;
-                access_threshold = 0.02f;
+                height_scale = 56;
+                access_threshold = 0.0325f;
             }
             default -> {
                 size_multiplier = 0;
@@ -249,16 +249,16 @@ public final class Landscape {
                 break;
             }
             int[] count = new int[1];
-            island_ids.floodfill(pos[0], pos[1], (float) last_id, 0.01f, count);
+            int[] bounds = new int[4];
+            island_ids.floodfill(pos[0], pos[1], (float) last_id, 0.01f, count, bounds);
+            int area = count[0];
             if (count[0] < MIN_ISLAND_AREA) {
                 // If not big enough, put it back
-                island_ids.floodfill(pos[0], pos[1], 0.0f, 0.01f, count);
-            } else {
-                IslandInfo info = new IslandInfo(last_id, count[0], pos[0], pos[1]);
-                island_info.put(last_id, info);
+                island_ids.floodfill(pos[0], pos[1], 0.0f, 0.01f, null, null);
             }
+            IslandInfo info = new IslandInfo(last_id, area, bounds[0], bounds[1], bounds[2], bounds[3], pos[0], pos[1]);
+            island_info.put(last_id, info);
             last_id++;
-            island_locations.add(pos);
         }
         if (DEBUG) {
             island_ids.copy().multiply(1.0f / last_id).toLayer().saveAsPNG("island_ids");
@@ -642,7 +642,8 @@ public final class Landscape {
         relheight = height.copy().relativeIntensityNormalized(Math.max(1, unit_grids_per_world >> 5));
         if (DEBUG) relheight.toLayer().saveAsPNG("relheight");
         if (archipelago) {
-            access = generateThresholdMap(slope, access_threshold);
+            Channel inv = water_map.copy().invert();
+            access = generateThresholdMap(slope, access_threshold).channelMultiply(inv);
         } else {
             access = generateThresholdMap(slope, access_threshold).largestConnected(1f);
         }
@@ -719,7 +720,8 @@ public final class Landscape {
         relheight = height.copy().relativeIntensityNormalized(Math.max(1, unit_grids_per_world >> 5));
         if (DEBUG) relheight.toLayer().saveAsPNG("relheight");
         if (archipelago) {
-            access = generateThresholdMap(slope, access_threshold);
+            Channel inv = water_map.copy().invert();
+            access = generateThresholdMap(slope, access_threshold).channelMultiply(inv);
         } else {
             access = generateThresholdMap(slope, access_threshold).largestConnected(1f);
         }
@@ -1309,10 +1311,10 @@ public final class Landscape {
     }
 
     private final void generateWaterGrid() {
-        this.dock = new boolean[unit_grids_per_world][unit_grids_per_world];
+        this.dock = new byte[unit_grids_per_world][unit_grids_per_world];
         this.water = new byte[unit_grids_per_world][unit_grids_per_world];
         water_map = height.copy().threshold(Globals.SEA_LEVEL - 10.0f, Globals.SEA_LEVEL).floodfill(0, 0, -1.0f, 0.1f,
-                new int[1]).threshold(-1.01f, -0.99f);
+                null, null).threshold(-1.01f, -0.99f);
         if (DEBUG) water_map.toLayer().saveAsPNG("water_map");
         Channel shore_line = water_map.copy().smooth(2).threshold(0.4f, 0.6f);
         if (DEBUG) shore_line.toLayer().saveAsPNG("shore_line");
@@ -1320,16 +1322,25 @@ public final class Landscape {
                 Globals.SEA_LEVEL - 0.1f / height_scale,
                 Globals.SEA_LEVEL + 0.1f / height_scale);
         dock_map = water_map.copy().smooth(6).threshold(0.0f, 0.99f).channelMultiply(beach).channelMultiply(shore_line);
-        Channel deep_water_map = water_map.copy().smooth(7).threshold(0.99f, 1.0f);
+        Channel near_beach = dock_map.copy().smooth(8);
+        Channel deep_water_map = water_map.copy().smooth(4).threshold(0.99f, 1.0f);
         if (DEBUG) deep_water_map.toLayer().saveAsPNG("deep_water");
         if (DEBUG) beach.toLayer().saveAsPNG("beach");
         if (DEBUG) dock_map.toLayer().saveAsPNG("dock_map");
         for (int y = 0; y < unit_grids_per_world; y++) {
             for (int x = 0; x < unit_grids_per_world; x++) {
-                this.dock[y][x] = dock_map.getPixel(x, y) > 0.5f;
-                this.water[y][x] = 0;
-                this.water[y][x] += water_map.getPixel(x, y) > 0.5f ? 1 : 0;
-                this.water[y][x] += deep_water_map.getPixel(x, y) > 0.5f ? 1 : 0;
+                byte water_val = 0;
+                water_val += water_map.getPixel(x, y) > 0.5f ? 1 : 0;
+                water_val += deep_water_map.getPixel(x, y) > 0.5f ? 1 : 0;
+                var dockf = dock_map.getPixel(x, y);
+                byte dock_val = 0;
+                if (dockf > 0.5f) {
+                    dock_val = 1;
+                } else if (water_val == 0 && near_beach.getPixel(x, y) > 0.0f) {
+                    dock_val = 2;
+                }
+                this.dock[y][x] = dock_val;
+                this.water[y][x] = water_val;
             }
         }
     }
@@ -1357,16 +1368,12 @@ public final class Landscape {
         return access_grid;
     }
 
-    public final boolean[][] getDockGrid() {
+    public final byte[][] getDockGrid() {
         return dock;
     }
 
     public final byte[][] getWaterGrid() {
         return water;
-    }
-
-    public final List<int[]> getIslandLocations() {
-        return island_locations;
     }
 
     public int[][] getIslandIds() {

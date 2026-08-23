@@ -549,7 +549,6 @@ public final class LandBuilding extends Building {
 
     @Override
     public float getSize() {
-        assert !isDead();
         float radius = (getTemplate().getPlacingSize() - 1);
         return (float) Math.sqrt(2) * radius + .1f;
     }

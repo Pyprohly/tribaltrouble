@@ -7,34 +7,26 @@ import com.oddlabs.tt.model.weapon.RockSpearWeapon;
 import com.oddlabs.tt.model.weapon.RubberAxeWeapon;
 import com.oddlabs.tt.model.weapon.RubberSpearWeapon;
 
-import com.oddlabs.tt.player.Player;
-
-import org.jspecify.annotations.NonNull;
 
 import org.joml.Vector2f;
 import org.joml.Vector3f;
 import java.util.HashMap;
 import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 public final class ShipHR {
 
     private final boolean vikings;
 
     protected float unitSize(Unit unit) {
-        //if (vikings) {
         if (unit.isWarrior()) {
             return 1.20f;
         } else {
             return 0.70f;
         }
-        /*} else {
-            if (unit.isWarrior()) {
-                return 1.20f;
-            } else {
-                return 0.60f;
-            }
-        }*/
     }
 
     interface Row {
@@ -61,24 +53,24 @@ public final class ShipHR {
         private Unit unit = null;
         private ShipAllocation alloc;
 
-        public Rudder(float x, float y, float z) {
+        public Rudder(Ship ship, float x, float y, float z) {
             alloc = new ShipAllocation(new Vector3f(x, y, z), new Vector2f(0.0f, 1.0f), ShipAllocation.STEERING);
+            var owner = ship.getOwner();
+            unit = new Unit(owner, x, y, null, owner.getRace().getUnitTemplate(Race.UNIT_PEON), null, false, false,
+                    true);
+            unit.mount(ship, alloc);
         }
 
         public boolean canFit(Unit unit) {
-            return !unit.isWarrior() && this.unit == null;
+            return false;
         }
 
         public void seat(Unit unit) {
-            if (canFit(unit)) {
-                this.unit = unit;
-            }
+            assert (false);
         }
 
         public void exit(Unit unit) {
-            if (this.unit == unit) {
-                this.unit = null;
-            }
+            assert (false);
         }
 
         public ShipAllocation getAllocation(Unit unit) {
@@ -90,30 +82,20 @@ public final class ShipHR {
         }
 
         public void killAll() {
-            if (this.unit != null) {
-                this.unit.drown();
-                this.unit = null;
-            }
+            unit.drown();
+            unit = null;
         }
 
         public List<Unit> allUnits() {
-            ArrayList<Unit> ret = new ArrayList<>();
-            if (this.unit != null) {
-                ret.add(this.unit);
-            }
-            return ret;
+            return new ArrayList<Unit>();
         }
 
         public Unit findUnit(UnitTemplate template) {
-            if (this.unit != null && this.unit.getTemplate() == template) {
-                return this.unit;
-            } else {
-                return null;
-            }
+            return null;
         }
 
         public boolean needRowers() {
-            return this.unit == null;
+            return false;
         }
 
         public int countRowers() {
@@ -322,9 +304,11 @@ public final class ShipHR {
         public void killAll() {
             if (left != null) {
                 left.drown();
+                left = null;
             }
             if (right != null) {
                 right.drown();
+                right = null;
             }
         }
 
@@ -367,14 +351,14 @@ public final class ShipHR {
         }
     }
 
-    private HashMap<Unit, Row> unit2row = new HashMap<>();
+    private LinkedHashMap<Unit, Row> unit2row = new LinkedHashMap<>();
 
     private ArrayList<Row> rows = new ArrayList<>();
 
-    public ShipHR(boolean vikings) {
+    public ShipHR(Ship ship, boolean vikings) {
         this.vikings = vikings;
         if (vikings) {
-            rows.add(new Rudder(-11.14f, -0.43f, +0.54f));
+            rows.add(new Rudder(ship, -11.14f, -0.43f, +0.54f));
             rows.add(new LowerDeckRow(-9.62f, -1.98f, +1.98f, 0.42f, true, true));
             rows.add(new LowerDeckRow(-8.18f, -2.31f, +2.31f, 0.42f, true, true));
             rows.add(new LowerDeckRow(-6.71f, -2.54f, +2.54f, 0.43f, true, true));
@@ -405,7 +389,7 @@ public final class ShipHR {
             rows.add(new UpperDeckRow(-8.99f, +1.31f, +2.99f));
             rows.add(new UpperDeckRow(-10.49f, +1.00f, +2.99f));
         } else {
-            rows.add(new Rudder(-11.4f, +0.87f, +2.455f));
+            rows.add(new Rudder(ship, -11.4f, +0.87f, +2.455f));
             rows.add(new LowerDeckRow(-9.39f, -2.88f, +2.88f, +0.37f, true, true));
             rows.add(new LowerDeckRow(-7.92f, -2.88f, +2.88f, +0.37f, true, true));
             rows.add(new LowerDeckRow(-6.47f, -2.88f, +2.88f, +0.37f, true, true));
@@ -483,6 +467,15 @@ public final class ShipHR {
         for (int i = 0; i < rows.size(); i++) {
             rows.get(i).killAll();
             unit2row.clear();
+        }
+    }
+
+    public void removeUnit(Unit unit) {
+        if (unit2row.containsKey(unit)) {
+            Row row = unit2row.get(unit);
+            row.exit(unit);
+            unit.setReference(null);
+            unit2row.remove(unit);
         }
     }
 
@@ -576,22 +569,19 @@ public final class ShipHR {
         return result;
     }
 
-    public boolean pickVictim(float random, int damage, float dir_x, float dir_y, @NonNull Player owner) {
+    public Unit pickVictim(float random) {
         int index = StrictMath.round(random * 120);
-        if (index < unit2row.size()) {
-            Unit unit = unit2row.keySet().toArray(new Unit[0])[index];
-            Row row = unit2row.get(unit);
-            if (unit.getHitPoints() - damage <= 0) {
-                unit.drown();
-                row.exit(unit);
-                unit2row.remove(unit);
-            } else {
-                unit.hit(damage, dir_x, dir_y, owner);
-            }
-            return true;
-        } else {
-            return false;
+        if (index >= unit2row.size()) {
+            return null;
         }
+        Iterator<Map.Entry<Unit, Row>> it = unit2row.entrySet().iterator();
+        Map.Entry<Unit, Row> victim = it.next();
+        for (int i = 0; i < index; i++) {
+            victim = it.next();
+        }
+        Unit unit = victim.getKey();
+        Row row = victim.getValue();
+        return unit;
     }
 
     public int countRowers() {

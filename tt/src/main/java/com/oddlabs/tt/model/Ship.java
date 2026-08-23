@@ -98,7 +98,7 @@ public class Ship extends Building implements Movable {
 
     private ShipProxy proxy = null;
 
-    private final ShipHR ship_hr;
+    private ShipHR ship_hr = null;
 
     private float anim_time;
 
@@ -109,7 +109,6 @@ public class Ship extends Building implements Movable {
         float x = UnitGrid.coordinateFromGrid(grid_x);
         float y = UnitGrid.coordinateFromGrid(grid_y);
         super.setPosition(x, y);
-        ship_hr = new ShipHR(template.isVikings());
         setPositionZ(
                 Math.max(
                         unit_grid.getHeightMap().getSeaLevelMeters(),
@@ -430,7 +429,7 @@ public class Ship extends Building implements Movable {
     }
 
     private Unit createUnit(Target rally_point, @NonNull UnitTemplate template) {
-        if (proxy != null) {
+        if (proxy != null && ship_hr != null) {
             Unit unit = ship_hr.exitUnit(template);
             if (unit != null && rally_point != null) {
                 unit.setTarget(rally_point, Action.MOVE, false);
@@ -521,6 +520,7 @@ public class Ship extends Building implements Movable {
             build_points = Math.min(build_points + amount, getTemplate().getMaxHitPoints());
             reinsert();
             if (build_points == getTemplate().getMaxHitPoints()) {
+                ship_hr = new ShipHR(this, getTemplate().isVikings());
                 updateProxy();
                 getOwner().getWorld().getNotificationListener().newSelectableNotification(this);
                 getAbilities().addAbilities(getTemplate().getAbilities());
@@ -628,6 +628,7 @@ public class Ship extends Building implements Movable {
     protected void setTarget(@NonNull Target target, @NonNull Action action, boolean aggressive) {
         forceDecide();
         clearControllerStack();
+        pushController(new NullController(this));
         pushController(new SailController(this, target));
         free();
         occupy();
@@ -649,7 +650,6 @@ public class Ship extends Building implements Movable {
     }
 
     public final float getSize() {
-        assert !isDead();
         float radius = (getBuildingTemplate().getPlacingSize() - 1);
         return (float) StrictMath.sqrt(2) * radius + .1f;
     }
@@ -665,7 +665,9 @@ public class Ship extends Building implements Movable {
         forceDecide();
 
         // If it's a ship and it's destroyed, kill everyone on board
-        ship_hr.killCrew();
+        if (ship_hr != null) {
+            ship_hr.killCrew();
+        }
 
         new RandomVelocityEmitter(
                 getOwner().getWorld(),
@@ -848,15 +850,20 @@ public class Ship extends Building implements Movable {
         removeProxy();
     }
 
-    public final void hit(int damage, float dir_x, float dir_y, @NonNull Player owner) {
-        World world = getOwner().getWorld();
-        float prob = world.getRandom().nextFloat();
-        if (ship_hr.pickVictim(prob, damage, dir_x, dir_y, owner)) {
-            return;
+    public final Unit pickVictim() {
+        if (ship_hr != null) {
+            World world = getOwner().getWorld();
+            float prob = world.getRandom().nextFloat();
+            return ship_hr.pickVictim(prob);
         }
+        return null;
+    }
+
+    public final void hit(int damage, float dir_x, float dir_y, @NonNull Player owner) {
         super.hit(damage, dir_x, dir_y, owner);
         if (!isDead()) {
             setHitPoints(hit_points - damage);
+            World world = getOwner().getWorld();
             world.getAudio().newAudio(
                     new AudioParameters(
                             world.getRacesResources().getBuildingHitSound(world.getRandom()),
@@ -935,7 +942,10 @@ public class Ship extends Building implements Movable {
 
     public final void debugRender() {
         if (getCurrentBehaviour() instanceof SailBehaviour sail) {
-            sail.getTrajectory().debugRender(getUnitGrid().getHeightMap());
+            var traj = sail.getTrajectory();
+            if (traj != null) {
+                traj.debugRender(getUnitGrid().getHeightMap());
+            }
         }
     }
 
@@ -950,6 +960,7 @@ public class Ship extends Building implements Movable {
     public final void endTrip() {
         forceDecide();
         clearControllerStack();
+        pushController(new NullController(this));
         free();
         reinsert();
         occupy();

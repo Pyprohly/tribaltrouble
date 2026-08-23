@@ -35,7 +35,10 @@ public final class ShipAttackBehaviour implements Behaviour {
         float gx = x + dx * ox - dy * oy;
         float gy = y + dy * ox + dx * oy;
         unit.setPosition(gx, gy);
-        unit.setGridPosition(UnitGrid.toGridCoordinate(gx), UnitGrid.toGridCoordinate(gy));
+        int gridSize = ship.getUnitGrid().getGridSize();
+        int gridX = Math.clamp(UnitGrid.toGridCoordinate(gx), 0, gridSize - 1);
+        int gridY = Math.clamp(UnitGrid.toGridCoordinate(gy), 0, gridSize - 1);
+        unit.setGridPosition(gridX, gridY);
         float rx = allocation.getRotation().x;
         float ry = allocation.getRotation().y;
         unit.setDirection(rx * dx - ry * dy, ry * dx + rx * dy);
