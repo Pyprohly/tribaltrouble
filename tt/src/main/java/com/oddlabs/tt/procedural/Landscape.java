@@ -89,7 +89,6 @@ public final class Landscape {
     private Channel island_ids;
     private Channel good_starts;
     private Channel access;
-    private Channel resources_access;
     private Channel access_exported;
     private Channel relheight;
     private Channel highlight;
@@ -647,7 +646,6 @@ public final class Landscape {
         } else {
             access = generateThresholdMap(slope, access_threshold).largestConnected(1f);
         }
-        resources_access = access.copy();
         access_exported = access.copy();
         if (DEBUG) access.toLayer().saveAsPNG("access");
         build = Landscape.generateBuildMap(generateThresholdMap(slope, build_threshold).channelMultiply(access));
@@ -725,7 +723,6 @@ public final class Landscape {
         } else {
             access = generateThresholdMap(slope, access_threshold).largestConnected(1f);
         }
-        resources_access = access.copy();
         access_exported = access.copy();
         if (DEBUG) access.toLayer().saveAsPNG("access");
         build = Landscape.generateBuildMap(generateThresholdMap(slope, build_threshold).channelMultiply(access));
@@ -1028,30 +1025,30 @@ public final class Landscape {
         if (DEBUG) rock_channel.toLayer().saveAsPNG("supplies_rocks");
         if (DEBUG) iron_channel.toLayer().saveAsPNG("supplies_iron");
 
-        Channel supplies = resources_access.copy();
+        Channel supplies = access.copy();
         float accessible = supplies.sum();
 
         // place trees
         trees = placeSupplies(tree_channel, supplies, 64, (int) (vegetation_amount * max_trees * (accessible / area)),
                 0.33f);
-        resources_access.channelSubtract(trees);
+        access.channelSubtract(trees);
         if (DEBUG) trees.toLayer().saveAsPNG("supplies_trees_placed");
 
         // place palmtrees
         palmtrees = placeSupplies(palmtree_channel, supplies, 64,
                 (int) (vegetation_amount * max_palmtrees * (accessible / area)), 0.25f);
-        resources_access.channelSubtract(palmtrees);
+        access.channelSubtract(palmtrees);
         if (DEBUG) palmtrees.toLayer().saveAsPNG("supplies_palmtrees_placed");
 
         // place rock
         rock = placeSupplies(rock_channel, supplies, 64, (int) (supplies_amount * max_rock), 0f);
-        resources_access.channelSubtract(rock);
+        access.channelSubtract(rock);
         shadow.channelBrightest(rock.copy().multiply(0.5f));
         if (DEBUG) rock.toLayer().saveAsPNG("supplies_rock_placed");
 
         // place iron
         iron = placeSupplies(iron_channel, supplies, 64, (int) (supplies_amount * max_iron), 0f);
-        resources_access.channelSubtract(iron);
+        access.channelSubtract(iron);
         shadow.channelBrightest(iron.copy().multiply(0.5f));
         if (DEBUG) iron.toLayer().saveAsPNG("supplies_iron_placed");
 
@@ -1065,25 +1062,18 @@ public final class Landscape {
         // place extra supplies around starting locations
         int num_rock = 2;
         int num_iron = 1;
-        int num_tree = 4;
         for (int p = 0; p < num_players; p++) {
             for (int r = 0; r < num_rock; r++) {
-                int[] location = resources_access.find((unit_grids_per_world >> 1), supply_locations[p][0],
+                int[] location = access.find((unit_grids_per_world >> 1), supply_locations[p][0],
                         supply_locations[p][1], 1f);
                 rock.putPixel(location[0], location[1], 1f);
-                resources_access.putPixel(location[0], location[1], 0f);
+                access.putPixel(location[0], location[1], 0f);
             }
             for (int i = 0; i < num_iron; i++) {
-                int[] location = resources_access.find((unit_grids_per_world >> 1), supply_locations[p][0],
+                int[] location = access.find((unit_grids_per_world >> 1), supply_locations[p][0],
                         supply_locations[p][1], 1f);
                 iron.putPixel(location[0], location[1], 1f);
-                resources_access.putPixel(location[0], location[1], 0f);
-            }
-            for (int i = 0; i < num_tree; i++) {
-                int[] location = resources_access.find((unit_grids_per_world >> 1), supply_locations[p][0],
-                        supply_locations[p][1], 1f);
-                trees.putPixel(location[0], location[1], 1f);
-                resources_access.putPixel(location[0], location[1], 0f);
+                access.putPixel(location[0], location[1], 0f);
             }
         }
 
