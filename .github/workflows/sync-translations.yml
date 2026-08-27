@@ -109,5 +109,6 @@ jobs:
             gh pr create --base "${{ github.ref_name }}" --head "$BRANCH" \
               --title "Update translations from sheet" --body-file pr-body.txt
           else
-            echo "PR already open; branch updated"
+            gh pr edit "$BRANCH" --body-file pr-body.txt
+            echo "PR already open; branch and body updated"
           fi
