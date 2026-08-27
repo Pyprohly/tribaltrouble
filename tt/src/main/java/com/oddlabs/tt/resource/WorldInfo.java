@@ -12,9 +12,9 @@ public record WorldInfo(int meters_per_world, float sea_level_meters, int texels
                         float @NonNull [] @NonNull [] heightmap, @NonNull List<int[]> trees,
                         @NonNull List<int[]> palm_trees, @NonNull List<int[]> rocks, @NonNull List<int[]> iron,
                         float @NonNull [] @NonNull [] plants, boolean @NonNull [] @NonNull [] access_grid,
-                        boolean @NonNull [] @NonNull [] dock_grid,
+                        byte @NonNull [] @NonNull [] dock_grid,
                         byte @NonNull [] @NonNull [] water_grid,
-                        byte @NonNull [] @NonNull [] build_grid, @NonNull List<int[]> island_locations,
+                        byte @NonNull [] @NonNull [] build_grid,
                         int @NonNull [] @NonNull [] island_ids,
                         @NonNull List<IslandInfo> island_infos,
                         float @NonNull [] @NonNull [] starting_locations,
@@ -27,8 +27,8 @@ public record WorldInfo(int meters_per_world, float sea_level_meters, int texels
             float @NonNull [] @NonNull [] heightmap, @NonNull List<int @NonNull []> trees,
             @NonNull List<int @NonNull []> palm_trees, @NonNull List<int[]> rocks, @NonNull List<int[]> iron,
             float @NonNull [] @NonNull [] plants, boolean @NonNull [] @NonNull [] access_grid,
-            boolean @NonNull [] @NonNull [] dock_grid, byte @NonNull [] @NonNull [] water_grid,
-            byte @NonNull [] @NonNull [] build_grid, @NonNull List<int[]> island_locations,
+            byte @NonNull [] @NonNull [] dock_grid, byte @NonNull [] @NonNull [] water_grid,
+            byte @NonNull [] @NonNull [] build_grid,
             int @NonNull [] @NonNull [] island_ids,
             @NonNull List<IslandInfo> island_infos,
             float @NonNull [] @NonNull [] starting_locations, BlendInfo @NonNull [] blend_infos) {
@@ -48,7 +48,6 @@ public record WorldInfo(int meters_per_world, float sea_level_meters, int texels
         this.access_grid = access_grid;
         this.dock_grid = dock_grid;
         this.water_grid = water_grid;
-        this.island_locations = island_locations;
         this.island_ids = island_ids;
         this.island_infos = island_infos;
         this.build_grid = build_grid;

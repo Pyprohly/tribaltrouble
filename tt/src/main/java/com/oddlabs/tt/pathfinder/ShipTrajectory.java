@@ -14,7 +14,6 @@ public final class ShipTrajectory {
 
     private final Ship ship;
     private final UnitGrid grid;
-    private final boolean DEBUG = false;
 
     private final List<ShipTrajectorySegment> trajectory;
 
@@ -30,24 +29,12 @@ public final class ShipTrajectory {
         grid = ship.getUnitGrid();
 
         ShipTrajectoryPoint p0 = new ShipTrajectoryPoint(ship);
-        ShipTrajectoryPoint p1 = p0.moved(10);
+        ShipTrajectoryPoint p1 = pickTargetPosition(grid, ship, t);
 
-        boolean waterTarget = grid.isDeepWater(t.getGridX(), t.getGridY());
-        boolean waterStart = grid.isDeepWater(ship.getGridX(), ship.getGridY());
-
-        ShipTrajectoryPoint p2 = null;
-
-        if (waterTarget) {
-            p2 = new ShipTrajectoryPoint(t);
-        } else {
-            p2 = pickTargetPosition(grid, ship, t);
-        }
-
-        var regionPath = findRegionPath(p1, p2);
+        var regionPath = findRegionPath(p0, p1);
 
         if (regionPath != null) {
             optimizePath(regionPath);
-            regionPath.add(0, p0);
             trajectory = createTrajectory(regionPath);
         } else {
             trajectory = null;
@@ -86,6 +73,10 @@ public final class ShipTrajectory {
     }
 
     private Region findRegion(int grid_x, int grid_y) {
+        int size = grid.getGridSize();
+        if (grid_x < 0 || grid_x >= size || grid_y < 0 || grid_y >= size) {
+            return null;
+        }
         return grid.getRegion(grid_x, grid_y, UnitGrid.SEA);
     }
 
@@ -101,7 +92,7 @@ public final class ShipTrajectory {
                         segment.p0.positionX, segment.p0.positionY, z,
                         segment.p1.positionX, segment.p1.positionY, z,
                         0.0f, 1.0f, 0.0f);
-            } else {
+            } else if (!segment.isPivot) {
                 drawArc(segment, z);
             }
         }
@@ -182,6 +173,10 @@ public final class ShipTrajectory {
 
         ShipTrajectoryPoint prev = path.get(0);
 
+        ShipTrajectoryPoint pivotPt = prev.clone();
+        pivotPt.setDirectionTo(path.get(1));
+        result.add(makeStraightSegment(prev, pivotPt));
+
         for (int i = 1; i < n - 1; i++) {
             ShipTrajectoryPoint a = path.get(i - 1);
             ShipTrajectoryPoint b = path.get(i);
@@ -256,7 +251,8 @@ public final class ShipTrajectory {
                 ShipTrajectoryPoint prev = path.get(i - 1);
                 ShipTrajectoryPoint next = path.get(i + 1);
 
-                if (!checkLandCollision(grid, prev, next)) {
+                if (!checkLandCollision(grid, prev, next) && !checkShipsCollision(grid, ship, prev.moved(-7),
+                        next.moved(7))) {
                     path.remove(i);
                     changed = true;
                 } else {
@@ -283,7 +279,7 @@ public final class ShipTrajectory {
         }
 
         public boolean filter(int grid_x, int grid_y, Occupant occ) {
-            if (grid.isDeepWater(grid_x, grid_y)) {
+            if (grid.isDeepWater(grid_x, grid_y) && grid.getRegion(grid_x, grid_y, UnitGrid.SEA) != null) {
                 pt = new ShipTrajectoryPoint(grid_x, grid_y);
                 return true;
             }
@@ -415,7 +411,7 @@ public final class ShipTrajectory {
         }
 
         public boolean filter(int grid_x, int grid_y, Occupant occ) {
-            if (occ instanceof Ship s && s != self) {
+            if (occ instanceof Ship s && s != self && !s.isDead()) {
                 ships.add(s);
             }
             return false;
@@ -447,6 +443,7 @@ public final class ShipTrajectory {
         int radius = (int) StrictMath.round(poly[0].gridDistanceTo(poly[2])) + 10;
         ShipFinder finder = new ShipFinder(radius, ship);
         grid.scan(finder, center_x, center_y, UnitGrid.SEA);
+        grid.scan(finder, center_x, center_y, UnitGrid.LAND);
         for (Ship otherShip : finder.results()) {
             int dist_dx = ship.getGridX() - otherShip.getGridX();
             int dist_dy = ship.getGridY() - otherShip.getGridY();

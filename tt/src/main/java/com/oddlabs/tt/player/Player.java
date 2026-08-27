@@ -8,7 +8,9 @@ import com.oddlabs.tt.landscape.World;
 import com.oddlabs.tt.model.Abilities;
 import com.oddlabs.tt.model.Action;
 import com.oddlabs.tt.model.Army;
+import com.oddlabs.tt.model.LandBuilding;
 import com.oddlabs.tt.model.Building;
+import com.oddlabs.tt.model.Ship;
 import com.oddlabs.tt.model.DeployType;
 import com.oddlabs.tt.model.IronSupply;
 import com.oddlabs.tt.model.Race;
@@ -315,7 +317,51 @@ public final class Player implements PlayerInterface {
     }
 
     public @Nullable Selectable<?> findNearestEnemyBuilding(int start_x, int start_y) {
-        return findNearestEnemy(start_x, start_y, null, Building.class);
+        return findNearestEnemy(start_x, start_y, null, LandBuilding.class);
+    }
+
+    public @Nullable Selectable<?> findNearestEnemyShip(int start_x, int start_y) {
+        return findNearestEnemy(start_x, start_y, null, Ship.class);
+    }
+
+    public @Nullable Selectable<?> findNearestEnemyOnBeach(int start_x, int start_y) {
+        int best_dist_squared = Integer.MAX_VALUE;
+        var dock = getWorld().getHeightMap().getDockGrid();
+        var map_size = getWorld().getHeightMap().getGridUnitsPerWorld();
+        Selectable<?> best_target = null;
+        for (Player player : world.getPlayers()) {
+            if (isEnemy(player)) {
+                for (var s : player.getUnits().getSet()) {
+                    int x = s.getGridX();
+                    int y = s.getGridY();
+                    int size = StrictMath.round(s.getSize());
+                    boolean on_beach = false;
+                    for (int i = 0; i < size && !on_beach; i++) {
+                        for (int j = 0; j < size && !on_beach; j++) {
+                            int cx = x + i - size / 2;
+                            int cy = y + i - size / 2;
+                            if (cx < 0 || cx >= map_size || cy < 0 || cy >= map_size) {
+                                continue;
+                            }
+                            if (dock[cy][cx] != 0) {
+                                on_beach = true;
+                            }
+                        }
+                    }
+                    if (!on_beach) {
+                        continue;
+                    }
+                    int dx = x - start_x;
+                    int dy = y - start_y;
+                    int dist_squared = dx * dx + dy * dy;
+                    if (best_dist_squared > dist_squared) {
+                        best_dist_squared = dist_squared;
+                        best_target = s;
+                    }
+                }
+            }
+        }
+        return best_target;
     }
 
     public @NonNull Race getRace() {
@@ -515,6 +561,15 @@ public final class Player implements PlayerInterface {
             if (selection1 != null) {
                 selection1.hit(10000, 0f, 1f, this);
             }
+        }
+    }
+
+    @Override
+    public final void setSailingTarget(Selectable<?> @NonNull [] selection, @NonNull Target target) {
+        if (selection.length == 0) return;
+        for (int i = 0; i < selection.length; i++) {
+            if (isValid(selection[i]))
+                selection[i].initTarget(target, Action.MOVE, false);
         }
     }
 

@@ -81,6 +81,7 @@ public class Unit extends Selectable<UnitTemplate> implements Occupant, Movable 
     private float anim_speed;
     private float anim_time;
     private int path_penalty;
+    private boolean imaginary;
     /**
      * unit is in a tower
      */
@@ -108,8 +109,15 @@ public class Unit extends Selectable<UnitTemplate> implements Occupant, Movable 
     public Unit(@NonNull Player owner, float x, float y, @Nullable Target rally_point,
             @NonNull UnitTemplate unit_template, @Nullable String name, boolean notify_by_chieftain,
             boolean grid_targets_only) {
+        this(owner, x, y, rally_point, unit_template, name, notify_by_chieftain, grid_targets_only, false);
+    }
+
+    public Unit(@NonNull Player owner, float x, float y, @Nullable Target rally_point,
+            @NonNull UnitTemplate unit_template, @Nullable String name, boolean notify_by_chieftain,
+            boolean grid_targets_only, boolean imaginary) {
         super(owner, unit_template);
         this.name = name;
+        this.imaginary = imaginary;
         getAbilities().addAbilities(unit_template.getAbilities());
         register();
         hit_points = unit_template.getMaxHitPoints();
@@ -117,9 +125,12 @@ public class Unit extends Selectable<UnitTemplate> implements Occupant, Movable 
         UnitSupplyContainerFactory factory = unit_template.getUnitSupplyContainerFactory();
         supply_container = factory != null ? (UnitSupplyContainer) factory.createContainer(this) : null;
 
-        findInitialPosition(x, y, grid_targets_only);
+        if (!imaginary) {
+            findInitialPosition(x, y, grid_targets_only);
+        }
+
         pushController(new IdleController(this, new AttackScanFilter(getOwner(), AttackScanFilter.UNIT_RANGE), true));
-        if (!getAbilities().hasAbilities(Abilities.MAGIC)) {
+        if (!getAbilities().hasAbilities(Abilities.MAGIC) && !imaginary) {
             int result = getOwner().getUnitCountContainer().increaseSupply(1);
             assert (result == 1) : "No room for new unit in player unit container.";
         } else if (notify_by_chieftain) {
@@ -158,7 +169,11 @@ public class Unit extends Selectable<UnitTemplate> implements Occupant, Movable 
 
     @Override
     protected final float getZError() {
-        return getLandscapeError();
+        if (on_ship) {
+            return 0.0f;
+        } else {
+            return getLandscapeError();
+        }
     }
 
     @Override
@@ -237,7 +252,9 @@ public class Unit extends Selectable<UnitTemplate> implements Occupant, Movable 
         mounted = false;
         on_ship = false;
         mount_offset = 0;
-        enable();
+        if (!imaginary) {
+            enable();
+        }
         if (supply_container != null) {
             supply_container.resetSupply(LeftPaddle.class);
             supply_container.resetSupply(RightPaddle.class);
@@ -267,8 +284,10 @@ public class Unit extends Selectable<UnitTemplate> implements Occupant, Movable 
         assert !isDead();
         mounted_building = building;
         mount_offset = building.getTemplate().getMountOffset();
-        disable();
-        free();
+        if (!imaginary) {
+            disable();
+            free();
+        }
         setPosition(building.getPositionX(), building.getPositionY());
         mounted = true;
         clearControllerStack();
@@ -279,8 +298,10 @@ public class Unit extends Selectable<UnitTemplate> implements Occupant, Movable 
         assert !isDead();
         mounted_building = ship;
         mount_offset = ship_allocation.getOffset().z;
-        disable();
-        free();
+        if (!imaginary) {
+            disable();
+            free();
+        }
         mounted = true;
         on_ship = true;
         setReference(ship);
@@ -369,7 +390,6 @@ public class Unit extends Selectable<UnitTemplate> implements Occupant, Movable 
 
     @Override
     public final float getSize() {
-        assert !isDead();
         return 1.9f;
     }
 
@@ -422,10 +442,12 @@ public class Unit extends Selectable<UnitTemplate> implements Occupant, Movable 
         if (getAbilities().hasAbilities(Abilities.MAGIC)) {
             getOwner().setActiveChieftain(null);
         }
-        free();
-        if (!getAbilities().hasAbilities(Abilities.MAGIC)) {
-            int result = getOwner().getUnitCountContainer().increaseSupply(-1);
-            assert result == -1;
+        if (!imaginary) {
+            free();
+            if (!getAbilities().hasAbilities(Abilities.MAGIC)) {
+                int result = getOwner().getUnitCountContainer().increaseSupply(-1);
+                assert result == -1;
+            }
         }
         if (stun_marker != null) {
             stun_marker.done();
@@ -478,7 +500,12 @@ public class Unit extends Selectable<UnitTemplate> implements Occupant, Movable 
         } else if (!isDead()) {
             hit_points = Math.clamp(hit_points - damage, 0, getTemplate().getMaxHitPoints());
             if (hit_points == 0) {
-                startDying();
+                if (mounted_building instanceof Ship ship) {
+                    ship.getShipHR().removeUnit(this);
+                    drown();
+                } else {
+                    startDying();
+                }
             }
         }
     }
@@ -750,6 +777,10 @@ public class Unit extends Selectable<UnitTemplate> implements Occupant, Movable 
         h_max = Math.max(h_max, hm.getNearestHeight(x - d, y - d));
 
         return Math.max(0f, h_max - h_center);
+    }
+
+    public final float getHitError() {
+        return on_ship ? 2.2f : 0.0f;
     }
 
     public final void debugRender() {

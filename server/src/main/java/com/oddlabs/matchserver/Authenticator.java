@@ -85,6 +85,11 @@ public final class Authenticator implements MatchmakingServerLoginInterface, Con
             if (allowed_chars.indexOf(c) == -1)
                 throw new InvalidUsernameException(MatchmakingClientInterface.USERNAME_ERROR_INVALID_CHARACTERS);
         }
+
+        // Reuses the invalid characters error code so old clients, which throw on unknown codes,
+        // stay compatible
+        if (!BannedWordFilter.isAllowed(name))
+            throw new InvalidUsernameException(MatchmakingClientInterface.USERNAME_ERROR_INVALID_CHARACTERS);
     }
 
     public void createUser(Login login, LoginDetails login_details, SignedObject reg_key, int revision) {

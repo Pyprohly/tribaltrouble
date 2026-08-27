@@ -6,27 +6,25 @@ public class IslandInfo {
     private int trees;
     private int rocks;
     private int iron;
-    private int gridX;
-    private int gridY;
+    private int min_x;
+    private int min_y;
+    private int max_x;
+    private int max_y;
+    private int start_x;
+    private int start_y;
 
-    public IslandInfo(int id, int area, int x, int y) {
+    public IslandInfo(int id, int area, int min_x, int min_y, int max_x, int max_y, int start_x, int start_y) {
         this.id = id;
         this.area = area;
-        this.gridX = x;
-        this.gridY = y;
+        this.min_x = min_x;
+        this.min_y = min_y;
+        this.max_x = max_x;
+        this.max_y = max_y;
+        this.start_x = start_x;
+        this.start_y = start_y;
         this.rocks = 0;
         this.iron = 0;
         this.trees = 0;
-    }
-
-    public IslandInfo(int id, int area, int trees, int rocks, int iron, int x, int y) {
-        this.id = id;
-        this.area = area;
-        this.trees = trees;
-        this.rocks = rocks;
-        this.iron = iron;
-        this.gridX = x;
-        this.gridY = y;
     }
 
     public void setTrees(int trees) {
@@ -53,12 +51,36 @@ public class IslandInfo {
         return trees;
     }
 
-    public int x() {
-        return gridX;
+    public int minX() {
+        return min_x;
     }
 
-    public int y() {
-        return gridY;
+    public int minY() {
+        return min_y;
+    }
+
+    public int maxX() {
+        return max_x;
+    }
+
+    public int maxY() {
+        return max_y;
+    }
+
+    public int centerX() {
+        return (min_x + max_x) / 2;
+    }
+
+    public int centerY() {
+        return (min_y + max_y) / 2;
+    }
+
+    public int startX() {
+        return start_x;
+    }
+
+    public int startY() {
+        return start_y;
     }
 
     public int area() {
