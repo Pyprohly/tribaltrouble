@@ -5,6 +5,7 @@ on:
     branches: [ "main", "translations-sheet-sync" ]
     paths:
       - 'tt/src/main/resources/**/*.properties'
+      - 'tt/translations-baseline.csv'
       - '.github/workflows/sync-translations.yml'
   schedule:
     - cron: '0 9 * * 1'  # Mondays 09:00 UTC
