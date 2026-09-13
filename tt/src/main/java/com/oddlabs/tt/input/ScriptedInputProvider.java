@@ -2,6 +2,7 @@ package com.oddlabs.tt.input;
 
 import com.oddlabs.tt.gui.GUIRoot;
 import com.oddlabs.tt.gui.GUITreeDump;
+import com.oddlabs.tt.model.Race;
 import com.oddlabs.tt.util.GLUtils;
 import com.oddlabs.tt.window.LWJGL3Window;
 import org.jspecify.annotations.NonNull;
@@ -38,6 +39,8 @@ import java.util.logging.Logger;
  * shot [PATH] screenshot; replies with the file written
  * tree GUI tree, one object per line in framebuffer pixels, terminated by END
  * state players, camera, and every unit and building with world and screen coordinates, terminated by END
+ * sites [QUARTERS|ARMORY|TOWER|SHIP] [radius] legal placement cells near the selection with screen coordinates,
+ * terminated by END
  * ping
  * </pre>
  */
@@ -179,6 +182,21 @@ public final class ScriptedInputProvider implements InputProvider<Long> {
                         return "err no gui root yet";
                     }
                     return "ok\n" + GUITreeDump.dump(root, window.getHeight()) + "END";
+                case "sites": {
+                    if (root == null) {
+                        return "err no gui root yet";
+                    }
+                    int building = switch (parts.length > 1 ? parts[1].toUpperCase(Locale.ROOT) : "QUARTERS") {
+                        case "ARMORY" -> Race.BUILDING_ARMORY;
+                        case "TOWER" -> Race.BUILDING_TOWER;
+                        case "SHIP" -> Race.BUILDING_SHIP;
+                        default -> Race.BUILDING_QUARTERS;
+                    };
+                    int radius = parts.length > 2 ? Integer.parseInt(parts[2]) : 20;
+                    String dump = GameStateDump.sites(root, building, radius, window.getWidth(),
+                            window.getHeight());
+                    return dump.startsWith("err") ? dump.strip() : dump + "END";
+                }
                 case "state": {
                     if (root == null) {
                         return "err no gui root yet";
