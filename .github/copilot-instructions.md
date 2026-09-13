@@ -14,7 +14,8 @@ The rules most often broken:
 3. Gameplay simulation code (`tt/.../model`, `behaviour`, `pathfinder`, `landscape`,
    `player`, `trigger`) must stay deterministic: no wall-clock time, no unseeded randomness,
    no hash-order iteration, no branching on local settings or hardware.
-4. New user-visible strings go in the **English `.properties` base file only**. Never
-   machine-translate into locale files.
+4. **Creative content stays human.** No AI-generated translations, art, or sound, ever. New
+   user-visible strings go in the **English `.properties` base file only**; locale files are
+   written by human translators. Generated code is a draft until a person reviews it.
 5. Keep diffs minimal and comments sparse. Match the surrounding code instead of modernizing
    it in passing.

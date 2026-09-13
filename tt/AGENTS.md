@@ -41,7 +41,9 @@ When a feature needs both, keep the simulation half as small as possible.
 
 User-visible text belongs in the `.properties` bundle next to the class under
 `src/main/resources/com/oddlabs/tt/`. Add new keys to the English base file only and leave
-the locale files to the translation sync.
+the locale files to the translation sync. Never write a translation yourself, and never
+generate art or sound for a feature: see the creative work policy in the root
+[AGENTS.md](../AGENTS.md#policy-creative-work-stays-human).
 
 ## Practical notes
 
