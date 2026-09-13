@@ -21,7 +21,7 @@ def main(args):
             f.flush()
             reply = f.readline().rstrip("\r\n")
             print(f"> {arg}\n{reply}")
-            if reply == "ok" and arg.split()[0] == "tree":
+            if reply == "ok" and arg.split()[0] in ("tree", "state"):
                 while True:
                     line = f.readline().rstrip("\r\n")
                     if line == "END" or line == "":

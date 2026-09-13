@@ -37,6 +37,7 @@ import java.util.logging.Logger;
  * type TEXT character input, one character per poll
  * shot [PATH] screenshot; replies with the file written
  * tree GUI tree, one object per line in framebuffer pixels, terminated by END
+ * state players, camera, and every unit and building with world and screen coordinates, terminated by END
  * ping
  * </pre>
  */
@@ -178,6 +179,13 @@ public final class ScriptedInputProvider implements InputProvider<Long> {
                         return "err no gui root yet";
                     }
                     return "ok\n" + GUITreeDump.dump(root, window.getHeight()) + "END";
+                case "state": {
+                    if (root == null) {
+                        return "err no gui root yet";
+                    }
+                    String dump = GameStateDump.dump(root, window.getWidth(), window.getHeight());
+                    return dump.startsWith("err") ? dump.strip() : dump + "END";
+                }
                 default:
                     return "err unknown command: " + line;
             }
