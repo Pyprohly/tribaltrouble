@@ -1,11 +1,12 @@
 """Send commands to the game's scripted input socket. Usage: ttcmd.py "move 100 200" "click" "shot C:/x.bmp" ...
 A command may be prefixed with "sleep:N" (seconds) to pause before sending it, e.g. "sleep:1.5 shot".
 """
+import os
 import socket
 import sys
 import time
 
-HOST, PORT = "127.0.0.1", 7777
+HOST, PORT = "127.0.0.1", int(os.environ.get("TT_PORT", "7777"))
 
 def main(args):
     with socket.create_connection((HOST, PORT), timeout=30) as s:
