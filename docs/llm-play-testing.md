@@ -46,8 +46,9 @@ another port and relaunch.
 
 `tools/ttinput.py` is a minimal client: each argument is one command, replies are printed, and a
 `sleep:N` prefix pauses before a command. The port comes from the `TT_PORT` environment variable
-(default 7777). It is plain Python with no dependencies; any language that can open a TCP socket and
-write lines works just as well.
+(default 7777) and the reply timeout from `TT_TIMEOUT` in seconds (default 300, so a long `wait`
+or `warp` does not time out). It is plain Python with no dependencies; any language that can open a
+TCP socket and write lines works just as well.
 
 ```
 python tools/ttinput.py "ping" "tree"
@@ -227,6 +228,50 @@ numbers. Hand that loop to a smaller model with this document, the ports, and a 
 question, and keep the expensive model for deciding what to test and interpreting failures. A
 subagent given "on port 7790 select all peons and build quarters via `sites`, then confirm on port
 7777 that player 1 has one building" needs nothing else.
+
+## Towards a headless simulation
+
+The socket driver still needs a window because the simulation only runs inside the rendering
+client. A survey of where the simulation packages touch OpenGL shows the split is smaller than it
+looks:
+
+| Package | Files touching GL or the renderer | Notes |
+|---|---|---|
+| `player`, `pathfinder`, `event` | 0 of 46 | Already renderer-free |
+| `model` | 4 of 67 | `Unit`, `LandBuilding`, `Ship` only in their render methods; `RacesResources` loads textures and effects next to the unit and building templates |
+| `landscape` | 2 of 22 | `HeightMap` uploads a height texture in its constructor; `LandscapeBaker` is texture baking |
+| `procedural` | 13 of 35 | Texture generators, plus `Landscape` which mixes heightmap generation with texture work |
+| `resource` | 9 of 19 | `IslandGenerator.generate` builds terrain then bakes textures in the same call |
+| `net` | 5 of 43 | `WorldStarter`, `PeerHub`, `MatchmakingClient` reach for the renderer or GUI |
+| `animation` | 1 of 5 | `AnimationManager.runGameLoop` is the game loop and it is welded to `Renderer` and the window |
+
+What it would take, in order, each step verifiable with an event-log replay because none of them
+may change a single simulation value:
+
+1. **Split terrain generation from texture baking.** `IslandGenerator.generate` and `Landscape`
+   produce the heightmap, trees, supplies, start positions and the access and build grids on the
+   CPU, then bake colour maps on the GPU. Return the CPU part as `WorldInfo` first and bake
+   afterwards from the renderer. Same for `HeightMap`, whose height texture belongs to the renderer
+   that reads it, not to the map.
+2. **Split `RacesResources` into templates and art.** Unit and building templates, abilities, costs
+   and build times are simulation data; textures, sprites, halos and smoke are not. Two classes,
+   or one class with the art loader optional.
+3. **A headless world owner.** `WorldViewer` today owns the world, the camera, the GUI panels and
+   the peer hub. The simulation needs only the peer hub, the local player interface and a
+   notification sink. A small `HeadlessWorld` that constructs `World` with a no-op audio
+   implementation and no GUI covers it.
+4. **A headless loop.** `AnimationManager.runGameLoop` polls the renderer's input and window every
+   tick. A second loop that ticks `LocalEventQueue` and the network at a fixed step, with no
+   renderer, is a few dozen lines next to the existing one.
+5. **Leave the render methods where they are.** The GL references in `Unit`, `LandBuilding` and
+   `Ship` are constants inside methods only the renderer calls. Without a renderer nothing calls
+   them, and LWJGL constants load without a GL context, so they cost nothing.
+
+Loopback networking already runs in-process for single player, so a headless test is
+`Server` plus `Client` plus the headless owner in one JVM, feeding orders through the same
+`PlayerInterface` the GUI uses. Rough size: ten to fifteen files, a few hundred lines moved rather
+than rewritten, and one to two weeks including the replay verification after each step. The risk
+sits in steps 1 and 2, which is exactly what the replay checksums guard.
 
 ## Cleanup
 

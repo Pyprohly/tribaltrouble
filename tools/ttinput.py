@@ -7,9 +7,10 @@ import sys
 import time
 
 HOST, PORT = "127.0.0.1", int(os.environ.get("TT_PORT", "7777"))
+TIMEOUT = float(os.environ.get("TT_TIMEOUT", "300"))
 
 def main(args):
-    with socket.create_connection((HOST, PORT), timeout=30) as s:
+    with socket.create_connection((HOST, PORT), timeout=TIMEOUT) as s:
         f = s.makefile("rw", encoding="utf-8", newline="\n")
         for arg in args:
             if arg.startswith("sleep:"):
