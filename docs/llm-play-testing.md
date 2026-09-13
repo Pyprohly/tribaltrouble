@@ -67,7 +67,16 @@ Commands:
 | `tree` | GUI tree, one line per widget: `depth Class x y w h [text]`, ends with `END` |
 | `state` | Game state, ends with `END`; `err not in game` from menus |
 | `sites [QUARTERS\|ARMORY\|TOWER\|SHIP] [radius]` | Legal placement cells, ends with `END` |
+| `tick` | Current simulation tick (high-precision ticks, 4 ms each) |
+| `warp MILLIS` | Fast-forward the simulation by that much game time; answers once it has caught up |
+| `wait tick N` | Answers once the simulation reaches tick N |
 | `ping` | `ok pong` |
+
+Prefer `warp` and `wait` to sleeping. `warp 60000` runs a minute of game time in a few frames and
+returns when the ticks have actually been simulated, so the next `state` is exact. The game loop
+refuses any single frame step over thirty seconds, so `warp` feeds the clock in chunks internally;
+you can ask for as much as you like. Warp only pushes the local clock, so use it in single player.
+In multiplayer the peers set the pace and a warped client would wait for them.
 
 Every command is answered `ok ...` or `err ...` once it has been applied on the game thread, so a
 client can simply send, read one line, and move on. A `click` is answered after the release has been
@@ -77,6 +86,7 @@ applied, one frame after the press.
 
 ```
 delegate SelectionDelegate
+tick 18250
 camera target 281.9 22.9 45.7
 player 0 local Player team 0 units 20/250 buildings 0
 player 1 AI1 team 1 units 20/250 buildings 1
@@ -191,6 +201,11 @@ Back on the host: Start. Start stays disabled until every filled slot, host incl
 **Verification.** After both report `delegate SelectionDelegate`, compare `state` from both ports
 with the `screen` columns stripped. Every unit and building should match exactly; they are the same
 lockstep simulation. Then act on one client and confirm the other sees the result.
+
+Two snapshots taken seconds apart will differ by a fraction of a metre on anything that is moving,
+which is timing, not desync. For an exact comparison read the `tick` line of both snapshots and
+only compare when they match, or `wait tick N` on both clients for the same N before reading. A real
+desync also shows up as `Checksum mismatch` in the client log.
 
 ## What to verify, and how
 

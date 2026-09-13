@@ -1,5 +1,7 @@
 package com.oddlabs.tt.input;
 
+import com.oddlabs.tt.animation.AnimationManager;
+import com.oddlabs.tt.event.LocalEventQueue;
 import com.oddlabs.tt.gui.GUIRoot;
 import com.oddlabs.tt.gui.GUITreeDump;
 import com.oddlabs.tt.model.Race;
@@ -41,11 +43,15 @@ import java.util.logging.Logger;
  * state players, camera, and every unit and building with world and screen coordinates, terminated by END
  * sites [QUARTERS|ARMORY|TOWER|SHIP] [radius] legal placement cells near the selection with screen coordinates,
  * terminated by END
+ * tick current simulation tick (4 ms high-precision ticks)
+ * warp MILLIS fast-forward the simulation by MILLIS of game time; answers once it has caught up
+ * wait tick N answers once the simulation reaches tick N
  * ping
  * </pre>
  */
 public final class ScriptedInputProvider implements InputProvider<Long> {
     private static final Logger logger = Logger.getLogger(ScriptedInputProvider.class.getName());
+    private static final long WARP_CHUNK_MILLIS = AnimationManager.MAX_STEP_MILLIS - 5000;
 
     private record MouseEvent(int button, boolean state, int x, int y) {
     }
@@ -69,6 +75,8 @@ public final class ScriptedInputProvider implements InputProvider<Long> {
     private int x;
     private int y;
     private @Nullable GUIRoot root;
+    private long warp_remaining;
+    private long warp_chunk_end;
 
     public ScriptedInputProvider(@NonNull LWJGL3InputProvider delegate, @NonNull LWJGL3Window window, int port) {
         this.delegate = delegate;
@@ -84,6 +92,10 @@ public final class ScriptedInputProvider implements InputProvider<Long> {
 
     public void setGuiRoot(@NonNull GUIRoot root) {
         this.root = root;
+    }
+
+    private static int currentTick() {
+        return LocalEventQueue.getQueue().getHighPrecisionManager().getTick();
     }
 
     private void serve(int port) {
@@ -114,7 +126,12 @@ public final class ScriptedInputProvider implements InputProvider<Long> {
     private void applyCommands() {
         if (!deferred.isEmpty()) {
             Command command = deferred.poll();
-            command.reply().complete(execute(command.line(), true));
+            String reply = execute(command.line(), true);
+            if (reply == null) {
+                deferred.addFirst(command);
+            } else {
+                command.reply().complete(reply);
+            }
             return;
         }
         Command command;
@@ -182,6 +199,32 @@ public final class ScriptedInputProvider implements InputProvider<Long> {
                         return "err no gui root yet";
                     }
                     return "ok\n" + GUITreeDump.dump(root, window.getHeight()) + "END";
+                case "tick":
+                    return "ok tick " + currentTick();
+                case "warp": {
+                    // warp MILLIS: pushes the game clock forward in chunks the loop will accept (it drops any frame
+                    // step over MAX_STEP_MILLIS) and answers once the simulation has caught up.
+                    if (!second_pass) {
+                        warp_remaining = Long.parseLong(parts[1]);
+                        warp_chunk_end = currentTick();
+                    }
+                    if (currentTick() < warp_chunk_end) {
+                        return null;
+                    }
+                    if (warp_remaining <= 0) {
+                        return "ok tick " + currentTick();
+                    }
+                    long chunk = Math.min(warp_remaining, WARP_CHUNK_MILLIS);
+                    warp_remaining -= chunk;
+                    warp_chunk_end = currentTick() + chunk / AnimationManager.ANIMATION_MILLISECONDS_PER_PRECISION_TICK;
+                    AnimationManager.warpTime(chunk);
+                    return null;
+                }
+                case "wait": {
+                    // wait tick N: answered once the simulation reaches tick N.
+                    long target = Long.parseLong(parts.length > 2 ? parts[2] : parts[1]);
+                    return currentTick() >= target ? "ok tick " + currentTick() : null;
+                }
                 case "sites": {
                     if (root == null) {
                         return "err no gui root yet";

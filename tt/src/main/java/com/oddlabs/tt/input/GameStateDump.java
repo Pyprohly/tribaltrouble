@@ -2,6 +2,7 @@ package com.oddlabs.tt.input;
 
 import com.oddlabs.tt.camera.CameraState;
 import com.oddlabs.tt.delegate.InGameDelegate;
+import com.oddlabs.tt.event.LocalEventQueue;
 import com.oddlabs.tt.gui.GUIRoot;
 import com.oddlabs.tt.landscape.HeightMap;
 import com.oddlabs.tt.model.Building;
@@ -36,6 +37,7 @@ public final class GameStateDump {
         Vector3f screen = new Vector3f();
         StringBuilder out = new StringBuilder("ok\n");
         out.append("delegate ").append(delegate.getClass().getSimpleName()).append('\n');
+        out.append("tick ").append(LocalEventQueue.getQueue().getHighPrecisionManager().getTick()).append('\n');
         out.append(String.format(Locale.ROOT, "camera target %.1f %.1f %.1f%n", camera.getTargetX(),
                 camera.getTargetY(), camera.getTargetZ()));
         for (int i = 0; i < players.length; i++) {
