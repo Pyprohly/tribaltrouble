@@ -46,6 +46,7 @@ import java.util.logging.Logger;
  * tick current simulation tick (4 ms high-precision ticks)
  * warp MILLIS fast-forward the simulation by MILLIS of game time; answers once it has caught up
  * wait tick N answers once the simulation reaches tick N
+ * scroll N wheel steps at the cursor (negative for down), one per poll
  * ping
  * </pre>
  */
@@ -53,7 +54,7 @@ public final class ScriptedInputProvider implements InputProvider<Long> {
     private static final Logger logger = Logger.getLogger(ScriptedInputProvider.class.getName());
     private static final long WARP_CHUNK_MILLIS = AnimationManager.MAX_STEP_MILLIS - 5000;
 
-    private record MouseEvent(int button, boolean state, int x, int y) {
+    private record MouseEvent(int button, boolean state, int x, int y, int dWheel) {
     }
 
     private record KeyEvent(int key, boolean down, char character) {
@@ -77,6 +78,7 @@ public final class ScriptedInputProvider implements InputProvider<Long> {
     private @Nullable GUIRoot root;
     private long warp_remaining;
     private long warp_chunk_end;
+    private int scroll_remaining;
 
     public ScriptedInputProvider(@NonNull LWJGL3InputProvider delegate, @NonNull LWJGL3Window window, int port) {
         this.delegate = delegate;
@@ -199,6 +201,25 @@ public final class ScriptedInputProvider implements InputProvider<Long> {
                         return "err no gui root yet";
                     }
                     return "ok\n" + GUITreeDump.dump(root, window.getHeight()) + "END";
+                case "scroll": {
+                    // scroll N: N wheel steps at the cursor, one per poll because the GUI collapses a poll's
+                    // wheel events into a single step.
+                    if (!second_pass) {
+                        scroll_remaining = Integer.parseInt(parts[1]);
+                    }
+                    if (scroll_remaining == 0) {
+                        return "ok";
+                    }
+                    int step = scroll_remaining > 0 ? 1 : -1;
+                    scroll_remaining -= step;
+                    if (!positioned) {
+                        x = delegate.getMouseX();
+                        y = delegate.getMouseY();
+                        positioned = true;
+                    }
+                    mouseEvents.add(new MouseEvent(-1, false, x, y, step * 120));
+                    return scroll_remaining == 0 ? "ok" : null;
+                }
                 case "tick":
                     return "ok tick " + currentTick();
                 case "warp": {
@@ -271,7 +292,7 @@ public final class ScriptedInputProvider implements InputProvider<Long> {
         x = px;
         y = window.getHeight() - py - 1;
         positioned = true;
-        mouseEvents.add(new MouseEvent(-1, false, x, y));
+        mouseEvents.add(new MouseEvent(-1, false, x, y, 0));
     }
 
     private void queueButton(int button, boolean down) {
@@ -280,7 +301,7 @@ public final class ScriptedInputProvider implements InputProvider<Long> {
             y = delegate.getMouseY();
             positioned = true;
         }
-        mouseEvents.add(new MouseEvent(button, down, x, y));
+        mouseEvents.add(new MouseEvent(button, down, x, y, 0));
     }
 
     private void queueKey(int code, boolean down, char character) {
@@ -357,7 +378,7 @@ public final class ScriptedInputProvider implements InputProvider<Long> {
 
     @Override
     public int getEventDWheel() {
-        return currentMouse != null ? 0 : delegate.getEventDWheel();
+        return currentMouse != null ? currentMouse.dWheel() : delegate.getEventDWheel();
     }
 
     @Override
