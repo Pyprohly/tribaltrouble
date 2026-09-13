@@ -45,8 +45,9 @@ public final class GameStateDump {
             out.append("player ").append(i).append(' ').append(p == local ? "local " : "").append(
                     p.getPlayerInfo().getName()).append(" team ").append(p.getPlayerInfo().getTeam()).append(
                             " units ").append(p.getUnitCountContainer().getNumSupplies()).append('/').append(
-                                    viewer.getWorld().getMaxUnitCount()).append(" buildings ").append(
-                                            p.getBuildingCountContainer().getNumSupplies()).append('\n');
+                                    p.getUnitCountContainer().getMaxSupplyCount()).append(" buildings ").append(
+                                            p.getBuildingCountContainer().getNumSupplies()).append('/').append(
+                                                    p.getBuildingCountContainer().getMaxSupplyCount()).append('\n');
         }
         var selection = viewer.getSelection().getCurrentSelection();
         for (int i = 0; i < players.length; i++) {
