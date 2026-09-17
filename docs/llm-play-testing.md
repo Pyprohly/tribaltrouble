@@ -78,6 +78,7 @@ Commands:
 | `wait tick N` | Answers once the simulation reaches tick N |
 | `wait delegate NAME` | Answers once the game is on that delegate, e.g. `wait delegate SelectionDelegate` |
 | `wait text TEXT` | Answers once a widget with that label is on screen, e.g. `wait text Ready` |
+| `wait ... SECONDS` | Any wait takes an optional trailing timeout and answers `err timeout` when it passes, e.g. `wait delegate SelectionDelegate 90`; give up on the server side, never only on the client side, or the queue stays blocked |
 | `ping` | `ok pong` |
 
 Prefer `warp` and `wait` to sleeping. `warp 60000` runs a minute of game time in a few frames and

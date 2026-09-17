@@ -51,7 +51,8 @@ import java.util.logging.Logger;
  * terminated by END
  * tick current simulation tick (4 ms high-precision ticks)
  * warp MILLIS fast-forward the simulation by MILLIS of game time; answers once it has caught up
- * wait tick N | wait delegate NAME | wait text TEXT answers once the condition holds
+ * wait tick N | wait delegate NAME | wait text TEXT [SECONDS] answers once the condition holds, or
+ * "err timeout" after SECONDS (default 300)
  * scroll N wheel steps at the cursor (negative for down), one per poll
  * ping
  * </pre>
@@ -66,7 +67,27 @@ public final class ScriptedInputProvider implements InputProvider<Long> {
     private record KeyEvent(int key, boolean down, char character) {
     }
 
-    private record Command(@NonNull String line, @NonNull CompletableFuture<String> reply) {
+    // A command that cannot finish in this poll waits in the deferred queue until its deadline, then answers
+    // "err timeout" so a client that gave up never leaves the queue wedged. wait commands take the deadline from
+    // their optional trailing SECONDS argument; everything else gets a generous default.
+    private static final long DEFAULT_DEADLINE_SECONDS = 300;
+
+    private record Command(@NonNull String line, @NonNull CompletableFuture<String> reply, long deadline_nanos) {
+        Command(@NonNull String line, @NonNull CompletableFuture<String> reply) {
+            this(line, reply, System.nanoTime() + secondsFor(line) * 1_000_000_000L);
+        }
+
+        private static long secondsFor(@NonNull String line) {
+            String[] parts = line.split("\\s+");
+            if (parts.length == 4 && parts[0].equalsIgnoreCase("wait")) {
+                try {
+                    return Long.parseLong(parts[3]);
+                } catch (NumberFormatException _) {
+                    return DEFAULT_DEADLINE_SECONDS;
+                }
+            }
+            return DEFAULT_DEADLINE_SECONDS;
+        }
     }
 
     private final @NonNull LWJGL3InputProvider delegate;
@@ -134,6 +155,10 @@ public final class ScriptedInputProvider implements InputProvider<Long> {
     private void applyCommands() {
         if (!deferred.isEmpty()) {
             Command command = deferred.poll();
+            if (System.nanoTime() > command.deadline_nanos()) {
+                command.reply().complete("err timeout");
+                return;
+            }
             String reply = execute(command.line(), true);
             if (reply == null) {
                 deferred.addFirst(command);
@@ -318,14 +343,15 @@ public final class ScriptedInputProvider implements InputProvider<Long> {
                 case "wait": {
                     // wait tick N | wait delegate NAME | wait text TEXT: answered once the condition holds.
                     String what = parts.length > 1 ? parts[1].toLowerCase(Locale.ROOT) : "tick";
+                    String value = parts.length > 2 ? parts[2].split("\\s+")[0] : parts[1];
                     if (what.equals("delegate")) {
                         String name = root == null ? "" : root.getDelegate().getClass().getSimpleName();
-                        return name.equalsIgnoreCase(parts[2]) ? "ok delegate " + name : null;
+                        return name.equalsIgnoreCase(value) ? "ok delegate " + name : null;
                     }
                     if (what.equals("text")) {
-                        return root != null && GUITreeDump.has(root, window.getHeight(), parts[2]) ? "ok" : null;
+                        return root != null && GUITreeDump.has(root, window.getHeight(), value) ? "ok" : null;
                     }
-                    long target = Long.parseLong(parts.length > 2 ? parts[2] : parts[1]);
+                    long target = Long.parseLong(value);
                     return currentTick() >= target ? "ok tick " + currentTick() : null;
                 }
                 case "sites": {
