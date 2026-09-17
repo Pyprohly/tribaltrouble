@@ -79,9 +79,9 @@ public final class ScriptedInputProvider implements InputProvider<Long> {
 
         private static long secondsFor(@NonNull String line) {
             String[] parts = line.split("\\s+");
-            if (parts.length == 4 && parts[0].equalsIgnoreCase("wait")) {
+            if (parts.length >= 4 && parts[0].equalsIgnoreCase("wait")) {
                 try {
-                    return Long.parseLong(parts[3]);
+                    return Long.parseLong(parts[parts.length - 1]);
                 } catch (NumberFormatException _) {
                     return DEFAULT_DEADLINE_SECONDS;
                 }
@@ -266,7 +266,7 @@ public final class ScriptedInputProvider implements InputProvider<Long> {
                     }
                     if (second_pass) {
                         queueButton(GLFW.GLFW_MOUSE_BUTTON_LEFT, false);
-                        deferred.add(new Command("press " + pair[1], new CompletableFuture<>()));
+                        commands.add(new Command("press " + pair[1], new CompletableFuture<>()));
                         return "ok";
                     }
                     if (root == null) {
@@ -343,7 +343,13 @@ public final class ScriptedInputProvider implements InputProvider<Long> {
                 case "wait": {
                     // wait tick N | wait delegate NAME | wait text TEXT: answered once the condition holds.
                     String what = parts.length > 1 ? parts[1].toLowerCase(Locale.ROOT) : "tick";
-                    String value = parts.length > 2 ? parts[2].split("\\s+")[0] : parts[1];
+                    String value = parts.length > 2 ? parts[2] : parts[1];
+                    if (parts.length > 2) {
+                        String[] words = parts[2].split("\\s+");
+                        boolean trailing_seconds = words.length > 1 && words[words.length - 1].matches("\\d+");
+                        value = trailing_seconds ? String.join(" ", java.util.Arrays.copyOf(words,
+                                words.length - 1)) : parts[2];
+                    }
                     if (what.equals("delegate")) {
                         String name = root == null ? "" : root.getDelegate().getClass().getSimpleName();
                         return name.equalsIgnoreCase(value) ? "ok delegate " + name : null;
