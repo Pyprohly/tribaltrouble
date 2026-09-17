@@ -28,6 +28,9 @@ public final class GUITreeDump {
                 ' ').append(py).append(' ').append(pw).append(' ').append(ph);
         if (object instanceof TextField field) {
             String text = field.getContents().replace('\n', ' ');
+            if (object instanceof PasswordLine) {
+                text = "*".repeat(text.length());
+            }
             if (!text.isEmpty()) {
                 out.append(' ').append(text);
             }
