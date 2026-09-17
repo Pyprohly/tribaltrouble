@@ -103,6 +103,10 @@ unit 0 Peon world 279.0 59.0 10.3 screen 1321 763 hp 1 selected
 building 1 Quarters world 247.0 365.0 20.8 screen 1302 -854 hp 2
 ```
 
+`simtick` is the lockstep tick and each `checksum T V` line is the world checksum at checksum tick T, kept for the
+last eight boundaries; two clients whose checksums match at the same T are running the same simulation, which is
+the only exact comparison, since `tick` is the local real-time clock and unit positions move between frames.
+
 `delegate` tells you what the game is doing: `SelectionDelegate` is normal play, `PlacingDelegate`
 means a building is being placed, anything else is a menu. Off-screen objects have negative or
 oversized screen coordinates; move the camera or pick another target.

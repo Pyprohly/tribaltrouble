@@ -9,6 +9,7 @@ import com.oddlabs.tt.model.Building;
 import com.oddlabs.tt.model.BuildingTemplate;
 import com.oddlabs.tt.model.Selectable;
 import com.oddlabs.tt.model.Unit;
+import com.oddlabs.tt.net.PeerHub;
 import com.oddlabs.tt.pathfinder.UnitGrid;
 import com.oddlabs.tt.player.Player;
 import com.oddlabs.tt.viewer.WorldViewer;
@@ -38,6 +39,11 @@ public final class GameStateDump {
         StringBuilder out = new StringBuilder("ok\n");
         out.append("delegate ").append(delegate.getClass().getSimpleName()).append('\n');
         out.append("tick ").append(LocalEventQueue.getQueue().getHighPrecisionManager().getTick()).append('\n');
+        PeerHub hub = viewer.getPeerHub();
+        out.append("simtick ").append(hub.getTick()).append('\n');
+        for (int[] c : hub.getRecentChecksums()) {
+            out.append("checksum ").append(c[0]).append(' ').append(c[1]).append('\n');
+        }
         out.append(String.format(Locale.ROOT, "camera target %.1f %.1f %.1f%n", camera.getTargetX(),
                 camera.getTargetY(), camera.getTargetZ()));
         for (int i = 0; i < players.length; i++) {
