@@ -4,6 +4,7 @@ import com.oddlabs.tt.animation.AnimationManager;
 import com.oddlabs.tt.event.LocalEventQueue;
 import com.oddlabs.tt.gui.GUIRoot;
 import com.oddlabs.tt.gui.GUITreeDump;
+import com.oddlabs.tt.gui.PasswordLine;
 import com.oddlabs.tt.gui.TextField;
 import com.oddlabs.tt.model.Race;
 import com.oddlabs.tt.util.GLUtils;
@@ -266,8 +267,12 @@ public final class ScriptedInputProvider implements InputProvider<Long> {
                     if (field == null) {
                         return "err no edit field for: " + pair[0];
                     }
-                    field.clear();
-                    field.append(pair[1]);
+                    if (field instanceof PasswordLine password) {
+                        password.setPassword(pair[1]);
+                    } else {
+                        field.clear();
+                        field.append(pair[1]);
+                    }
                     return "ok " + field.getContents();
                 }
                 case "scroll": {
