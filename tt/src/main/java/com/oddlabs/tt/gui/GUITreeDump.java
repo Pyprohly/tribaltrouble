@@ -55,7 +55,8 @@ public final class GUITreeDump {
         return "";
     }
 
-    private record Placed(@NonNull GUIObject object, int x, int y, int w, int h, @NonNull String text) {
+    private record Placed(@NonNull GUIObject object, int x, int y, int w, int h, @NonNull String text,
+                          boolean clickable) {
         int centerX() {
             return x + w / 2;
         }
@@ -65,28 +66,40 @@ public final class GUITreeDump {
         }
     }
 
+    private static boolean isClickable(@NonNull GUIObject object) {
+        return object instanceof ButtonObject || object instanceof PanelTab || object instanceof PulldownButton
+                || object instanceof EditLine;
+    }
+
     private static void collect(@NonNull List<Placed> out, @NonNull GUIObject object, int parent_x, int parent_y,
-            float scale, int framebuffer_height) {
+            float scale, int framebuffer_height, boolean inside_clickable) {
         int abs_x = parent_x + object.getX();
         int abs_y = parent_y + object.getY();
         int px = Math.round(abs_x * scale);
         int py = framebuffer_height - Math.round((abs_y + object.getHeight()) * scale);
+        boolean clickable = inside_clickable || isClickable(object);
         out.add(new Placed(object, px, py, Math.round(object.getWidth() * scale),
-                Math.round(object.getHeight() * scale), textOf(object)));
+                Math.round(object.getHeight() * scale), textOf(object), clickable));
         GUIObject child = object.getFirstChild();
         while (child != null) {
-            collect(out, child, abs_x, abs_y, scale, framebuffer_height);
+            collect(out, child, abs_x, abs_y, scale, framebuffer_height, clickable);
             child = child.getNext();
         }
     }
 
-    // The last match wins so a form on top of another form takes priority over the one underneath.
+    private static void collect(@NonNull List<Placed> out, @NonNull GUIObject object, int parent_x, int parent_y,
+            float scale, int framebuffer_height) {
+        collect(out, object, parent_x, parent_y, scale, framebuffer_height, false);
+    }
+
+    // A widget that is clickable, or sits inside one, beats a plain label with the same text; among equals the
+    // last match wins so a form on top of another form takes priority over the one underneath.
     private static @Nullable Placed last(@NonNull GUIRoot root, int framebuffer_height, @NonNull String text) {
         List<Placed> placed = new ArrayList<>();
         collect(placed, root, 0, 0, root.getGlobalScale(), framebuffer_height);
         Placed match = null;
         for (Placed p : placed) {
-            if (p.text().equalsIgnoreCase(text.strip())) {
+            if (p.text().equalsIgnoreCase(text.strip()) && (match == null || p.clickable() || !match.clickable())) {
                 match = p;
             }
         }
