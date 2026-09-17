@@ -4,6 +4,7 @@ import com.oddlabs.tt.animation.AnimationManager;
 import com.oddlabs.tt.event.LocalEventQueue;
 import com.oddlabs.tt.gui.GUIRoot;
 import com.oddlabs.tt.gui.GUITreeDump;
+import com.oddlabs.tt.gui.TextField;
 import com.oddlabs.tt.model.Race;
 import com.oddlabs.tt.util.GLUtils;
 import com.oddlabs.tt.window.LWJGL3Window;
@@ -40,12 +41,16 @@ import java.util.logging.Logger;
  * type TEXT character input, one character per poll
  * shot [PATH] screenshot; replies with the file written
  * tree GUI tree, one object per line in framebuffer pixels, terminated by END
+ * find TEXT framebuffer centre of the last widget whose label matches TEXT
+ * press TEXT move to that widget and click it; rpress TEXT right-clicks it
+ * choose LABEL=ITEM open the pulldown on LABEL's row and pick ITEM
+ * edit LABEL=TEXT set the edit field on the row of LABEL (or the field showing LABEL) to TEXT
  * state players, camera, and every unit and building with world and screen coordinates, terminated by END
  * sites [QUARTERS|ARMORY|TOWER|SHIP] [radius] legal placement cells near the selection with screen coordinates,
  * terminated by END
  * tick current simulation tick (4 ms high-precision ticks)
  * warp MILLIS fast-forward the simulation by MILLIS of game time; answers once it has caught up
- * wait tick N answers once the simulation reaches tick N
+ * wait tick N | wait delegate NAME | wait text TEXT answers once the condition holds
  * scroll N wheel steps at the cursor (negative for down), one per poll
  * ping
  * </pre>
@@ -201,6 +206,70 @@ public final class ScriptedInputProvider implements InputProvider<Long> {
                         return "err no gui root yet";
                     }
                     return "ok\n" + GUITreeDump.dump(root, window.getHeight()) + "END";
+                case "find": {
+                    if (root == null) {
+                        return "err no gui root yet";
+                    }
+                    int[] at = GUITreeDump.find(root, window.getHeight(), rest(line, verb));
+                    return at == null ? "err not found: " + rest(line, verb) : "ok " + at[0] + " " + at[1];
+                }
+                case "press":
+                case "rpress": {
+                    int mouse_button = verb.equals(
+                            "rpress") ? GLFW.GLFW_MOUSE_BUTTON_RIGHT : GLFW.GLFW_MOUSE_BUTTON_LEFT;
+                    if (second_pass) {
+                        queueButton(mouse_button, false);
+                        return "ok";
+                    }
+                    if (root == null) {
+                        return "err no gui root yet";
+                    }
+                    int[] at = GUITreeDump.find(root, window.getHeight(), rest(line, verb));
+                    if (at == null) {
+                        return "err not found: " + rest(line, verb);
+                    }
+                    moveTo(at[0], at[1]);
+                    queueButton(mouse_button, true);
+                    return null;
+                }
+                case "choose": {
+                    // choose LABEL=ITEM: open the pulldown on LABEL's row, then press ITEM at the following polls.
+                    String[] pair = rest(line, verb).split("=", 2);
+                    if (pair.length != 2) {
+                        return "err usage: choose LABEL=ITEM";
+                    }
+                    if (second_pass) {
+                        queueButton(GLFW.GLFW_MOUSE_BUTTON_LEFT, false);
+                        deferred.add(new Command("press " + pair[1], new CompletableFuture<>()));
+                        return "ok";
+                    }
+                    if (root == null) {
+                        return "err no gui root yet";
+                    }
+                    int[] at = GUITreeDump.findPulldown(root, window.getHeight(), pair[0]);
+                    if (at == null) {
+                        return "err no pulldown for: " + pair[0];
+                    }
+                    moveTo(at[0], at[1]);
+                    queueButton(GLFW.GLFW_MOUSE_BUTTON_LEFT, true);
+                    return null;
+                }
+                case "edit": {
+                    if (root == null) {
+                        return "err no gui root yet";
+                    }
+                    String[] pair = rest(line, verb).split("=", 2);
+                    if (pair.length != 2) {
+                        return "err usage: edit LABEL=TEXT";
+                    }
+                    TextField field = GUITreeDump.findField(root, window.getHeight(), pair[0]);
+                    if (field == null) {
+                        return "err no edit field for: " + pair[0];
+                    }
+                    field.clear();
+                    field.append(pair[1]);
+                    return "ok " + field.getContents();
+                }
                 case "scroll": {
                     // scroll N: N wheel steps at the cursor, one per poll because the GUI collapses a poll's
                     // wheel events into a single step.
@@ -242,7 +311,15 @@ public final class ScriptedInputProvider implements InputProvider<Long> {
                     return null;
                 }
                 case "wait": {
-                    // wait tick N: answered once the simulation reaches tick N.
+                    // wait tick N | wait delegate NAME | wait text TEXT: answered once the condition holds.
+                    String what = parts.length > 1 ? parts[1].toLowerCase(Locale.ROOT) : "tick";
+                    if (what.equals("delegate")) {
+                        String name = root == null ? "" : root.getDelegate().getClass().getSimpleName();
+                        return name.equalsIgnoreCase(parts[2]) ? "ok delegate " + name : null;
+                    }
+                    if (what.equals("text")) {
+                        return root != null && GUITreeDump.has(root, window.getHeight(), parts[2]) ? "ok" : null;
+                    }
                     long target = Long.parseLong(parts.length > 2 ? parts[2] : parts[1]);
                     return currentTick() >= target ? "ok tick " + currentTick() : null;
                 }
@@ -274,6 +351,10 @@ public final class ScriptedInputProvider implements InputProvider<Long> {
         } catch (RuntimeException e) {
             return "err " + e;
         }
+    }
+
+    private static @NonNull String rest(@NonNull String line, @NonNull String verb) {
+        return line.substring(verb.length()).strip();
     }
 
     private static int button(@NonNull String @NonNull [] parts) {

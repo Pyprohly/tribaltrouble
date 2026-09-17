@@ -66,11 +66,18 @@ Commands:
 | `type TEXT` | Character input, one character per poll |
 | `shot [PATH]` | Screenshot to PATH (or a numbered file in the home directory); replies with the file |
 | `tree` | GUI tree, one line per widget: `depth Class x y w h [text]`, ends with `END` |
+| `find TEXT` | Framebuffer centre of the last widget whose label matches TEXT, e.g. `find Create new game` |
+| `press TEXT` | `find` then click it in one step; menu buttons, tabs, pulldown items and list rows all work |
+| `rpress TEXT` | Same with the right button, e.g. the player pulldown in the chat panel |
+| `choose LABEL=ITEM` | Open the pulldown on LABEL's row and pick ITEM, e.g. `choose Game speed:=Ludicrous` |
+| `edit LABEL=TEXT` | Set the edit field on LABEL's row (or the field currently showing LABEL) to TEXT |
 | `state` | Game state, ends with `END`; `err not in game` from menus |
 | `sites [QUARTERS\|ARMORY\|TOWER\|SHIP] [radius]` | Legal placement cells, ends with `END` |
 | `tick` | Current simulation tick (high-precision ticks, 4 ms each) |
 | `warp MILLIS` | Fast-forward the simulation by that much game time; answers once it has caught up |
 | `wait tick N` | Answers once the simulation reaches tick N |
+| `wait delegate NAME` | Answers once the game is on that delegate, e.g. `wait delegate SelectionDelegate` |
+| `wait text TEXT` | Answers once a widget with that label is on screen, e.g. `wait text Ready` |
 | `ping` | `ok pong` |
 
 Prefer `warp` and `wait` to sleeping. `warp 60000` runs a minute of game time in a few frames and
