@@ -52,6 +52,9 @@ public final class GUITreeDump {
         if (object instanceof MenuButton button) {
             return button.getText().toString();
         }
+        if (object instanceof Diode diode) {
+            return diode.isLit() ? "on" : "off";
+        }
         return "";
     }
 
