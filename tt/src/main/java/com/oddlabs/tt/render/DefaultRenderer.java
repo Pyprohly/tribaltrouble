@@ -85,7 +85,6 @@ public final class DefaultRenderer implements UIRenderer, AutoCloseable {
     private static final int SUN_VIEW_WIDTH = 4096 * 2;
     private static final int SUN_VIEW_HEIGHT = 2048;
 
-    private static final Vector3f TORCH_LIGHT_COLOR = new Vector3f(1f, 0.6f, 0.25f);
     private final float[] pointLights = new float[GlobalUniforms.MAX_POINT_LIGHTS * 8];
 
     private @Nullable Building selected_building;
@@ -110,7 +109,6 @@ public final class DefaultRenderer implements UIRenderer, AutoCloseable {
             @NonNull Selection selection, @NonNull WorldGenerator generator, @NonNull MatrixStack modelViewStack,
             @NonNull MatrixStack projectionStack, @Nullable SpectatorView spectator_view) {
         this.world = local_player.getWorld();
-        com.oddlabs.tt.particle.TorchEmitter.purge(this.world);
         this.cheat = cheat;
         this.render_queues = render_queues;
         this.picker = picker;
@@ -365,7 +363,6 @@ public final class DefaultRenderer implements UIRenderer, AutoCloseable {
         // Rally point uses SpriteShader (Mask) -> Enable
         setDrawBuffers(true);
         renderRallyPoint(context, frustum_state);
-        renderTorchProps(context);
 
         assert ShaderProgram.activeShader() == null : "Shader still active=" + ShaderProgram.activeShader();
 
@@ -381,51 +378,9 @@ public final class DefaultRenderer implements UIRenderer, AutoCloseable {
         }
     }
 
-    /** Draws the torch prop model at every visible torch position, alternating variants by position. */
-    private void renderTorchProps(@NonNull RenderContext context) {
-        java.util.List<com.oddlabs.tt.particle.TorchEmitter> torches = com.oddlabs.tt.particle.TorchEmitter.getActiveTorches();
-        if (torches.isEmpty())
-            return;
-        com.oddlabs.tt.render.SpriteKey[] keys = world.getRacesResources().getTorchSprites();
-        try (var _ = spriteShader.use(); var _ = context.withBlendMode(BlendMode.ALPHA)) {
-            for (com.oddlabs.tt.particle.TorchEmitter torch : torches) {
-                if (!torch.isPropVisible() || torch.getWorld() != world)
-                    continue;
-                Vector3f pos = torch.getPosition();
-                float z = world.getHeightMap().getNearestHeight(pos.x, pos.y);
-                int hash = Float.floatToIntBits(pos.x * 13f + pos.y * 7f) >>> 1;
-                SpriteRenderer renderer = render_queues.getRenderer(keys[hash % keys.length]);
-                Sprite sprite = renderer.getSpriteList().getSprite(0);
-                sprite.setupShaderUniforms(context, spriteShader, 0, false);
-
-                float angle = (hash & 0xffff) / 65535f * (float) Math.PI * 2f;
-                modelViewStack.push();
-                RenderTools.translateAndRotate(pos.x, pos.y, z, (float) Math.cos(angle), (float) Math.sin(angle),
-                        modelViewStack);
-                spriteShader.setUniformMatrix4(SpriteShader.Uniforms.MODEL_VIEW_MATRIX, false,
-                        modelViewStack.current());
-                spriteShader.setUniform(SpriteShader.Uniforms.DECAL_COLOR, 1f, 1f, 1f, 1f);
-                spriteShader.setUniform(SpriteShader.Uniforms.COLOR, 1f, 1f, 1f, 1f);
-                sprite.renderShader(spriteShader, 0, 0f, renderer.getSpriteList());
-                modelViewStack.pop();
-            }
-        }
-    }
-
-    /**
-     * Packs the burning torches and glowing models nearest the camera into the point light array; returns the light
-     * count.
-     */
-    private int collectPointLights(@NonNull CameraState camera, float time) {
+    /** Packs the glowing models nearest the camera into the point light array; returns the light count. */
+    private int collectPointLights(@NonNull CameraState camera) {
         java.util.List<GlowLights.Light> lights = new java.util.ArrayList<>();
-        for (com.oddlabs.tt.particle.TorchEmitter torch : com.oddlabs.tt.particle.TorchEmitter.getActiveTorches()) {
-            if (torch.isStarted() && torch.getWorld() == world) {
-                Vector3f pos = torch.getPosition();
-                float flicker = 0.8f + 0.2f * (float) Math.sin(time * 11f + pos.x * 13.7f + pos.y * 7.3f);
-                lights.add(new GlowLights.Light(pos.x, pos.y, pos.z + 0.5f, torch.getLightRadius(),
-                        TORCH_LIGHT_COLOR.x * flicker, TORCH_LIGHT_COLOR.y * flicker, TORCH_LIGHT_COLOR.z * flicker));
-            }
-        }
         lights.addAll(render_queues.getGlowLights().takeDrawn());
         float cx = camera.getCurrentX();
         float cy = camera.getCurrentY();
@@ -466,7 +421,7 @@ public final class DefaultRenderer implements UIRenderer, AutoCloseable {
         Vector3f gga = night ? groundAmbientNight : Globals.classic_lighting ? groundAmbientClassic : groundAmbientEnhanced;
         Vector3f sunColor = night ? sunColorNight : sunColorDay;
         Vector3f sceneTint = night ? sceneTintNight : sceneTintDay;
-        int numLights = collectPointLights(frustum_state, LocalEventQueue.getQueue().getTime());
+        int numLights = collectPointLights(frustum_state);
 
         boolean lowDetail = Settings.getSettings().graphic_detail == Globals.DETAIL_LOW;
 

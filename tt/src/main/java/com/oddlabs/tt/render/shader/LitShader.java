@@ -38,7 +38,7 @@ public interface LitShader extends Shader {
             """;
 
     /**
-     * Accumulated contribution of nearby point lights (torches). View-space inputs; uses
+     * Accumulated contribution of nearby point lights. View-space inputs; uses
      * half-Lambert wrap so billboard sprites with awkward normals still catch light.
      */
     String POINT_LIGHTS_FUNCTION = """

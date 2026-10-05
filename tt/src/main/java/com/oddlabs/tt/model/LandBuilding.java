@@ -17,11 +17,9 @@ import com.oddlabs.tt.model.weapon.RockSpearWeapon;
 import com.oddlabs.tt.model.weapon.RubberAxeWeapon;
 import com.oddlabs.tt.model.weapon.RubberSpearWeapon;
 import com.oddlabs.tt.model.weapon.ThrowingWeapon;
-import com.oddlabs.tt.global.Globals;
 import com.oddlabs.tt.particle.LinearEmitter;
 import com.oddlabs.tt.particle.RandomAccelerationEmitter;
 import com.oddlabs.tt.particle.RandomVelocityEmitter;
-import com.oddlabs.tt.particle.TorchEmitter;
 import com.oddlabs.tt.pathfinder.Occupant;
 import com.oddlabs.tt.pathfinder.UnitGrid;
 import com.oddlabs.tt.player.Player;
@@ -64,7 +62,6 @@ public final class LandBuilding extends Building {
             DeployType.class);
     private final @NonNull LinearEmitter damaged_emitter;
     private final @NonNull LinearEmitter production_emitter;
-    private final @NonNull TorchEmitter torch_emitter;
 
     private @Nullable ChieftainContainer chieftain_container = null;
     private @Nullable WeaponsProducer weapons_producer = null;
@@ -122,23 +119,6 @@ public final class LandBuilding extends Building {
                 owner.getWorld().getRacesResources().getSmokeTextures(),
                 owner.getWorld().getAnimationManagerRealTime());
         production_emitter.stop();
-
-        torch_emitter = new TorchEmitter(owner.getWorld(), torchPosition(), 1f,
-                owner.getWorld().getRacesResources().getSmokeTextures(),
-                owner.getWorld().getAnimationManagerRealTime());
-        torch_emitter.stop();
-    }
-
-    /** A ground-standing torch just outside the building footprint, off the front-right corner. */
-    private @NonNull Vector3f torchPosition() {
-        // Viking buildings overhang their placing radius more than native ones, so give them extra clearance.
-        boolean viking = getOwner().getRace() == getOwner().getWorld().getRacesResources().getRace(
-                RacesResources.RACE_VIKINGS);
-        float d = (getSize() + (viking ? 2.5f : 1f)) * 0.7071f;
-        float tx = getPositionX() + d;
-        float ty = getPositionY() - d;
-        float tz = getOwner().getWorld().getHeightMap().getNearestHeight(tx, ty) + 2.2f;
-        return new Vector3f(tx, ty, tz);
     }
 
     @Override
@@ -161,17 +141,11 @@ public final class LandBuilding extends Building {
         float yc = getPositionY() + getTemplate().getChimneyY();
         float zc = getPositionZ() + getTemplate().getChimneyZ();
         production_emitter.setPosition(new Vector3f(xc, yc, zc));
-        torch_emitter.setPosition(torchPosition());
     }
 
     @Override
     protected void doAnimate(float t) {
         if (!isDead()) {
-            torch_emitter.setPropVisible(isComplete());
-            if (getOwner().getWorld().isNight() && isComplete())
-                torch_emitter.start();
-            else
-                torch_emitter.stop();
             UnitContainer unit_container = getUnitContainer();
             if (unit_container != null)
                 unit_container.animate(t);
@@ -201,7 +175,6 @@ public final class LandBuilding extends Building {
                 remove();
                 damaged_emitter.done();
                 production_emitter.done();
-                torch_emitter.dispose();
                 if (weapons_producer != null)
                     weapons_producer.stopSound();
                 float energy = 3f;
