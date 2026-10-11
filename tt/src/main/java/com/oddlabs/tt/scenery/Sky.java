@@ -144,10 +144,7 @@ public final class Sky implements SceneRenderer, AutoCloseable {
             skyShader.setUniform(SkyShader.Uniforms.SKY_COLOR, color.get(0), color.get(1), color.get(2), color.get(3));
             skyShader.setUniform(SkyShader.Uniforms.NIGHT_FACTOR, Globals.night_mode ? 1f : 0f);
             skyShader.setUniform(SkyShader.Uniforms.RAYS_INTENSITY, state.getCurrentZ() < 0.0f ? 0.0f : 1.0f);
-            var skyBodyDir = switch (terrain) {
-                case NATIVE -> SKY_BODY_DIRECTION_TROPICAL;
-                case VIKING -> SKY_BODY_DIRECTION_NORTHERN;
-            };
+            var skyBodyDir = getSkyBodyDirection();
             skyShader.setUniform(SkyShader.Uniforms.SKY_BODY_DIRECTION, skyBodyDir.x(), skyBodyDir.y(), skyBodyDir.z());
 
             context.setTexture(0, clouds[GeneratorClouds.INNER]);
@@ -175,6 +172,14 @@ public final class Sky implements SceneRenderer, AutoCloseable {
         } finally {
             com.oddlabs.tt.vbo.VBO.releaseIndexVBO();
         }
+    }
+
+    /** A sky body is either the moon or the sun. It's the light source too */
+    public @NonNull Vector3fc getSkyBodyDirection() {
+        return switch (terrain) {
+            case NATIVE -> SKY_BODY_DIRECTION_TROPICAL;
+            case VIKING -> SKY_BODY_DIRECTION_NORTHERN;
+        };
     }
 
     private void updateAnimation() {

@@ -20,7 +20,9 @@ import java.nio.ByteBuffer;
 public final class GlobalUniforms {
     public static final int MAX_POINT_LIGHTS = 8;
 
-    private final ByteBuffer buffer = BufferUtils.createByteBuffer(512);
+    public static final int SIZE = 518;
+
+    private final ByteBuffer buffer = BufferUtils.createByteBuffer(SIZE);
 
     public @NonNull ByteBuffer getBuffer() {
         buffer.flip();
@@ -40,7 +42,8 @@ public final class GlobalUniforms {
             @NonNull Vector3fc sceneTint,
             float time,
             float @NonNull [] pointLights,
-            int numPointLights
+            int numPointLights,
+            int shadowMode
     ) {
         buffer.clear();
 
@@ -157,6 +160,9 @@ public final class GlobalUniforms {
             buffer.putFloat(pointLights[base + 6]);
             buffer.putFloat(0f);
         }
-        buffer.position(512);
+
+        // 512: int shadowMode
+        buffer.putInt(512, shadowMode);
+        buffer.position(SIZE);
     }
 }

@@ -20,7 +20,14 @@ public record WorldInfo(int meters_per_world, float sea_level_meters, int texels
                         float @NonNull [] @NonNull [] starting_locations,
                         @NonNull BlendInfo @NonNull [] blend_infos, byte @NonNull [] @NonNull [] ground,
                         int seed) {
-    public record Maps(Texture diffuse, Texture normal) {
+    public record Maps(Texture diffuse, Texture normal, @Nullable StructureBlend supplyShadows) {
+        public Maps(Texture diffuse, Texture normal) {
+            this(diffuse, normal, null);
+        }
+
+        public @NonNull Maps withSupplyShadows(@NonNull StructureBlend supplyShadows) {
+            return new Maps(diffuse, normal, supplyShadows);
+        }
     }
 
     public WorldInfo(int meters_per_world, float sea_level_meters, int texels_per_colormap, int chunks_per_colormap,

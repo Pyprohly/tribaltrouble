@@ -246,12 +246,12 @@ public final class DefaultRenderer implements UIRenderer, AutoCloseable {
     private void renderScene(@NonNull RenderContext context, @NonNull CameraState frustum_state,
             @NonNull GUIRoot gui_root, boolean includeWater,
             @Nullable Texture reflectionTexture, @Nullable Matrix4f reflectionVP,
-            boolean aboveSea) {
+            boolean reflectionPass) {
         if (Globals.line_mode || (cheat != null && cheat.line_mode)) {
             GL11.glPolygonMode(GL11.GL_FRONT_AND_BACK, GL11.GL_LINE);
         }
 
-        float seaLevel = aboveSea ? world.getHeightMap().getSeaLevelMeters() : -100.0f;
+        float seaLevel = reflectionPass ? world.getHeightMap().getSeaLevelMeters() : -100.0f;
         render_queues.getInstancedRenderer().setSeaLevel(seaLevel);
         treeSpriteRenderer.setSeaLevel(seaLevel);
 
@@ -261,13 +261,13 @@ public final class DefaultRenderer implements UIRenderer, AutoCloseable {
         if (Globals.draw_sky) {
             sky.render(context, frustum_state, modelViewStack, projectionStack);
             // The underwater backdrop must not appear in the water reflection pass
-            if (!aboveSea) {
+            if (!reflectionPass) {
                 sky.renderSeaBottom(context, frustum_state, modelViewStack, projectionStack);
             }
         }
 
         if (Globals.process_landscape) {
-            landscape_renderer.prepareAll(frustum_state, false, aboveSea);
+            landscape_renderer.prepareAll(frustum_state, false, reflectionPass);
             landscape_renderer.render(context, frustum_state, modelViewStack, projectionStack);
         }
         // Trees & Units write to mask -> Enable Mask Buffer
@@ -446,12 +446,14 @@ public final class DefaultRenderer implements UIRenderer, AutoCloseable {
 
         boolean lowDetail = Settings.getSettings().graphic_detail == Globals.DETAIL_LOW;
 
+        int shadowMode = Settings.getSettings().shadow_mode;
+
         // Rendering everything from the water's point of view. It's as if we put the camera underwater and
         // rendered from there. The output image will be used to color the water as if it's a reflection
         CameraState waterCamera = frustum_state.reflectCamera(world.getHeightMap().getSeaLevelMeters());
         if (!lowDetail) {
             globalUniforms.update(waterCamera, sunDirection, ga, gga, sunColor, sceneTint,
-                    LocalEventQueue.getQueue().getTime(), pointLights, numLights);
+                    LocalEventQueue.getQueue().getTime(), pointLights, numLights, shadowMode);
             context.updateGlobalState(globalUniforms.getBuffer());
             modelViewStack.current().set(waterCamera.getModelView());
             reflectionFBO.bind();
@@ -460,7 +462,7 @@ public final class DefaultRenderer implements UIRenderer, AutoCloseable {
         }
 
         globalUniforms.update(frustum_state, sunDirection, ga, gga, sunColor, sceneTint,
-                LocalEventQueue.getQueue().getTime(), pointLights, numLights);
+                LocalEventQueue.getQueue().getTime(), pointLights, numLights, shadowMode);
         context.updateGlobalState(globalUniforms.getBuffer());
         ambient.updateSoundListener(frustum_state, world.getHeightMap());
         modelViewStack.current().set(frustum_state.getModelView());

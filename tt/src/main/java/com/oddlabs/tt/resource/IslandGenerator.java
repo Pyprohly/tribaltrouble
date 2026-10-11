@@ -97,7 +97,8 @@ public final class IslandGenerator implements WorldGenerator {
         com.oddlabs.tt.landscape.LandscapeBaker baker = new com.oddlabs.tt.landscape.LandscapeBaker();
         // Original tiled structure textures at colormap_size/STRUCTURE_SIZE repeats.
         float textureScale = (float) colormap_size / Globals.STRUCTURE_SIZE;
-        WorldInfo.Maps maps = baker.bake(colormap_size, textureScale, blend_infos);
+        WorldInfo.Maps maps = baker.bake(colormap_size, textureScale, blend_infos).withSupplyShadows(
+                landscape.getSupplyShadows());
 
         ProgressForm.progress();
         return new WorldInfo(meters_per_world, landscape.getSeaLevelMeters(),

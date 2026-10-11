@@ -9,6 +9,9 @@ public final class LandscapeShader extends ShaderProgram implements FogShader, L
         String DIFFUSE_MAP = "u_DiffuseMap";
         String NORMAL_MAP = "u_NormalMap";
         String DETAIL_MAP = "u_DetailMap";
+        String SUPPLY_SHADOW_ALPHA = "u_SupplyShadowAlpha";
+        String SUPPLY_SHADOW_TEXTURE = "u_SupplyShadowTexture";
+        String SUPPLY_SHADOW_SCALE = "u_SupplyShadowScale";
         String WORLD_SIZE = "u_WorldSize";
         String DETAIL_SCALE = "u_DetailScale";
         String SEA_LEVEL = "u_SeaLevel";
@@ -72,6 +75,9 @@ public final class LandscapeShader extends ShaderProgram implements FogShader, L
             uniform sampler2D u_DiffuseMap;
             uniform sampler2D u_NormalMap;
             uniform sampler2D u_DetailMap;
+            uniform sampler2D u_SupplyShadowAlpha;
+            uniform sampler2D u_SupplyShadowTexture;
+            uniform float u_SupplyShadowScale;
             uniform float u_SeaLevel;
 
             in vec2 v_texCoord0;
@@ -89,6 +95,11 @@ public final class LandscapeShader extends ShaderProgram implements FogShader, L
                 }
 
                 vec4 diffuseColor = texture(u_DiffuseMap, v_texCoord0);
+                if (u_shadowMode == 0) {
+                    float supplyShadow = texture(u_SupplyShadowAlpha, v_texCoord0).r;
+                    vec4 shadowColor = texture(u_SupplyShadowTexture, v_texCoord0 * u_SupplyShadowScale);
+                    diffuseColor = mix(diffuseColor, shadowColor, supplyShadow);
+                }
                 vec4 detailColor = texture(u_DetailMap, v_texCoord1);
 
                 // Apply detail map

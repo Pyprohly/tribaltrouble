@@ -12,6 +12,7 @@ public interface Shader {
     int COLOR_LOC = 3;
 
     // Standard Uniform Names
+    String SHADOW_MAP = "u_shadowMap";
     String PROJECTION_MATRIX = "u_projectionMatrix";
     String MODEL_VIEW_MATRIX = "u_modelViewMatrix";
     String VIEW_MATRIX = "u_viewMatrix";
@@ -40,7 +41,9 @@ public interface Shader {
                 float u_numPointLights;
                 vec4 u_pointLightPos[8];
                 vec4 u_pointLightColor[8];
+                int u_shadowMode;
             };
+            uniform sampler2D u_shadowMap;
             """;
 
     boolean inUse();

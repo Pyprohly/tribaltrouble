@@ -12,6 +12,9 @@ public final class Globals {
     public static final int DETAIL_NORMAL = 1;
     public static final int DETAIL_HIGH = 2;
 
+    public static final int SHADOWS_STATIC = 0;
+    public static final int SHADOWS_DYNAMIC = 1;
+
     public static final int[] TEXTURE_MIP_SHIFT = new int[]{0, 0, 0};
     public static final int[] UNIT_HIGH_POLY_COUNT = new int[]{20000, 80000, 200000};
     public static final int[] LANDSCAPE_POLY_COUNT = new int[]{10000, 40000, 100000};
