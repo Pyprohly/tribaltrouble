@@ -9,9 +9,10 @@ public final class LandscapeShader extends ShaderProgram implements FogShader, L
         String DIFFUSE_MAP = "u_DiffuseMap";
         String NORMAL_MAP = "u_NormalMap";
         String DETAIL_MAP = "u_DetailMap";
+        String TERRAIN_SHADOW_ALPHA = "u_TerrainShadowAlpha";
         String SUPPLY_SHADOW_ALPHA = "u_SupplyShadowAlpha";
-        String SUPPLY_SHADOW_TEXTURE = "u_SupplyShadowTexture";
-        String SUPPLY_SHADOW_SCALE = "u_SupplyShadowScale";
+        String SHADOW_TEXTURE = "u_ShadowTexture";
+        String SHADOW_SCALE = "u_ShadowScale";
         String WORLD_SIZE = "u_WorldSize";
         String DETAIL_SCALE = "u_DetailScale";
         String SEA_LEVEL = "u_SeaLevel";
@@ -40,6 +41,8 @@ public final class LandscapeShader extends ShaderProgram implements FogShader, L
             out vec3 v_viewPosition;
             out vec3 v_viewNormal;
             out float v_worldZ;
+            out vec2 v_shadowUV;
+            out float v_sunDistance;
 
             void main() {
                 vec2 worldPos = in_InstancePatchOffset + in_Position;
@@ -66,18 +69,23 @@ public final class LandscapeShader extends ShaderProgram implements FogShader, L
                 v_fogDist = length(viewPosition.xyz);
                 v_viewPosition = viewPosition.xyz;
                 v_viewNormal = normalize((u_viewMatrix * vec4(normal, 0.0)).xyz);
+
+                vec4 shadowCoord = u_shadowMatrix * worldPosition4;
+                v_shadowUV = shadowCoord.xy;
+                v_sunDistance = shadowCoord.z;
             }
             """;
 
     private static final String FRAGMENT_SHADER = """
             #version 410 core
-            """ + GLOBAL_STATE_BLOCK + FOG_FUNCTION + POINT_LIGHTS_FUNCTION + """
+            """ + GLOBAL_STATE_BLOCK + FOG_FUNCTION + POINT_LIGHTS_FUNCTION + SHADOW_FUNCTION + """
             uniform sampler2D u_DiffuseMap;
             uniform sampler2D u_NormalMap;
             uniform sampler2D u_DetailMap;
+            uniform sampler2D u_TerrainShadowAlpha;
             uniform sampler2D u_SupplyShadowAlpha;
-            uniform sampler2D u_SupplyShadowTexture;
-            uniform float u_SupplyShadowScale;
+            uniform sampler2D u_ShadowTexture;
+            uniform float u_ShadowScale;
             uniform float u_SeaLevel;
 
             in vec2 v_texCoord0;
@@ -86,20 +94,29 @@ public final class LandscapeShader extends ShaderProgram implements FogShader, L
             in vec3 v_viewPosition;
             in vec3 v_viewNormal;
             in float v_worldZ;
+            in vec2 v_shadowUV;
+            in float v_sunDistance;
 
             layout(location = 0) out vec4 out_FragColor;
+
+            const float DYNAMIC_SHADOW_ALPHA = 0.67;
 
             void main() {
                 if (v_worldZ < u_SeaLevel) {
                     discard;
                 }
 
+                vec3 normal = normalize(v_viewNormal);
                 vec4 diffuseColor = texture(u_DiffuseMap, v_texCoord0);
-                if (u_shadowMode == 0) {
-                    float supplyShadow = texture(u_SupplyShadowAlpha, v_texCoord0).r;
-                    vec4 shadowColor = texture(u_SupplyShadowTexture, v_texCoord0 * u_SupplyShadowScale);
-                    diffuseColor = mix(diffuseColor, shadowColor, supplyShadow);
+                float shadowAlpha = texture(u_TerrainShadowAlpha, v_texCoord0).r;
+                if (dynamicShadows()) {
+                    shadowAlpha = max(shadowAlpha, DYNAMIC_SHADOW_ALPHA * calculateShadow(v_shadowUV, v_sunDistance, normal));
+                } else {
+                    shadowAlpha = max(shadowAlpha, texture(u_SupplyShadowAlpha, v_texCoord0).r);
                 }
+
+                vec4 shadowColor = texture(u_ShadowTexture, v_texCoord0 * u_ShadowScale);
+                diffuseColor = mix(diffuseColor, shadowColor, shadowAlpha);
                 vec4 detailColor = texture(u_DetailMap, v_texCoord1);
 
                 // Apply detail map
@@ -107,7 +124,7 @@ public final class LandscapeShader extends ShaderProgram implements FogShader, L
 
                 // Lighting is already baked into u_DiffuseMap in LandscapeBaker; the scene
                 // tint (1.0 by day) scales the baked result without double-lighting.
-                vec3 intensity = u_sceneTint + calculatePointLights(v_viewPosition, normalize(v_viewNormal));
+                vec3 intensity = u_sceneTint + calculatePointLights(v_viewPosition, normal);
                 vec4 litColor = vec4(diffuseColor.rgb * intensity, diffuseColor.a);
 
                 float fogFactor = calculateFogFactor(v_fogDist, gl_FragCoord.xy);

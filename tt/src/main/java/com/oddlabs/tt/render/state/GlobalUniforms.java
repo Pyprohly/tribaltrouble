@@ -5,6 +5,7 @@ import com.oddlabs.tt.render.shader.FogShader;
 import com.oddlabs.tt.resource.DistanceFogInfo;
 import com.oddlabs.tt.resource.FogInfo;
 import com.oddlabs.tt.resource.RadialFogInfo;
+import org.joml.Matrix4f;
 import org.joml.Matrix4fc;
 import org.joml.Vector3f;
 import org.joml.Vector3fc;
@@ -20,7 +21,7 @@ import java.nio.ByteBuffer;
 public final class GlobalUniforms {
     public static final int MAX_POINT_LIGHTS = 8;
 
-    public static final int SIZE = 518;
+    public static final int SIZE = 656;
 
     private final ByteBuffer buffer = BufferUtils.createByteBuffer(SIZE);
 
@@ -43,6 +44,7 @@ public final class GlobalUniforms {
             float time,
             float @NonNull [] pointLights,
             int numPointLights,
+            @NonNull Matrix4fc shadowMatrix,
             int shadowMode
     ) {
         buffer.clear();
@@ -161,8 +163,10 @@ public final class GlobalUniforms {
             buffer.putFloat(0f);
         }
 
-        // 512: int shadowMode
-        buffer.putInt(512, shadowMode);
+        shadowMatrix.get(512, buffer);
+        shadowMatrix.mul(viewMatrix.invert(new Matrix4f()), new Matrix4f()).get(576, buffer);
+
+        buffer.putInt(640, shadowMode);
         buffer.position(SIZE);
     }
 }

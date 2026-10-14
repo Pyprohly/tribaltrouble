@@ -25,6 +25,7 @@ import com.oddlabs.tt.model.Ship;
 import com.oddlabs.tt.player.Player;
 import com.oddlabs.tt.render.shader.DebugMeshShader;
 import com.oddlabs.tt.render.shader.DebugShaderRenderer;
+import com.oddlabs.tt.render.shader.Shader;
 import com.oddlabs.tt.render.shader.ShaderProgram;
 import com.oddlabs.tt.render.shader.SpriteShader;
 import com.oddlabs.tt.render.state.BlendMode;
@@ -62,10 +63,14 @@ public final class DefaultRenderer implements UIRenderer, AutoCloseable {
     private final @NonNull InstancedSpriteRenderer treeSpriteRenderer = new InstancedSpriteRenderer();
     private final @NonNull PostProcessor postProcessor;
     private final @NonNull FBO reflectionFBO;
+    private final @NonNull FBO sunViewFBO;
+    private CameraState sunCamera;
+    private final float min_height;
+    private final float max_height;
+    private final @NonNull Matrix4f shadowMatrix = new Matrix4f();
     private final @Nullable Cheat cheat;
 
     private final GlobalUniforms globalUniforms = new GlobalUniforms();
-    private final Vector3f sunDirection = new Vector3f(-0.9f, 0.7f, 0.7f).normalize();
     private final Vector3f globalAmbientClassic = new Vector3f(0.65f, 0.65f, 0.65f);
     private final Vector3f groundAmbientClassic = new Vector3f(0.65f, 0.65f, 0.65f);
     private final Vector3f globalAmbientEnhanced = new Vector3f(0.4f, 0.4f, 0.45f);
@@ -76,6 +81,9 @@ public final class DefaultRenderer implements UIRenderer, AutoCloseable {
     private final Vector3f sceneTintNight = new Vector3f(0.30f, 0.35f, 0.52f);
     private final Vector3f globalAmbientNight = new Vector3f(0.22f, 0.25f, 0.36f);
     private final Vector3f groundAmbientNight = new Vector3f(0.10f, 0.11f, 0.18f);
+
+    private static final int SUN_VIEW_WIDTH = 4096 * 2;
+    private static final int SUN_VIEW_HEIGHT = 4096 * 2;
 
     private static final Vector3f TORCH_LIGHT_COLOR = new Vector3f(1f, 0.6f, 0.25f);
     private final float[] pointLights = new float[GlobalUniforms.MAX_POINT_LIGHTS * 8];
@@ -122,6 +130,19 @@ public final class DefaultRenderer implements UIRenderer, AutoCloseable {
         var window = Renderer.getRenderer().getWindow();
         this.postProcessor = new PostProcessor(window.getWidth(), window.getHeight());
         this.reflectionFBO = FBO.createSceneFBO(window.getWidth(), window.getHeight());
+        this.sunViewFBO = FBO.createDepthFBO(SUN_VIEW_WIDTH, SUN_VIEW_HEIGHT);
+        var heightMap = world.getHeightMap();
+        float minHeight = Float.POSITIVE_INFINITY;
+        float maxHeight = Float.NEGATIVE_INFINITY;
+        for (int y = 0; y < heightMap.getGridUnitsPerWorld(); y++) {
+            for (int x = 0; x < heightMap.getGridUnitsPerWorld(); x++) {
+                float h = heightMap.getClampedHeight(x, y);
+                minHeight = Math.min(minHeight, h);
+                maxHeight = Math.max(maxHeight, h);
+            }
+        }
+        min_height = minHeight;
+        max_height = maxHeight;
         DebugRender.setShaderRenderer(new DebugShaderRenderer(new DebugMeshShader(), modelViewStack, projectionStack));
     }
 
@@ -250,6 +271,8 @@ public final class DefaultRenderer implements UIRenderer, AutoCloseable {
         if (Globals.line_mode || (cheat != null && cheat.line_mode)) {
             GL11.glPolygonMode(GL11.GL_FRONT_AND_BACK, GL11.GL_LINE);
         }
+
+        context.setReflectionPass(reflectionPass);
 
         float seaLevel = reflectionPass ? world.getHeightMap().getSeaLevelMeters() : -100.0f;
         render_queues.getInstancedRenderer().setSeaLevel(seaLevel);
@@ -447,22 +470,31 @@ public final class DefaultRenderer implements UIRenderer, AutoCloseable {
         boolean lowDetail = Settings.getSettings().graphic_detail == Globals.DETAIL_LOW;
 
         int shadowMode = Settings.getSettings().shadow_mode;
+        if (shadowMode == Globals.SHADOWS_DYNAMIC) {
+            sunCamera = frustum_state.sunCamera(Globals.REAL_SKY_BODY_DIRECTION, min_height, max_height + 10.0f,
+                    world.getHeightMap().getMetersPerWorld(), world.getHeightMap().getSeaLevelMeters(), SUN_VIEW_WIDTH,
+                    SUN_VIEW_HEIGHT);
+            shadowMatrix.translation(0.5f, 0.5f, 0.5f).scale(0.5f).mul(sunCamera.getProjectionModelView());
+            renderSunView(context, ga, gga, sunColor, sceneTint, numLights);
+            context.setTexture(Shader.SHADOW_MAP_TEXTURE_UNIT, sunViewFBO.getDepthTexture());
+        }
 
         // Rendering everything from the water's point of view. It's as if we put the camera underwater and
         // rendered from there. The output image will be used to color the water as if it's a reflection
         CameraState waterCamera = frustum_state.reflectCamera(world.getHeightMap().getSeaLevelMeters());
         if (!lowDetail) {
-            globalUniforms.update(waterCamera, sunDirection, ga, gga, sunColor, sceneTint,
-                    LocalEventQueue.getQueue().getTime(), pointLights, numLights, shadowMode);
+            globalUniforms.update(waterCamera, Globals.REAL_SKY_BODY_DIRECTION, ga, gga, sunColor, sceneTint,
+                    LocalEventQueue.getQueue().getTime(), pointLights, numLights, shadowMatrix, shadowMode);
             context.updateGlobalState(globalUniforms.getBuffer());
             modelViewStack.current().set(waterCamera.getModelView());
+            projectionStack.current().set(waterCamera.getProjectionMatrix());
             reflectionFBO.bind();
             context.clear(true, true);
             renderScene(context, waterCamera, gui_root, false, null, null, true);
         }
 
-        globalUniforms.update(frustum_state, sunDirection, ga, gga, sunColor, sceneTint,
-                LocalEventQueue.getQueue().getTime(), pointLights, numLights, shadowMode);
+        globalUniforms.update(frustum_state, Globals.REAL_SKY_BODY_DIRECTION, ga, gga, sunColor, sceneTint,
+                LocalEventQueue.getQueue().getTime(), pointLights, numLights, shadowMatrix, shadowMode);
         context.updateGlobalState(globalUniforms.getBuffer());
         ambient.updateSoundListener(frustum_state, world.getHeightMap());
         modelViewStack.current().set(frustum_state.getModelView());
@@ -474,8 +506,58 @@ public final class DefaultRenderer implements UIRenderer, AutoCloseable {
                 lowDetail ? null : waterCamera.getProjectionModelView(), false);
     }
 
+    private void renderSunView(@NonNull RenderContext context, @NonNull Vector3f ga, @NonNull Vector3f gga,
+            @NonNull Vector3f sunColor, @NonNull Vector3f sceneTint, int numLights) {
+        context.setTexture(Shader.SHADOW_MAP_TEXTURE_UNIT, 0);
+        globalUniforms.update(sunCamera, Globals.REAL_SKY_BODY_DIRECTION, ga, gga, sunColor, sceneTint,
+                LocalEventQueue.getQueue().getTime(), pointLights, numLights, shadowMatrix, Globals.SHADOWS_DYNAMIC);
+        context.updateGlobalState(globalUniforms.getBuffer());
+        modelViewStack.current().set(sunCamera.getModelView());
+        projectionStack.current().set(sunCamera.getProjectionMatrix());
+        sunViewFBO.bind();
+        context.clear(false, true);
+        context.setShadowPass(true);
+        context.setReflectionPass(false);
+        try {
+            renderShadowCasters(context);
+        } finally {
+            context.setShadowPass(false);
+            context.setReflectionPass(false);
+        }
+    }
+
+    private void renderShadowCasters(@NonNull RenderContext context) {
+        float seaLevel = world.getHeightMap().getSeaLevelMeters();
+        render_queues.getInstancedRenderer().setSeaLevel(seaLevel);
+        treeSpriteRenderer.setSeaLevel(seaLevel);
+
+        if (Globals.process_trees) {
+            tree_renderer.setup(sunCamera);
+            world.getTreeRoot().visit(tree_renderer);
+        }
+        if (Globals.process_misc) {
+            element_renderer.setup(sunCamera);
+            world.getElementRoot().visit(element_renderer);
+        }
+        sprite_sorter.distributeModels();
+
+        if (Globals.process_trees) {
+            tree_renderer.render(context, sunCamera, modelViewStack, projectionStack);
+        }
+
+        if (Globals.process_misc) {
+            render_queues.renderAll(context, sunCamera, projectionStack);
+            treeSpriteRenderer.renderAll(context, sunCamera, projectionStack);
+            render_queues.renderPlants(context, sunCamera, projectionStack);
+            render_queues.renderNoDetail();
+            render_queues.renderBlends(context, sunCamera, projectionStack);
+            render_queues.renderEmitterSprites(context, sunCamera, projectionStack);
+        }
+    }
+
     @Override
     public void close() {
+        sunViewFBO.close();
         emitterRenderer.close();
         lightningRenderer.close();
         sonicBlastRenderer.close();

@@ -40,8 +40,9 @@ public final class LandscapeRenderer implements SceneRenderer, Animated {
     private final @NonNull World world;
     private final @NonNull Texture diffuseMap;
     private final @NonNull Texture normalMap;
+    private final @Nullable StructureBlend terrainShadows;
     private final @Nullable StructureBlend supplyShadows;
-    private final float supplyShadowScale;
+    private final float shadowScale;
     private final @NonNull Texture detailMap;
     private final @NonNull PatchMesh patchMesh;
     private final LandscapeShader shader = new LandscapeShader();
@@ -58,10 +59,11 @@ public final class LandscapeRenderer implements SceneRenderer, Animated {
         this.world = world;
         this.diffuseMap = world_info.maps().diffuse();
         this.normalMap = world_info.maps().normal();
+        this.terrainShadows = world_info.maps().terrainShadows();
         this.supplyShadows = world_info.maps().supplyShadows();
-        this.supplyShadowScale = (float) world_info.texels_per_colormap() / Globals.STRUCTURE_SIZE;
-        if (supplyShadows != null) {
-            GL11.glBindTexture(GL11.GL_TEXTURE_2D, supplyShadows.getStructureMap().getHandle());
+        this.shadowScale = (float) world_info.texels_per_colormap() / Globals.STRUCTURE_SIZE;
+        if (terrainShadows != null) {
+            GL11.glBindTexture(GL11.GL_TEXTURE_2D, terrainShadows.getStructureMap().getHandle());
             GL33.glGenerateMipmap(GL11.GL_TEXTURE_2D);
             GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MIN_FILTER, GL11.GL_LINEAR_MIPMAP_LINEAR);
             GL11.glBindTexture(GL11.GL_TEXTURE_2D, 0);
@@ -130,9 +132,11 @@ public final class LandscapeRenderer implements SceneRenderer, Animated {
 
             context.setTexture(4, supplyShadows != null ? supplyShadows.getAlphaMap() : null);
             shader.setUniform(LandscapeShader.Uniforms.SUPPLY_SHADOW_ALPHA, 4);
-            context.setTexture(5, supplyShadows != null ? supplyShadows.getStructureMap() : null);
-            shader.setUniform(LandscapeShader.Uniforms.SUPPLY_SHADOW_TEXTURE, 5);
-            shader.setUniform(LandscapeShader.Uniforms.SUPPLY_SHADOW_SCALE, supplyShadowScale);
+            context.setTexture(5, terrainShadows != null ? terrainShadows.getStructureMap() : null);
+            shader.setUniform(LandscapeShader.Uniforms.SHADOW_TEXTURE, 5);
+            shader.setUniform(LandscapeShader.Uniforms.SHADOW_SCALE, shadowScale);
+            context.setTexture(6, terrainShadows != null ? terrainShadows.getAlphaMap() : null);
+            shader.setUniform(LandscapeShader.Uniforms.TERRAIN_SHADOW_ALPHA, 6);
 
             if (Globals.draw_landscape && !render_list.isEmpty()) {
                 int instanceCount = render_list.size();

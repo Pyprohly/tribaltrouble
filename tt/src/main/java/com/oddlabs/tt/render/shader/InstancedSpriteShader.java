@@ -68,7 +68,10 @@ public final class InstancedSpriteShader extends ShaderProgram implements FogSha
                 out vec3 v_viewPosition;
                 out vec3 v_viewNormal;
                 out vec3 v_lightIntensity;
+                out vec3 v_sunIntensity;
                 out float v_worldZ;
+                out vec2 v_shadowUV;
+                out float v_sunDistance;
 
                 void main() {
                     // Fetch vertex data for both frames
@@ -105,16 +108,22 @@ public final class InstancedSpriteShader extends ShaderProgram implements FogSha
                     if (u_enableLighting) {
                         vec3 lightDir = normalize(u_lightDirection);
                         float diff = max(dot(v_viewNormal, lightDir), 0.0);
-                        v_lightIntensity = u_globalAmbient + u_sunColor * diff;
+                        v_sunIntensity = u_sunColor * diff;
+                        v_lightIntensity = u_globalAmbient + v_sunIntensity;
                     } else {
                         v_lightIntensity = vec3(1.0);
+                        v_sunIntensity = vec3(0.0);
                     }
+
+                    vec4 shadowCoord = u_shadowMatrix * worldPosition;
+                    v_shadowUV = shadowCoord.xy;
+                    v_sunDistance = shadowCoord.z;
                 }
             """;
 
     private static final String FRAGMENT_SHADER = """
             #version 410 core
-            """ + GLOBAL_STATE_BLOCK + FOG_FUNCTION + PERTURB_NORMAL_FUNC + POINT_LIGHTS_FUNCTION + FRAGMENT_LIGHTING_FUNCTION + """
+            """ + GLOBAL_STATE_BLOCK + FOG_FUNCTION + PERTURB_NORMAL_FUNC + POINT_LIGHTS_FUNCTION + FRAGMENT_LIGHTING_FUNCTION + SHADOW_FUNCTION + """
             uniform sampler2D u_texture0;
             uniform sampler2D u_texture1;
             uniform sampler2D u_normalMap;
@@ -137,7 +146,10 @@ public final class InstancedSpriteShader extends ShaderProgram implements FogSha
             in vec3 v_viewPosition;
             in vec3 v_viewNormal;
             in vec3 v_lightIntensity;
+            in vec3 v_sunIntensity;
             in float v_worldZ;
+            in vec2 v_shadowUV;
+            in float v_sunDistance;
 
             layout(location = 0) out vec4 out_FragColor;
             layout(location = 1) out vec4 out_MaskColor;
@@ -155,20 +167,22 @@ public final class InstancedSpriteShader extends ShaderProgram implements FogSha
                 }
 
                 vec3 torchLight = calculatePointLights(v_viewPosition, normalize(v_viewNormal));
+                float shadow = calculateShadow(v_shadowUV, v_sunDistance, normalize(v_viewNormal));
+                vec3 shadowedTint = u_sceneTint * mix(1.0, SHADOW_INTENSITY, shadow);
 
                 vec4 finalColor;
                 if (u_replaceMode) {
                     // Unlit sprites have daylight baked into the texture; the scene tint darkens them at night.
-                    finalColor = vec4(base.rgb * (u_sceneTint + torchLight), base.a);
+                    finalColor = vec4(base.rgb * (shadowedTint + torchLight), base.a);
                     if (finalColor.a <= u_alphaTestValue) discard;
                 } else if (u_modulateColor) {
                     finalColor = v_color * base;
-                    finalColor.rgb *= u_sceneTint + torchLight;
+                    finalColor.rgb *= shadowedTint + torchLight;
                     if (finalColor.a <= 0.0) discard;
                 } else {
                     vec3 lightIntensity;
                     if (u_classicLighting) {
-                        lightIntensity = clamp(v_lightIntensity, 0.0, 1.0) + torchLight;
+                        lightIntensity = clamp(v_lightIntensity - v_sunIntensity * shadow, 0.0, 1.0) + torchLight;
                     } else {
                         vec3 normal = normalize(v_viewNormal);
                         float specularStrength = 0.0;
@@ -178,7 +192,7 @@ public final class InstancedSpriteShader extends ShaderProgram implements FogSha
                             specularStrength = normalMapVal.a;
                         }
                         if (u_enableLighting) {
-                            lightIntensity = calculateLighting(normal, v_viewPosition, specularStrength) + torchLight;
+                            lightIntensity = calculateLighting(normal, v_viewPosition, specularStrength, 1.0 - shadow) + torchLight;
                         } else {
                             lightIntensity = vec3(1.0);
                         }

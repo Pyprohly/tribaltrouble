@@ -5,6 +5,9 @@ import org.jspecify.annotations.Nullable;
 import org.lwjgl.opengl.GL11;
 import org.lwjgl.opengl.GL12;
 import org.lwjgl.opengl.GL30;
+import org.lwjgl.system.MemoryStack;
+
+import java.nio.IntBuffer;
 
 public final class FBO implements AutoCloseable {
     private int id;
@@ -48,6 +51,30 @@ public final class FBO implements AutoCloseable {
         fbo.checkStatus();
         fbo.unbind();
         return fbo;
+    }
+
+    public static @NonNull FBO createDepthFBO(int width, int height) {
+        try (MemoryStack stack = MemoryStack.stackPush()) {
+            IntBuffer viewport = stack.mallocInt(4);
+            GL11.glGetIntegerv(GL11.GL_VIEWPORT, viewport);
+
+            FBO fbo = new FBO(width, height);
+            fbo.bind();
+
+            Texture depth = new Texture(width, height, GL30.GL_DEPTH_COMPONENT32F, GL11.GL_LINEAR, GL11.GL_LINEAR,
+                    GL12.GL_CLAMP_TO_EDGE);
+            fbo.attachTexture(GL30.GL_DEPTH_ATTACHMENT, depth);
+            fbo.depthTexture = depth;
+
+            GL11.glDrawBuffer(GL11.GL_NONE);
+            GL11.glReadBuffer(GL11.GL_NONE);
+
+            fbo.checkStatus();
+            fbo.unbind();
+
+            GL11.glViewport(viewport.get(0), viewport.get(1), viewport.get(2), viewport.get(3));
+            return fbo;
+        }
     }
 
     public void resize(int width, int height) {

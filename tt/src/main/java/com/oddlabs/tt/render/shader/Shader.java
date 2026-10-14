@@ -11,6 +11,8 @@ public interface Shader {
     int TEX_COORD_LOC = 2;
     int COLOR_LOC = 3;
 
+    int SHADOW_MAP_TEXTURE_UNIT = 8;
+
     // Standard Uniform Names
     String SHADOW_MAP = "u_shadowMap";
     String PROJECTION_MATRIX = "u_projectionMatrix";
@@ -41,6 +43,8 @@ public interface Shader {
                 float u_numPointLights;
                 vec4 u_pointLightPos[8];
                 vec4 u_pointLightColor[8];
+                mat4 u_shadowMatrix;
+                mat4 u_viewToShadowMatrix;
                 int u_shadowMode;
             };
             uniform sampler2D u_shadowMap;
