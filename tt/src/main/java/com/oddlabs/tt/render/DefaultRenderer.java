@@ -82,8 +82,8 @@ public final class DefaultRenderer implements UIRenderer, AutoCloseable {
     private final Vector3f globalAmbientNight = new Vector3f(0.22f, 0.25f, 0.36f);
     private final Vector3f groundAmbientNight = new Vector3f(0.10f, 0.11f, 0.18f);
 
-    private static final int SUN_VIEW_WIDTH = 4096;
-    private static final int SUN_VIEW_HEIGHT = 4096;
+    private static final int SUN_VIEW_WIDTH = 4096 * 2;
+    private static final int SUN_VIEW_HEIGHT = 2048;
 
     private static final Vector3f TORCH_LIGHT_COLOR = new Vector3f(1f, 0.6f, 0.25f);
     private final float[] pointLights = new float[GlobalUniforms.MAX_POINT_LIGHTS * 8];
