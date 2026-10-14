@@ -60,6 +60,8 @@ final class SelectableShadowRenderer extends ShadowListRenderer {
                     renderShadow(context, renderer, model.getShadowDiameter(), model.getPositionX(),
                             model.getPositionY());
                 }
+            } else {
+                shadowed_list.clear();
             }
 
             bindShadowTexture(halos[GeneratorHalos.SELECTED]);
