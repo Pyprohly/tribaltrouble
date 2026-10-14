@@ -61,37 +61,37 @@ public interface LitShader extends Shader {
      * A function for looking up dynamic shadow values from the shadow texture.
      */
     String SHADOW_FUNCTION = """
-                    const float SHADOW_INTENSITY = 0.72;
-                    const float SHADOW_BIAS_METERS = 0.1;
-                    const float SHADOW_SLOPE_BIAS_TEXELS = 1.5;
-                    const float SHADOW_MAX_BIAS_METERS = 3.0;
+            const float SHADOW_INTENSITY = 0.72;
+            const float SHADOW_BIAS_METERS = 0.1;
+            const float SHADOW_SLOPE_BIAS_TEXELS = 1.5;
+            const float SHADOW_MAX_BIAS_METERS = 3.0;
 
-                    bool dynamicShadows() {
-                        return u_shadowMode == 1;
-                    }
+            bool dynamicShadows() {
+                return u_shadowMode == 1;
+            }
 
-                    float calculateShadow(vec2 shadowUV, float sunDistance, vec3 normal) {
-                        if (!dynamicShadows()) {
-                            return 0.0;
-                        }
+            float calculateShadow(vec2 shadowUV, float sunDistance, vec3 normal) {
+                if (!dynamicShadows()) {
+                    return 0.0;
+                }
 
-                        if (shadowUV.x < 0.0 || shadowUV.y < 0.0 || shadowUV.x > 1.0 || shadowUV.y > 1.0 || sunDistance > 1.0) {
-                            return 0.0;
-                        }
+                if (shadowUV.x < 0.0 || shadowUV.y < 0.0 || shadowUV.x > 1.0 || shadowUV.y > 1.0 || sunDistance > 1.0) {
+                    return 0.0;
+                }
 
-                        vec2 uvPerMeter = vec2(length(vec3(u_shadowMatrix[0][0], u_shadowMatrix[1][0], u_shadowMatrix[2][0])),
-                                length(vec3(u_shadowMatrix[0][1], u_shadowMatrix[1][1], u_shadowMatrix[2][1])));
-                        float distancePerMeter = length(vec3(u_shadowMatrix[0][2], u_shadowMatrix[1][2], u_shadowMatrix[2][2]));
-                        vec2 texelSize = 1.0 / (uvPerMeter * vec2(textureSize(u_shadowMap, 0)));
-                        float texelMeters = max(texelSize.x, texelSize.y);
-                        float nDotL = max(abs(dot(normal, normalize(u_lightDirection))), 0.05);
-                        float slope = sqrt(1.0 - nDotL * nDotL) / nDotL;
-                        float bias = min(SHADOW_BIAS_METERS + SHADOW_SLOPE_BIAS_TEXELS * texelMeters * slope, SHADOW_MAX_BIAS_METERS) * distancePerMeter;
+                vec2 uvPerMeter = vec2(length(vec3(u_shadowMatrix[0][0], u_shadowMatrix[1][0], u_shadowMatrix[2][0])),
+                        length(vec3(u_shadowMatrix[0][1], u_shadowMatrix[1][1], u_shadowMatrix[2][1])));
+                float distancePerMeter = length(vec3(u_shadowMatrix[0][2], u_shadowMatrix[1][2], u_shadowMatrix[2][2]));
+                vec2 texelSize = 1.0 / (uvPerMeter * vec2(textureSize(u_shadowMap, 0)));
+                float texelMeters = max(texelSize.x, texelSize.y);
+                float nDotL = max(abs(dot(normal, normalize(u_lightDirection))), 0.05);
+                float slope = sqrt(1.0 - nDotL * nDotL) / nDotL;
+                float bias = min(SHADOW_BIAS_METERS + SHADOW_SLOPE_BIAS_TEXELS * texelMeters * slope, SHADOW_MAX_BIAS_METERS) * distancePerMeter;
 
-                        float occDistance = texture(u_shadowMap, shadowUV).r;
-            return (sunDistance - bias > occDistance) ? 1.0 : 0.0;
-                    }
-                    """;
+                float occDistance = texture(u_shadowMap, shadowUV).r;
+                return (sunDistance - bias > occDistance) ? 1.0 : 0.0;
+            }
+            """;
 
     /**
      * Simple vertex-based diffuse lighting (Legacy/FFP emulation).

@@ -118,14 +118,19 @@ public final class SkyShader extends ShaderProgram {
                 vec3 sky = mix(color1 * (1.0 + skyBodyLum), nightSky, u_nightFactor);
 
                 float skyBodyDist = acos(clamp(dot(dir, u_skyBodyDirection), -1.0, 1.0)) / asin(SKY_BODY_SIN_RADIUS);
-                float coronaIntensity = 0.35 * u_nightFactor + (1.0 - u_nightFactor) * 0.25;
+                float coronaIntensity = 0.25 * u_nightFactor + (1.0 - u_nightFactor) * 0.45;
                 float corona = coronaIntensity * exp(-max(skyBodyDist - 1.0, 0.0) * 0.55);
-                float halo = 0.19 * exp(-skyBodyDist * 0.55);
+                float haloIntensity = 0.19 * u_nightFactor + (1.0 - u_nightFactor) * 0.68;
+                float halo = haloIntensity * exp(-skyBodyDist * 0.55);
                 float cloudCover = max(c0, c1);
                 vec3 glow = vec3(0.75, 0.82, 1.0) * (corona + halo) * (1.0 + cloudCover);
 
                 float sunRayAngle = atan(skyBodyCoord.y, skyBodyCoord.x);
-                vec3 sunRayColor = vec3(1.0, 1.0, 1.0) * max((sin(sunRayAngle * 15.0) + sin(sunRayAngle * 34.0 + 0.5) + sin(sunRayAngle * 60.0 - 1.7)) * 0.4 - 0.25, 0.0) * 4.0 * (1.0 - u_nightFactor) / exp(skyBodyDist + 1.0) * u_raysIntensity;
+                float sunRay0 = sin(sunRayAngle * 35.0 + 1.0);
+                float sunRay1 = sin(sunRayAngle * 63.0 + 0.5);
+                float sunRay2 = sin(sunRayAngle * 97.0 - 1.7);
+                float sunRay = 4.0 * (max(sunRay0 + sunRay1 + sunRay2, 0.0) * 0.3 - 0.25) / exp(skyBodyDist + 1.0);
+                vec3 sunRayColor = vec3(1.0, 1.0, 1.0) * sunRay * (1.0 - u_nightFactor) * u_raysIntensity;
 
                 out_FragColor = vec4(sky + glow + sunRayColor, 1.0);
             }
