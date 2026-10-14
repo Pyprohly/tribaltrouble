@@ -267,6 +267,7 @@ public final class CameraState {
         float maxY = size;
 
         if (upperPtRatio > -1.0f) {
+
             Matrix4f invMat = new Matrix4f();
             getProjectionModelView().invert(invMat);
 

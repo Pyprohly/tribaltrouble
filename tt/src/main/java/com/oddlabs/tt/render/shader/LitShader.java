@@ -65,6 +65,12 @@ public interface LitShader extends Shader {
             const float SHADOW_BIAS_METERS = 0.1;
             const float SHADOW_SLOPE_BIAS_TEXELS = 1.5;
             const float SHADOW_MAX_BIAS_METERS = 3.0;
+            const float SHADOW_BLUR_METERS = 0.2;
+            const int SHADOW_TAPS = 12;
+            const vec2 SHADOW_POISSON_DISK[SHADOW_TAPS] = vec2[](
+                    vec2(-0.326, -0.406), vec2(-0.840, -0.074), vec2(-0.696, 0.457), vec2(-0.203, 0.621),
+                    vec2(0.962, -0.195), vec2(0.473, -0.480), vec2(0.519, 0.767), vec2(0.185, -0.893),
+                    vec2(0.507, 0.064), vec2(0.896, 0.412), vec2(-0.322, -0.933), vec2(-0.792, -0.598));
 
             bool dynamicShadows() {
                 return u_shadowMode == 1;
@@ -86,10 +92,16 @@ public interface LitShader extends Shader {
                 float texelMeters = max(texelSize.x, texelSize.y);
                 float nDotL = max(abs(dot(normal, normalize(u_lightDirection))), 0.05);
                 float slope = sqrt(1.0 - nDotL * nDotL) / nDotL;
-                float bias = min(SHADOW_BIAS_METERS + SHADOW_SLOPE_BIAS_TEXELS * texelMeters * slope, SHADOW_MAX_BIAS_METERS) * distancePerMeter;
-
-                float occDistance = texture(u_shadowMap, shadowUV).r;
-                return (sunDistance - bias > occDistance) ? 1.0 : 0.0;
+                float bias = min(SHADOW_BIAS_METERS + (SHADOW_SLOPE_BIAS_TEXELS * texelMeters + SHADOW_BLUR_METERS) * slope, SHADOW_MAX_BIAS_METERS) * distancePerMeter;
+                float angle = fract(sin(dot(gl_FragCoord.xy, vec2(12.9898, 78.233))) * 43758.5453) * 6.2831853;
+                mat2 rotation = mat2(cos(angle), sin(angle), -sin(angle), cos(angle));
+                vec2 radius = SHADOW_BLUR_METERS * uvPerMeter;
+                float lit = 0.0;
+                for (int i = 0; i < SHADOW_TAPS; i++) {
+                    vec2 uv = shadowUV + rotation * SHADOW_POISSON_DISK[i] * radius;
+                    lit += texture(u_shadowMap, vec3(uv, sunDistance - bias));
+                }
+                return 1.0 - lit / float(SHADOW_TAPS);
             }
             """;
 

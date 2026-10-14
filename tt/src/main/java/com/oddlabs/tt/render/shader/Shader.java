@@ -47,7 +47,7 @@ public interface Shader {
                 mat4 u_viewToShadowMatrix;
                 int u_shadowMode;
             };
-            uniform sampler2D u_shadowMap;
+            uniform sampler2DShadow u_shadowMap;
             """;
 
     boolean inUse();

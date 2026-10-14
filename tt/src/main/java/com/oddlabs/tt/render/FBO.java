@@ -63,6 +63,9 @@ public final class FBO implements AutoCloseable {
 
             Texture depth = new Texture(width, height, GL30.GL_DEPTH_COMPONENT32F, GL11.GL_LINEAR, GL11.GL_LINEAR,
                     GL12.GL_CLAMP_TO_EDGE);
+            GL11.glBindTexture(GL11.GL_TEXTURE_2D, depth.getHandle());
+            GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL30.GL_TEXTURE_COMPARE_MODE, GL30.GL_COMPARE_REF_TO_TEXTURE);
+            GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL30.GL_TEXTURE_COMPARE_FUNC, GL11.GL_LEQUAL);
             fbo.attachTexture(GL30.GL_DEPTH_ATTACHMENT, depth);
             fbo.depthTexture = depth;
 
