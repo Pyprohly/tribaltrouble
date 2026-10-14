@@ -13,6 +13,7 @@ public final class CameraState {
     //  private static final float MAX_ANGLE = (float)Math.PI/2f;// - 0.0001f;
     static final float MAX_ANGLE = -0.0001f;
     static final float MAX_ANGLE_UNLOCKED = (float) Math.PI / 6f;
+    private static final float HORIZON_EPSILON = 0.01f;
 
     private final Matrix4f modl = new Matrix4f();
     private final Matrix4f proj = new Matrix4f();
@@ -258,7 +259,8 @@ public final class CameraState {
         var maxVertAngle = vert_angle + halfFov;
         boolean belowHorizon = Math.sin(maxVertAngle) < 0.0f;
 
-        float upperPtRatio = belowHorizon ? 1.0f : (float) (Math.tan(-vert_angle) / Math.tan(halfFov));
+        float upperPtRatio = belowHorizon ? 1.0f : (float) (Math.tan(-vert_angle) / Math.tan(
+                halfFov)) - HORIZON_EPSILON;
 
         float maxX = size;
         float minX = 0.0f;
