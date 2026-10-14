@@ -254,14 +254,17 @@ public final class CameraState {
         // The X range is bound by the min and max X the player's camera can see.
         // The Z range is always the minimum and maximum height in the map.
 
-        var maxVertAngle = vert_angle + (float) Math.toRadians(Globals.FOV) * 0.5f;
+        float halfFov = (float) Math.toRadians(Globals.FOV) * 0.5f;
+        var maxVertAngle = vert_angle + halfFov;
         boolean belowHorizon = Math.sin(maxVertAngle) < 0.0f;
+
+        float upperPtRatio = belowHorizon ? 1.0f : (float) (Math.tan(-vert_angle) / Math.tan(halfFov));
 
         float maxX = size;
         float minX = 0.0f;
         float maxY = size;
 
-        if (belowHorizon) {
+        if (upperPtRatio > -1.0f) {
             Matrix4f invMat = new Matrix4f();
             getProjectionModelView().invert(invMat);
 
@@ -278,10 +281,10 @@ public final class CameraState {
             invMat.transformProject(-1.0f, -1.0f, +1.0f, lowerLeft1);
             invMat.transformProject(+1.0f, -1.0f, -1.0f, lowerRight0);
             invMat.transformProject(+1.0f, -1.0f, +1.0f, lowerRight1);
-            invMat.transformProject(-1.0f, +1.0f, -1.0f, upperLeft0);
-            invMat.transformProject(-1.0f, +1.0f, +1.0f, upperLeft1);
-            invMat.transformProject(+1.0f, +1.0f, -1.0f, upperRight0);
-            invMat.transformProject(+1.0f, +1.0f, +1.0f, upperRight1);
+            invMat.transformProject(-1.0f, upperPtRatio, -1.0f, upperLeft0);
+            invMat.transformProject(-1.0f, upperPtRatio, +1.0f, upperLeft1);
+            invMat.transformProject(+1.0f, upperPtRatio, -1.0f, upperRight0);
+            invMat.transformProject(+1.0f, upperPtRatio, +1.0f, upperRight1);
 
             Vector3f[] pts = new Vector3f[8];
             pts[0] = solveForZ(lowerLeft0, lowerLeft1, seaLevel);
