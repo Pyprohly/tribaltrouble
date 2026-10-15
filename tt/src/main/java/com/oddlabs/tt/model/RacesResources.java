@@ -47,6 +47,9 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
+import java.time.LocalDate;
+import java.time.Month;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.HashMap;
@@ -69,13 +72,16 @@ public final class RacesResources {
     private static final String LIGHTS_FILE = "/geometry/lights.txt";
     private static final int DEFAULT_TEXTURE = 0;
     private static final String NO_EVENT = "-";
+    private static final String AUTUMN = "autumn";
+    public static final String HALLOWEEN = "halloween";
+    private static final int LAST_AUTUMN_ONLY_DAY = 15;
     private static final String CARRIED_SLOT = "carried";
     private static final String CARRIED_UNIT = "peon";
     private static final int IRON_TEXTURE = 1;
     private static final String PROP_SLOT = "prop";
     private static final Pattern SPRITE_PATH = Pattern.compile("/geometry/\\w+/\\w+\\.binsprite$");
-    // Render-only, so it may differ between the players of one game.
-    private static final String EVENT = System.getProperty("com.oddlabs.tt.event", NO_EVENT);
+    // Render-only, so they may differ between the players of one game.
+    private static final Set<String> EVENTS = activeEvents();
     private static List<AttachmentEntry> attachment_entries;
     private static Map<String, String> event_skins;
     private static Map<String, List<GlowLights.Light>> lights;
@@ -241,8 +247,19 @@ public final class RacesResources {
                                    @NonNull String name, int textures, @NonNull String event) {
     }
 
+    // Autumn through October, Halloween from the 16th; com.oddlabs.tt.event=a,b overrides the date.
+    private static @NonNull Set<String> activeEvents() {
+        String forced = System.getProperty("com.oddlabs.tt.event");
+        if (forced != null)
+            return Set.copyOf(List.of(forced.split(",")));
+        LocalDate today = LocalDate.now(ZoneId.systemDefault());
+        if (today.getMonth() != Month.OCTOBER)
+            return Set.of();
+        return today.getDayOfMonth() <= LAST_AUTUMN_ONLY_DAY ? Set.of(AUTUMN) : Set.of(AUTUMN, HALLOWEEN);
+    }
+
     public static boolean isEventActive(@NonNull String event) {
-        return event.equals(NO_EVENT) || event.equals(EVENT);
+        return event.equals(NO_EVENT) || EVENTS.contains(event);
     }
 
     // Lines of "group base slot order name textures event" written by the geometry converter; order 0 is default-on.
@@ -325,7 +342,8 @@ public final class RacesResources {
             if (!entry.group().equals(group) || !entry.base().equals(CARRIED_UNIT) || !entry.slot().equals(
                     CARRIED_SLOT))
                 continue;
-            if (entry.name().equals(name + "_" + EVENT) || (entry.name().equals(name) && found == null))
+            if (EVENTS.stream().anyMatch(event -> entry.name().equals(name + "_" + event)) || (entry.name().equals(
+                    name) && found == null))
                 found = entry;
         }
         if (found == null)

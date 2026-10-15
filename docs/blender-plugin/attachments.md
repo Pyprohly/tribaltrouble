@@ -48,7 +48,7 @@ A building is a static sprite, so a prop on it is simpler than a hat: it has no 
 - Every prop registered on a stage is drawn with it. There is nothing to toggle; the slot must be `prop`.
 - `event` is optional. Without it the prop shows all year. With it the prop only shows while that event is on.
 
-Which event is on comes from the `com.oddlabs.tt.event` system property, for example `-Dcom.oddlabs.tt.event=halloween`. It is render-only, so players in one game may differ. Turning an event on by calendar date is a follow-up. Event items on units obey the same attribute: outside their event they are not loaded at all. `attachments.txt` carries the event as its last column. To give something another look during an event, use an event skin (see Skins).
+By date, `autumn` is on through October and `halloween` from October 16 to 31. The `com.oddlabs.tt.event` system property overrides the date with a comma list: `-Dcom.oddlabs.tt.event=autumn,halloween` turns both on, `-Dcom.oddlabs.tt.event=-` turns every event off. It is render-only, so players in one game may differ. Event items on units obey the same attribute: outside their event they are not loaded at all. `attachments.txt` carries the event as its last column. To give something another look during an event, use an event skin (see Skins).
 
 ## Props on anything else (implemented 2026-09-25)
 

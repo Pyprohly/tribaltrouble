@@ -944,7 +944,7 @@
                 <texture name="pumpkins" emissive="pumpkins_emissive" light_color="#ffa98a" light_strength="1" light_reach="8"/>
             </model>
         </sprite>
-        <sprite name="oak_tree_crown_pumpkin" skin="pumpkin" replaces="oak_tree_crown" event="halloween">
+        <sprite name="oak_tree_crown_pumpkin" skin="pumpkin" replaces="oak_tree_crown" event="autumn">
             <model r="90" g="60" b="30">
                 misc/oak_flat.xml
                 <texture name="viking_autumn_trees"/>
