@@ -307,6 +307,10 @@ public final class CameraState {
                 minX = Math.min(minX, pts[i].x());
                 maxY = Math.max(maxY, pts[i].y());
             }
+
+            minX = (float) Math.floor(minX / 32.0f) * 32.0f;
+            maxX = (float) Math.ceil(maxX / 32.0f) * 32.0f;
+            maxY = (float) Math.ceil(maxY / 32.0f) * 32.0f;
             maxX = Math.clamp(maxX, 0.0f, size);
             minX = Math.clamp(minX, 0.0f, size);
             maxY = Math.clamp(maxY, 0.0f, size);
