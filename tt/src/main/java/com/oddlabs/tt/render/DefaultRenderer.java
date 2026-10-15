@@ -120,7 +120,7 @@ public final class DefaultRenderer implements UIRenderer, AutoCloseable {
                 selection, spectator_view);
         this.tree_renderer = new TreeRenderer(cheat, sprite_sorter, picker.getRespondManager(), treeSpriteRenderer);
         this.landscape_renderer = landscape_renderer;
-        this.sky = new Sky(landscape_renderer, generator.getTerrainType(), world_info.detail());
+        this.sky = new Sky(world, landscape_renderer, generator.getTerrainType(), world_info.detail());
         this.modelViewStack = modelViewStack;
         this.projectionStack = projectionStack;
         this.water = new Water(world.getHeightMap(), generator.getTerrainType(), sky, modelViewStack, projectionStack);
@@ -460,7 +460,8 @@ public final class DefaultRenderer implements UIRenderer, AutoCloseable {
             context.clear(true, true);
         }
 
-        boolean night = Globals.night_mode;
+        boolean night = world.isNight();
+        render_queues.getGlowLights().setEnabled(night);
         Vector3f ga = night ? globalAmbientNight : Globals.classic_lighting ? globalAmbientClassic : globalAmbientEnhanced;
         Vector3f gga = night ? groundAmbientNight : Globals.classic_lighting ? groundAmbientClassic : groundAmbientEnhanced;
         Vector3f sunColor = night ? sunColorNight : sunColorDay;

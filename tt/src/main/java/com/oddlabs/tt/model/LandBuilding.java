@@ -167,10 +167,8 @@ public final class LandBuilding extends Building {
     @Override
     protected void doAnimate(float t) {
         if (!isDead()) {
-            // Visual only: the torch emitter draws no sim RNG, so gating it on the render-side
-            // night flag cannot desync lockstep.
             torch_emitter.setPropVisible(isComplete());
-            if (Globals.night_mode && isComplete())
+            if (getOwner().getWorld().isNight() && isComplete())
                 torch_emitter.start();
             else
                 torch_emitter.stop();

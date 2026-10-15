@@ -100,7 +100,7 @@ public abstract class InGameDelegate extends CameraDelegate<Camera> {
         }
         if (actions.contains(GameAction.CHEAT_10)) {
             // F10 toggles night mode
-            com.oddlabs.tt.global.Globals.night_mode = !com.oddlabs.tt.global.Globals.night_mode;
+            viewer.getWorld().toggleNight();
             return true;
         }
 

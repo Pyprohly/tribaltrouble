@@ -19,9 +19,16 @@ public final class GlowLights {
     private Set<Light> lit = new LinkedHashSet<>();
     private final Matrix4f transform = new Matrix4f();
     private final Vector3f position = new Vector3f();
+    private boolean enabled;
+
+    public void setEnabled(boolean enabled) {
+        this.enabled = enabled;
+    }
 
     /** Adds light, given in the model's space, where model is drawn. */
     void add(@NonNull ModelState<?> model, @NonNull Light light) {
+        if (!enabled)
+            return;
         model.getTransform(transform).transformPosition(light.x(), light.y(), light.z(), position);
         drawn.add(new Light(position.x, position.y, position.z, light.radius(), light.r(), light.g(), light.b()));
     }

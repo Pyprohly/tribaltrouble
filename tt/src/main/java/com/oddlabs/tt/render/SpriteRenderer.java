@@ -44,10 +44,8 @@ public final class SpriteRenderer {
     }
 
     void addToRenderList(@NonNull PolyDetail detail, ModelState<?> model, boolean respond) {
-        if (Globals.night_mode) {
-            for (GlowLights.Light light : lights)
-                glow_lights.add(model, light);
-        }
+        for (GlowLights.Light light : lights)
+            glow_lights.add(model, light);
         int index = detail.ordinal();
         index = Math.min(sprite_list.getNumSprites() - 1, index);
         if (respond) {

@@ -44,6 +44,7 @@ public final class World {
     private final int max_unit_count;
     private final int max_building_count;
     private final boolean ships;
+    private boolean night;
     private final @NonNull NotificationListener notification_listener;
 
     private final @NonNull Player @NonNull [] players;
@@ -191,6 +192,7 @@ public final class World {
         this.max_unit_count = world_params.getMaxUnitCount();
         this.max_building_count = world_params.getMaxBuildingCount();
         this.ships = world_params.isShipsEnabled();
+        this.night = world_params.isNight();
         this.notification_listener = notification_listener;
         this.gamespeed = world_params.getInitialGameSpeed();
         this.map_size = world_params.getMapSize();
@@ -271,6 +273,14 @@ public final class World {
 
     public boolean isShipsEnabled() {
         return ships;
+    }
+
+    public boolean isNight() {
+        return night;
+    }
+
+    public void toggleNight() {
+        night = !night;
     }
 
     public @NonNull NotificationListener getNotificationListener() {
