@@ -106,9 +106,9 @@ public final class UnitTemplate extends Template {
     public @NonNull List<SpriteKey> getStartingAttachments() {
         List<SpriteKey> keys = new ArrayList<>();
         for (String slot : default_attachments) {
-            keys.add(attachments.get(slot).values().iterator().next());
+            attachments.getOrDefault(slot, Map.of()).values().stream().findFirst().ifPresent(keys::add);
         }
-        return keys;
+        return List.copyOf(keys);
     }
 
     public UnitSupplyContainerFactory getUnitSupplyContainerFactory() {
