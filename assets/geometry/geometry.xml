@@ -292,7 +292,7 @@
 				<texture name="viking_ship" team="viking_ship_team"/>
 			</model>
 		</sprite>
-        <sprite name="peon_pumpkin_pants" base="peon" slot="belt" default="true">
+        <sprite name="peon_pumpkin_pants" base="peon" slot="belt" event="halloween" default="true">
             <model r="90" g="60" b="30">
                 vikings/peon/pumpkin_pants.xml
                 <texture name="pumpkins"/>
