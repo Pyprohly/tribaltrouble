@@ -53,7 +53,7 @@ from .props import (CloseItem, DonePainting, item_index_update, MakeTexture, New
 bl_info = {
     "name": "Tribal Trouble Mesh (.xml)",
     "author": "Tribal Trouble tooling",
-    "version": (2, 6, 1),
+    "version": (2, 6, 2),
     "blender": (4, 2, 0),
     "location": "File > Import-Export",
     "description": "Import/export Tribal Trouble geometry XML meshes",
@@ -85,8 +85,7 @@ def register():
                                                      description="How far the light reaches, in meters")
     bpy.types.Object.tt_light_strength = FloatProperty(name="Strength", min=0.1, max=5.0, default=1.0, precision=2,
                                                        update=lambda obj, context: unsaved.schedule(),
-                                                       description="How bright the light is; 1 is as bright as a "
-                                                                   "torch")
+                                                       description="How bright the light is")
     wm = bpy.types.WindowManager
     wm.tt_repo_root = StringProperty(name="Repo Folder", subtype="DIR_PATH", update=root_update)
     wm.tt_units = CollectionProperty(type=TTUnitEntry)
