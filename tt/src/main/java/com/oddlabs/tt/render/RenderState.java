@@ -322,6 +322,16 @@ final class RenderState implements ElementVisitor {
     }
 
     private static final ModelVisitor<SceneryModel> scenery_model_visitor = new WhiteModelVisitor<>() {
+        @Override
+        public void markDetailPolygon(@NonNull ElementRenderState<SceneryModel> render_state,
+                @NonNull PolyDetail detail) {
+            super.markDetailPolygon(render_state, detail);
+            if (render_state.render_state.isPicking())
+                return;
+            for (SpriteKey attachment : render_state.model.getAttachments()) {
+                render_state.getRenderer(attachment).addToRenderList(detail, render_state, false);
+            }
+        }
     };
 
     @Override

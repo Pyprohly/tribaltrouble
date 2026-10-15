@@ -6,6 +6,8 @@ import com.oddlabs.tt.render.ShadowListKey;
 import com.oddlabs.tt.render.SpriteKey;
 import org.jspecify.annotations.NonNull;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -98,6 +100,15 @@ public final class UnitTemplate extends Template {
      */
     public @NonNull Set<String> getDefaultAttachments() {
         return default_attachments;
+    }
+
+    /** The items a new unit starts with: the first item of every slot in {@link #getDefaultAttachments()}. */
+    public @NonNull List<SpriteKey> getStartingAttachments() {
+        List<SpriteKey> keys = new ArrayList<>();
+        for (String slot : default_attachments) {
+            keys.add(attachments.get(slot).values().iterator().next());
+        }
+        return keys;
     }
 
     public UnitSupplyContainerFactory getUnitSupplyContainerFactory() {
