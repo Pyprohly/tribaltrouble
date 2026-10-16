@@ -698,11 +698,9 @@ public class Ship extends Building implements Movable {
     public static @NonNull List<Ship> newStartingShips(@NonNull Player owner, int grid_x, int grid_y, int num_units) {
         BuildingTemplate template = owner.getRace().getBuildingTemplate(Race.BUILDING_SHIP);
         List<Ship> ships = new ArrayList<>();
-        Ship first = new Ship(owner, template, grid_x, grid_y);
-        first.instantBuild();
-        ships.add(first);
-        UnitGrid grid = first.getUnitGrid();
-        while (ships.size() < num_units / STARTING_UNITS_PER_SHIP && owner.canBuild(Race.BUILDING_SHIP)) {
+        UnitGrid grid = owner.getWorld().getUnitGrid();
+        int num_ships = (int) StrictMath.ceil(num_units / (float) STARTING_UNITS_PER_SHIP);
+        while (ships.size() < num_ships && owner.canBuild(Race.BUILDING_SHIP)) {
             StartingSeaSpotFilter filter = new StartingSeaSpotFilter(grid, STARTING_SHIP_CLEARANCE_CELLS);
             grid.scan(filter, grid_x, grid_y, UnitGrid.SEA);
             int[] spot = filter.getSpot();
