@@ -95,7 +95,9 @@ Before reporting a change as finished:
 
 1. `./gradlew :tt:compileJava` (or the affected module's `compileJava`) passes.
 2. `./gradlew spotlessApply` has been run, so `spotlessCheck` in CI will pass.
-3. Gameplay changes are described honestly: say whether you ran the game or not.
+3. Player-visible changes get a line under `## [Unreleased]` in [CHANGELOG.md](CHANGELOG.md),
+   written for players, in English, following the rules at the top of that file.
+4. Gameplay changes are described honestly: say whether you ran the game or not.
 
 Do not say "done", "ready", or "working" for code that has not compiled.
 
@@ -176,7 +178,8 @@ Beyond formatting, the house preferences are:
 - **No delegating wrapper methods.** If a method only forwards to another, call the real one.
 - **Prefer a constructor overload** to editing every call site when adding a parameter.
 - **Feature flags default to off.** Work merged into `main` that is not ready to be seen
-  ships behind a flag that is off (see `Globals.SHIPS_ENABLED` for the pattern).
+  ships behind a flag that is off. `Globals.SHIPS_ENABLED` gated ships this way until they
+  were released.
 - Null annotations are JSpecify; Error Prone and NullAway run on every compile, with a
   disabled-check list in the root `build.gradle.kts`. Do not add checks to that list to make
   your code compile.
@@ -237,6 +240,7 @@ database is migrated by hand, so a merged migration is not a deployed migration.
 - [docs/event-logs.md](docs/event-logs.md): per-run logs and `--eventload` replay
 - [docs/translations/README.md](docs/translations/README.md): the translation sync
 - [docs/migrate-save-to-steam.md](docs/migrate-save-to-steam.md): player save migration
+- [CHANGELOG.md](CHANGELOG.md): player-facing release notes; the game shows it as Patch notes
 
 ## Quick sanity list
 
