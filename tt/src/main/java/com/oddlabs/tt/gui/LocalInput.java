@@ -11,7 +11,7 @@ import com.oddlabs.tt.input.KeyboardInput;
 import com.oddlabs.tt.input.LWJGL3InputProvider;
 import com.oddlabs.tt.input.Modifier;
 import com.oddlabs.tt.input.PointerInput;
-import com.oddlabs.tt.input.ScriptedInputProvider;
+import com.oddlabs.tt.input.scripted.ScriptedInputProvider;
 import com.oddlabs.tt.window.LWJGL3Window;
 import com.oddlabs.tt.window.Window;
 import org.jspecify.annotations.NonNull;

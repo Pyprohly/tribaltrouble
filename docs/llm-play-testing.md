@@ -44,15 +44,15 @@ another port and relaunch.
 
 ## Talking to it
 
-`tools/ttinput.py` is a minimal client: each argument is one command, replies are printed, and a
+`tools/scripts/ttinput.py` is a minimal client: each argument is one command, replies are printed, and a
 `sleep:N` prefix pauses before a command. The port comes from the `TT_PORT` environment variable
 (default 7777) and the reply timeout from `TT_TIMEOUT` in seconds (default 300, so a long `wait`
 or `warp` does not time out). It is plain Python with no dependencies; any language that can open a
 TCP socket and write lines works just as well.
 
 ```
-python tools/ttinput.py "ping" "tree"
-python tools/ttinput.py "move 134 635" "click" "sleep:1.5 shot C:/tmp/menu.bmp"
+python tools/scripts/ttinput.py "ping" "tree"
+python tools/scripts/ttinput.py "move 134 635" "click" "sleep:1.5 shot C:/tmp/menu.bmp"
 ```
 
 Commands:

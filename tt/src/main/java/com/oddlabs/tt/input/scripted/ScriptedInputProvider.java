@@ -1,4 +1,4 @@
-package com.oddlabs.tt.input;
+package com.oddlabs.tt.input.scripted;
 
 import com.oddlabs.tt.animation.AnimationManager;
 import com.oddlabs.tt.event.LocalEventQueue;
@@ -6,9 +6,13 @@ import com.oddlabs.tt.gui.GUIRoot;
 import com.oddlabs.tt.gui.GUITreeDump;
 import com.oddlabs.tt.gui.PasswordLine;
 import com.oddlabs.tt.gui.TextField;
+import com.oddlabs.tt.input.InputProvider;
+import com.oddlabs.tt.input.Key;
+import com.oddlabs.tt.input.LWJGL3InputProvider;
 import com.oddlabs.tt.model.Race;
 import com.oddlabs.tt.util.GLUtils;
 import com.oddlabs.tt.window.LWJGL3Window;
+
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 import org.lwjgl.glfw.GLFW;

@@ -1,4 +1,4 @@
-package com.oddlabs.tt.input;
+package com.oddlabs.tt.input.scripted;
 
 import com.oddlabs.tt.camera.CameraState;
 import com.oddlabs.tt.delegate.InGameDelegate;
