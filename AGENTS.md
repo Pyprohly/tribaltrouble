@@ -60,6 +60,7 @@ They describe the work rather than being the work.
 | `common/` | Code shared by client and server: networking (`com.oddlabs.net`, the ARMI RPC layer), matchmaking and router wire interfaces, deterministic event log, geometry, utilities |
 | `tt/` | The game client: rendering, GUI, input, audio, world simulation, models, pathfinding, campaign, Steam integration. `com.oddlabs.tt.Main` is the entry point |
 | `server/` | The two server processes: matchmaker (`com.oddlabs.matchserver`) and router (`com.oddlabs.routerserver`), plus the Discord bot integration |
+| `bugserver/` | The crash report service behind `bug.tribaltrouble.org`: stores each report with its event log and files it as a ticket. `deploy/` has the unit file and nginx config |
 | `assets/` | Art source and the Gradle tasks that convert it into the binary geometry and texture formats the game loads |
 | `tools/` | Offline converters: geometry, fonts, images |
 | `servlet/` | Legacy web endpoints from the original Oddlabs deployment |
@@ -137,6 +138,10 @@ ARMI dispatches by method signature order, so renaming a method, reordering para
 inserting a method into one of those interfaces is a breaking change even when it compiles
 on both sides. If a change genuinely is wire compatible, that is a maintainer's call to
 record with an empty `[api-compat-ack]` commit, not something an agent decides.
+
+`common/src/main/java/com/oddlabs/bugreport/` is the JSON contract between the game's crash
+handler and the bug server. It is not ARMI and not covered by `API_VERSION`, but the server is
+deployed separately, so a field change there needs a bug server deploy before clients ship it.
 
 **Never bump either version on your own initiative.** Point out that a bump looks necessary
 and let the maintainer decide, because a bump has deployment and player-facing consequences
@@ -243,7 +248,9 @@ database is migrated by hand, so a merged migration is not a deployed migration.
 
 - [docs/development-workflow.md](docs/development-workflow.md): branch model, who merges where
 - [docs/releasing.md](docs/releasing.md): release cut, promotion, Steam and itch publishing
-- [docs/event-logs.md](docs/event-logs.md): per-run logs and `--eventload` replay
+- [docs/event-logs.md](docs/event-logs.md): per-run logs and `--eventload` replay. A crash report
+  carries the run's event log, so a filed bug is reproduced by replaying it on the reported commit
+- [bugserver/deploy/README.md](bugserver/deploy/README.md): running the bug server locally and deploying it
 - [docs/translations/README.md](docs/translations/README.md): the translation sync
 - [docs/migrate-save-to-steam.md](docs/migrate-save-to-steam.md): player save migration
 - [CHANGELOG.md](CHANGELOG.md): player-facing release notes; the game shows it as Patch notes
