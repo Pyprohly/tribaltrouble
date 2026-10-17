@@ -26,6 +26,9 @@ release is cut.
 - Held items such as the viking warrior's axe, the chieftains' lur and club, the native warrior's spear and the peons' carried goods are separate pieces attached to the unit, so they can be swapped and skinned.
 - Server: simulation version 1010, so clients on this build only see games from the same version.
 
+### Fixed
+
+- Spectating from the chat panel while in a game lobby now leaves the lobby first, so you no longer appear twice when you rejoin it.
 
 ## [2.1.96] - 2026-10-15
 
