@@ -43,7 +43,7 @@ public final class Settings implements Serializable {
     public boolean remember_login = false;
 
     public int graphic_detail = Globals.DETAIL_NORMAL;
-    public int shadow_mode = Globals.SHADOWS_STATIC;
+    public int shadow_mode = Globals.SHADOWS_DYNAMIC;
 
     // sound
     public boolean play_music = true;
