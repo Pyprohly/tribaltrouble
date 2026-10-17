@@ -12,6 +12,22 @@ release is cut.
 
 ## [Unreleased]
 
+### Added
+
+- Night games: pick Day or Night when creating a game. The moon lights the island, glowing models light their surroundings and the water darkens.
+- The sun and moon are drawn in the sky, with sun rays by day and moonlight through the clouds at night.
+- Dynamic shadows that follow the sun, with a static or dynamic shadows choice in the graphics settings.
+- Seasonal looks by date: autumn leaves on the oak trees through October, and Halloween from October 16 to 31 with pumpkins on native quarters and rally points, pumpkin patches, pumpkin hats and viking pumpkin pants.
+- Map decorations scattered around the island without affecting the simulation.
+- Blender add-on for artists: import and export models, skeletons and animations, paint textures, add items, props and skins, and publish straight into the game files.
+
+### Changed
+
+- Held items such as the viking warrior's axe, the chieftains' lur and club, the native warrior's spear and the peons' carried goods are separate pieces attached to the unit, so they can be swapped and skinned.
+- Building torches are gone.
+- Server: simulation version 1010, so clients on this build only see games from the same version.
+
+
 ## [2.1.96] - 2026-10-15
 
 Everything since the original Oddlabs source was released on 2014-09-01. Builds before 2.1 were prereleases and are not listed separately.
