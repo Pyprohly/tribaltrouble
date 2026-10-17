@@ -255,7 +255,8 @@ public final class Sky implements SceneRenderer, AutoCloseable {
     }
 
     private Sky(@NonNull World world, @NonNull LandscapeRenderer landscape_renderer,
-            Landscape.@NonNull TerrainType terrain, float inner_radius, float radius, int subdiv_axis, int subdiv_height, float outer_utile, float outer_vtile,
+            Landscape.@NonNull TerrainType terrain, float inner_radius, float radius, int subdiv_axis,
+            int subdiv_height, float outer_utile, float outer_vtile,
             float inner_utile, float inner_vtile, float origin_x, float origin_y, float origin_z,
             @NonNull Texture detail) {
         this.world = world;
