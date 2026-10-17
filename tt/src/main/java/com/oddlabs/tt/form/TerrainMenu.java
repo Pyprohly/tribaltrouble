@@ -123,6 +123,7 @@ public final class TerrainMenu extends Group {
     private final @Nullable ModeAndPresetsPanel mode_and_presets;
     private final @NonNull ScrollablePulldownMenu<Void> pulldown_menu_slots;
     private static final int DEFAULT_PLAYER_COUNT = 6;
+    private static final int NIGHT = 1;
     private int player_count = DEFAULT_PLAYER_COUNT;
     private int seed;
     private AdvancedSettingsForm.@NonNull Values advanced_settings = AdvancedSettingsForm.Values.defaults();
@@ -471,6 +472,8 @@ public final class TerrainMenu extends Group {
         pulldown_size.chooseItem(1);
         if (!Renderer.isRegistered())
             pm_terrain_type.chooseItem(0);
+        if (RacesResources.isEventActive(RacesResources.HALLOWEEN))
+            pm_time_of_day.chooseItem(NIGHT);
 
         cb_rated.addCheckBoxListener(marked -> {
             // Rated games play with the default limits so ratings stay comparable.
@@ -792,7 +795,7 @@ public final class TerrainMenu extends Group {
     }
 
     private boolean isNight() {
-        return pm_time_of_day.getChosenItemIndex() == 1;
+        return pm_time_of_day.getChosenItemIndex() == NIGHT;
     }
 
     private boolean isChosen(@NonNull PulldownMenu<Void> menu) {
