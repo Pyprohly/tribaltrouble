@@ -24,7 +24,6 @@ release is cut.
 ### Changed
 
 - Held items such as the viking warrior's axe, the chieftains' lur and club, the native warrior's spear and the peons' carried goods are separate pieces attached to the unit, so they can be swapped and skinned.
-- Building torches are gone.
 - Server: simulation version 1010, so clients on this build only see games from the same version.
 
 
