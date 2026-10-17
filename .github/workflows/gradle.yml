@@ -189,12 +189,17 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
       - name: Build Server Distribution
-        run: ./gradlew :server:installDist
+        run: ./gradlew :server:installDist :bugserver:installDist
       - name: Upload server
         uses: actions/upload-artifact@v4
         with:
           name: tribal-trouble-server_${{ needs.version.outputs.full }}
           path: server/build/install/server/
+      - name: Upload bug server
+        uses: actions/upload-artifact@v4
+        with:
+          name: tribal-trouble-bugserver_${{ needs.version.outputs.full }}
+          path: bugserver/build/install/bugserver/
 
   build-windows:
     needs: [version]
