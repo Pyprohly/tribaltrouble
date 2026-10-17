@@ -19,3 +19,5 @@ The rules most often broken:
    written by human translators. Generated code is a draft until a person reviews it.
 5. Keep diffs minimal and comments sparse. Match the surrounding code instead of modernizing
    it in passing.
+6. Never add yourself as a commit author, co-author or trailer. Commits belong to the person
+   running you.

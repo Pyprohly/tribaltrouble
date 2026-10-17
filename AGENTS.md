@@ -197,8 +197,10 @@ parts agents get wrong:
   call.
 - **Small atomic commits** with short single-line messages in the imperative mood. No body
   unless it genuinely adds something.
-- **No AI attribution trailers.** Do not add `Co-Authored-By` lines for the agent,
-  generated-by footers, or session links to commits or PR bodies in this repo.
+- **The agent is never a committer or author.** Commits are authored by the person running
+  the agent, under their git identity. Do not add `Co-Authored-By` lines for the agent,
+  generated-by footers, or session links to commits or PR bodies, and do not change
+  `user.name` or `user.email` to name a model.
 - `hotfix/*` branches off `release`, merges to `release`, then forwards into `main`.
 
 ## Translations
