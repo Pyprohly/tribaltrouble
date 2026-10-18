@@ -117,9 +117,10 @@ they mean different things.
   it when a matchmaking ARMI interface or a serialized class crossing that boundary changes
   incompatibly.
 - **`SIM_VERSION`** is the client to client gameplay determinism version. Clients report it
-  after connecting; the server only lists and joins games between clients with equal values.
+  after connecting; the server lists every game with its host's value, the client dims the rows
+  on another value and refuses to join them, and the server refuses spectating across values.
   Bump it when a change alters lockstep simulation behavior. It needs no server deploy and
-  locks nobody out; players on different values simply stop seeing each other's games.
+  locks nobody out; players on different values see each other's games but cannot enter them.
 
 CI has an `api-guard` job that fails if any of these files changed since the last
 `API_VERSION` bump:
