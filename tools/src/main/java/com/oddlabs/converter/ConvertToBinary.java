@@ -1,6 +1,11 @@
 package com.oddlabs.converter;
 
 import com.oddlabs.geometry.AnimationInfo;
+import com.oddlabs.geometry.AttachmentLine;
+import com.oddlabs.geometry.DecorationLine;
+import com.oddlabs.geometry.LightLine;
+import com.oddlabs.geometry.Listings;
+import com.oddlabs.geometry.SkinLine;
 import com.oddlabs.geometry.SpriteInfo;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
@@ -20,16 +25,11 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.stream.IntStream;
 
 public final class ConvertToBinary {
-    private static final String ATTACHMENTS_FILE = "attachments.txt";
-    private static final String SKINS_FILE = "skins.txt";
-    private static final String DECORATIONS_FILE = "decorations.txt";
-    private static final String LIGHTS_FILE = "lights.txt";
 
     void main(@NonNull String @NonNull... args) {
         if (args.length != 3)
@@ -71,10 +71,10 @@ public final class ConvertToBinary {
             Collections.sort(lights);
             try {
                 Files.createDirectories(build_dir);
-                Files.write(build_dir.resolve(ATTACHMENTS_FILE), attachments);
-                Files.write(build_dir.resolve(SKINS_FILE), skins);
-                Files.write(build_dir.resolve(DECORATIONS_FILE), decorations);
-                Files.write(build_dir.resolve(LIGHTS_FILE), lights);
+                Files.write(build_dir.resolve(Listings.ATTACHMENTS), attachments);
+                Files.write(build_dir.resolve(Listings.SKINS), skins);
+                Files.write(build_dir.resolve(Listings.DECORATIONS), decorations);
+                Files.write(build_dir.resolve(Listings.LIGHTS), lights);
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
@@ -116,35 +116,29 @@ public final class ConvertToBinary {
         }
     }
 
-    // group base slot order name textures event: one line per sprite with a slot, default-on sprites sorted first in
-    // their slot.
     private static @NonNull String attachmentLine(@NonNull String group, @NonNull SpriteEntry sprite,
             @NonNull String base,
             @NonNull String slot, ModelObjectInfo @NonNull [] models) {
-        int order = sprite.defaultOn() ? 0 : 1;
-        return String.join(" ", group, base, slot, Integer.toString(order), sprite.name(),
-                Integer.toString(models[0].getTextures().length), sprite.event());
+        return new AttachmentLine(group, base, slot, sprite.defaultOn(), sprite.name(), models[0].getTextures().length,
+                sprite.event()).toLine();
     }
 
-    // group skin replaces name textures event: one line per sprite that stands in for another sprite of its group in a
-    // skin.
     private static @NonNull String skinLine(@NonNull String group, @NonNull SpriteEntry sprite, @NonNull String skin,
             ModelObjectInfo @NonNull [] models, @NonNull Map<String, SpriteEntry> group_sprites) {
         String replaces = sprite.replaces();
         if (replaces == null || !group_sprites.containsKey(replaces))
             throw new RuntimeException(
-                    "SpriteEntry " + sprite.name() + " is in skin " + skin + " but replaces no sprite of group " + group);
+                    "Sprite " + sprite.name() + " is in skin " + skin + " but replaces no sprite of group " + group);
         SpriteEntry replaced = group_sprites.get(replaces);
         if (!Objects.equals(sprite.slot(), replaced.slot()) || (sprite.slot() != null && !Objects.equals(
                 sprite.base(), replaced.base())))
             throw new RuntimeException(
-                    "SpriteEntry " + sprite.name() + " needs the slot and base of " + replaces + ", the item it replaces");
-        return String.join(" ", group, skin, replaces, sprite.name(), Integer.toString(
-                models[0].getTextures().length), sprite.event());
+                    "Sprite " + sprite.name() + " needs the slot and base of " + replaces + ", the item it replaces");
+        return new SkinLine(group, skin, replaces, sprite.name(), models[0].getTextures().length,
+                sprite.event()).toLine();
     }
 
-    // group name texture color radius strength x y z: one line per spot where the glow of a texture of the sprite lights
-    // its surroundings at night.
+    // One line per spot where the glow of a texture of the sprite lights its surroundings at night.
     private static @NonNull List<String> lightLines(@NonNull String group, @NonNull SpriteEntry sprite,
             ModelObjectInfo @NonNull [] models, @NonNull Path src_dir) {
         List<String> lines = new ArrayList<>();
@@ -159,22 +153,19 @@ public final class ConvertToBinary {
                     Objects.requireNonNull(textures[i].emissive()) + ".png");
             try {
                 for (float[] spot : LightSpots.find(models[0].getFile(), glow, sprite.scale())) {
-                    lines.add(String.join(" ", group, sprite.name(), Integer.toString(i), light.color(),
-                            light.reach(), light.strength(),
-                            String.format(Locale.ROOT, "%.2f %.2f %.2f", spot[0], spot[1], spot[2])));
+                    lines.add(new LightLine(group, sprite.name(), i, light.color(), light.reach(), light.strength(),
+                            spot[0], spot[1], spot[2]).toLine());
                 }
             } catch (Exception e) {
-                throw new RuntimeException("SpriteEntry " + sprite.name() + " has a light but its glow cannot be read",
-                        e);
+                throw new RuntimeException("Sprite " + sprite.name() + " has a light but its glow cannot be read", e);
             }
         }
         return lines;
     }
 
-    // group name ground count event: one line per sprite the game scatters over the map as scenery.
     private static @NonNull String decorationLine(@NonNull String group, @NonNull SpriteEntry sprite,
             @NonNull String ground) {
-        return String.join(" ", group, sprite.name(), ground, Integer.toString(sprite.count()), sprite.event());
+        return new DecorationLine(group, sprite.name(), ground, sprite.count(), sprite.event()).toLine();
     }
 
     private static boolean isModified(@NonNull Path src, @NonNull Path dest) {

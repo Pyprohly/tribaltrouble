@@ -39,6 +39,7 @@ import com.oddlabs.tt.guievent.ItemChosenListener;
 import com.oddlabs.tt.guievent.MouseClickListener;
 import com.oddlabs.tt.guievent.ValueListener;
 import com.oddlabs.tt.landscape.WorldParameters;
+import com.oddlabs.tt.model.GeometryRegistry;
 import com.oddlabs.tt.model.RacesResources;
 import com.oddlabs.tt.net.GameNetwork;
 import com.oddlabs.tt.net.Network;
@@ -472,7 +473,7 @@ public final class TerrainMenu extends Group {
         pulldown_size.chooseItem(1);
         if (!Renderer.isRegistered())
             pm_terrain_type.chooseItem(0);
-        if (RacesResources.isEventActive(RacesResources.HALLOWEEN))
+        if (GeometryRegistry.isEventActive(GeometryRegistry.HALLOWEEN))
             pm_time_of_day.chooseItem(NIGHT);
 
         cb_rated.addCheckBoxListener(marked -> {

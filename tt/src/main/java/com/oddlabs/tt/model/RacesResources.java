@@ -1,5 +1,8 @@
 package com.oddlabs.tt.model;
 
+import com.oddlabs.geometry.AttachmentLine;
+import com.oddlabs.geometry.Listings;
+import com.oddlabs.geometry.SkinLine;
 import com.oddlabs.tt.audio.Audio;
 import com.oddlabs.tt.audio.AudioFile;
 import com.oddlabs.tt.form.ProgressForm;
@@ -28,7 +31,6 @@ import com.oddlabs.tt.procedural.GeneratorHalos;
 import com.oddlabs.tt.procedural.GeneratorLightning;
 import com.oddlabs.tt.procedural.GeneratorPoison;
 import com.oddlabs.tt.procedural.GeneratorSmoke;
-import com.oddlabs.tt.render.GlowLights;
 import com.oddlabs.tt.render.RenderQueues;
 import com.oddlabs.tt.render.ShadowListKey;
 import com.oddlabs.tt.render.SpriteKey;
@@ -42,15 +44,6 @@ import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 import org.lwjgl.opengl.GL11;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.UncheckedIOException;
-import java.nio.charset.StandardCharsets;
-import java.time.LocalDate;
-import java.time.Month;
-import java.time.ZoneId;
-import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -61,30 +54,14 @@ import java.util.Set;
 import java.util.Random;
 import java.util.ResourceBundle;
 import java.util.function.Supplier;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 public final class RacesResources {
-    private static final String ATTACHMENTS_FILE = "/geometry/attachments.txt";
-    private static final String SKINS_FILE = "/geometry/skins.txt";
-    private static final String LIGHTS_FILE = "/geometry/lights.txt";
     private static final int DEFAULT_TEXTURE = 0;
-    private static final String NO_EVENT = "-";
-    private static final String AUTUMN = "autumn";
-    public static final String HALLOWEEN = "halloween";
-    private static final int LAST_AUTUMN_ONLY_DAY = 15;
     private static final String CARRIED_SLOT = "carried";
     private static final String CARRIED_UNIT = "peon";
     private static final int IRON_TEXTURE = 1;
-    private static final String PROP_SLOT = "prop";
-    private static final Pattern SPRITE_PATH = Pattern.compile("/geometry/\\w+/\\w+\\.binsprite$");
-    // Render-only, so they may differ between the players of one game.
-    private static final Set<String> EVENTS = activeEvents();
-    private static List<AttachmentEntry> attachment_entries;
-    private static Map<String, String> event_skins;
-    private static Map<String, List<GlowLights.Light>> lights;
     public static final int QUARTERS_SIZE = 5;
     public static final int ARMORY_SIZE = 5;
     public static final int TOWER_SIZE = 3;
@@ -242,87 +219,10 @@ public final class RacesResources {
                 props);
     }
 
-    private record AttachmentEntry(@NonNull String group, @NonNull String base, @NonNull String slot,
-                                   boolean default_on,
-                                   @NonNull String name, int textures, @NonNull String event) {
-    }
-
-    // Autumn through October, Halloween from the 16th; com.oddlabs.tt.event=a,b overrides the date.
-    private static @NonNull Set<String> activeEvents() {
-        String forced = System.getProperty("com.oddlabs.tt.event");
-        if (forced != null)
-            return Set.copyOf(List.of(forced.split(",")));
-        LocalDate today = LocalDate.now(ZoneId.systemDefault());
-        if (today.getMonth() != Month.OCTOBER)
-            return Set.of();
-        return today.getDayOfMonth() <= LAST_AUTUMN_ONLY_DAY ? Set.of(AUTUMN) : Set.of(AUTUMN, HALLOWEEN);
-    }
-
-    public static boolean isEventActive(@NonNull String event) {
-        return event.equals(NO_EVENT) || EVENTS.contains(event);
-    }
-
-    // Lines of "group base slot order name textures event" written by the geometry converter; order 0 is default-on.
-    private static @NonNull List<AttachmentEntry> loadAttachments() {
-        if (attachment_entries == null)
-            attachment_entries = readAttachments();
-        return attachment_entries;
-    }
-
-    private static @NonNull List<AttachmentEntry> readAttachments() {
-        try (var reader = new BufferedReader(new InputStreamReader(
-                com.oddlabs.util.Utils.makeURL(ATTACHMENTS_FILE).openStream(), StandardCharsets.UTF_8))) {
-            return reader.lines().map(line -> line.split(" ")).map(f -> new AttachmentEntry(f[0], f[1], f[2],
-                    f[3].equals("0"), f[4], Integer.parseInt(f[5]), f[6])).filter(entry -> isEventActive(
-                            entry.event())).toList();
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
-        }
-    }
-
-    /** The registry path of every prop drawn with the sprite at location; there is nothing to toggle. */
-    public static @NonNull List<String> getProps(@NonNull String location) {
-        String base = registryPath(location);
-        return loadAttachments().stream().filter(entry -> entry.slot().equals(PROP_SLOT) && spritePath(entry.group(),
-                entry.base()).equals(base)).map(entry -> spritePath(entry.group(), entry.name())).toList();
-    }
-
-    /** Where the glow of the sprite at location drawn with texture tex_index lights from, in the sprite's space. */
-    public static @NonNull List<GlowLights.Light> getLights(@NonNull String location, int tex_index) {
-        if (lights == null)
-            lights = readLights();
-        return lights.getOrDefault(registryPath(location) + " " + tex_index, List.of());
-    }
-
-    // Lines of "group name texture #rrggbb radius strength x y z" written by the geometry converter.
-    private static @NonNull Map<String, List<GlowLights.Light>> readLights() {
-        try (var reader = new BufferedReader(new InputStreamReader(
-                com.oddlabs.util.Utils.makeURL(LIGHTS_FILE).openStream(), StandardCharsets.UTF_8))) {
-            Map<String, List<GlowLights.Light>> found = new HashMap<>();
-            reader.lines().map(line -> line.split(" ")).forEach(f -> {
-                int rgb = Integer.parseInt(f[3].substring(1), 16);
-                float strength = Float.parseFloat(f[5]) / 255f;
-                found.computeIfAbsent(spritePath(f[0], f[1]) + " " + f[2], key -> new ArrayList<>()).add(
-                        new GlowLights.Light(Float.parseFloat(f[6]), Float.parseFloat(f[7]), Float.parseFloat(f[8]),
-                                Float.parseFloat(f[4]), (rgb >> 16 & 0xff) * strength, (rgb >> 8 & 0xff) * strength,
-                                (rgb & 0xff) * strength));
-            });
-            return found;
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
-        }
-    }
-
-    // Resource locations are URLs, while the registry names a sprite by its path under /geometry.
-    private static @Nullable String registryPath(@NonNull String location) {
-        Matcher path = SPRITE_PATH.matcher(location);
-        return path.find() ? path.group() : null;
-    }
-
     // What a peon holds is decided by the simulation, so these never reach the unit's own slots.
     private static @NonNull Map<Class<? extends Supply>, SpriteKey> carried(@NonNull RenderQueues queues,
-            @NonNull List<AttachmentEntry> entries, @NonNull String group) {
-        AttachmentEntry rock = carriedEntry(entries, group, "rock_resource");
+            @NonNull List<AttachmentLine> entries, @NonNull String group) {
+        AttachmentLine rock = carriedEntry(entries, group, "rock_resource");
         return Map.of(
                 TreeSupply.class, registerItem(queues, carriedEntry(entries, group, "wood_resource"), DEFAULT_TEXTURE),
                 RockSupply.class, registerItem(queues, rock, DEFAULT_TEXTURE),
@@ -335,15 +235,16 @@ public final class RacesResources {
     }
 
     // During an event, <name>_<event> stands in for <name> when the registry has one.
-    private static @NonNull AttachmentEntry carriedEntry(@NonNull List<AttachmentEntry> entries, @NonNull String group,
+    private static @NonNull AttachmentLine carriedEntry(@NonNull List<AttachmentLine> entries, @NonNull String group,
             @NonNull String name) {
-        AttachmentEntry found = null;
-        for (AttachmentEntry entry : entries) {
+        AttachmentLine found = null;
+        for (AttachmentLine entry : entries) {
             if (!entry.group().equals(group) || !entry.base().equals(CARRIED_UNIT) || !entry.slot().equals(
                     CARRIED_SLOT))
                 continue;
-            if (EVENTS.stream().anyMatch(event -> entry.name().equals(name + "_" + event)) || (entry.name().equals(
-                    name) && found == null))
+            if (GeometryRegistry.events().stream().anyMatch(event -> entry.name().equals(name + "_" + event))
+                    || (entry.name().equals(
+                            name) && found == null))
                 found = entry;
         }
         if (found == null)
@@ -351,13 +252,9 @@ public final class RacesResources {
         return found;
     }
 
-    private static @NonNull String spritePath(@NonNull String group, @NonNull String name) {
-        return "/geometry/" + group + "/" + name + ".binsprite";
-    }
-
-    private static @NonNull SpriteKey registerItem(@NonNull RenderQueues queues, @NonNull AttachmentEntry entry,
+    private static @NonNull SpriteKey registerItem(@NonNull RenderQueues queues, @NonNull AttachmentLine entry,
             int tex_index) {
-        String location = spritePath(entry.group(), entry.name());
+        String location = GeometryRegistry.spritePath(entry.group(), entry.name());
         return queues.register(new SpriteFile(location, Globals.NO_MIPMAP_CUTOFF, true, true, true, false),
                 textureIndex(entry.textures(), tex_index));
     }
@@ -367,9 +264,9 @@ public final class RacesResources {
     }
 
     private static @NonNull Map<String, Map<String, SpriteKey>> attachments(@NonNull RenderQueues queues,
-            @NonNull List<AttachmentEntry> entries, @NonNull String group, @NonNull String base, int tex_index) {
+            @NonNull List<AttachmentLine> entries, @NonNull String group, @NonNull String base, int tex_index) {
         Map<String, Map<String, SpriteKey>> slots = new LinkedHashMap<>();
-        for (AttachmentEntry entry : entries) {
+        for (AttachmentLine entry : entries) {
             if (!entry.group().equals(group) || !entry.base().equals(base) || entry.slot().equals(CARRIED_SLOT))
                 continue;
             slots.computeIfAbsent(entry.slot(), _ -> new LinkedHashMap<>()).put(entry.name(),
@@ -378,40 +275,14 @@ public final class RacesResources {
         return slots;
     }
 
-    private static @NonNull Set<String> defaultAttachments(@NonNull List<AttachmentEntry> entries,
+    private static @NonNull Set<String> defaultAttachments(@NonNull List<AttachmentLine> entries,
             @NonNull String group, @NonNull String base) {
         Set<String> slots = new HashSet<>();
-        for (AttachmentEntry entry : entries) {
-            if (entry.default_on() && entry.group().equals(group) && entry.base().equals(base))
+        for (AttachmentLine entry : entries) {
+            if (entry.defaultOn() && entry.group().equals(group) && entry.base().equals(base))
                 slots.add(entry.slot());
         }
         return slots;
-    }
-
-    private record SkinEntry(@NonNull String group, @NonNull String skin, @NonNull String replaces,
-                             @NonNull String name, int textures, @NonNull String event) {
-    }
-
-    // Lines of "group skin replaces name textures event" written by the geometry converter.
-    private static @NonNull List<SkinEntry> readSkins() {
-        try (var reader = new BufferedReader(new InputStreamReader(
-                com.oddlabs.util.Utils.makeURL(SKINS_FILE).openStream(), StandardCharsets.UTF_8))) {
-            return reader.lines().map(line -> line.split(" ")).map(f -> new SkinEntry(f[0], f[1], f[2], f[3],
-                    Integer.parseInt(f[4]), f[5])).filter(entry -> isEventActive(entry.event())).toList();
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
-        }
-    }
-
-    /** What the active event draws for everyone in place of sprite_file; owned skins still draw over it. */
-    public static @NonNull SpriteFile eventSkin(@NonNull SpriteFile sprite_file) {
-        if (event_skins == null) {
-            event_skins = new HashMap<>();
-            readSkins().stream().filter(entry -> !entry.event().equals(NO_EVENT)).forEach(entry -> event_skins.put(
-                    spritePath(entry.group(), entry.replaces()), spritePath(entry.group(), entry.name())));
-        }
-        String location = event_skins.get(registryPath(sprite_file.getLocation()));
-        return location != null ? sprite_file.withLocation(location) : sprite_file;
     }
 
     // A skin sprite stands in wherever a template draws the sprite it replaces, and brings its own building props.
@@ -426,8 +297,8 @@ public final class RacesResources {
             for (int i = 0; i < Race.NUM_UNITS; i++)
                 race.getUnitTemplate(i).getAttachments().values().forEach(slot -> item_keys.addAll(slot.values()));
         }
-        for (SkinEntry entry : readSkins()) {
-            if (!entry.event().equals(NO_EVENT))
+        for (SkinLine entry : GeometryRegistry.skins()) {
+            if (!entry.event().equals(Listings.NO_EVENT))
                 continue;
             for (SpriteKey item : item_keys) {
                 SpriteKey skin = reskin(queues, item, entry);
@@ -468,12 +339,12 @@ public final class RacesResources {
 
     // Drawn with the replaced sprite's flags and texture, or the first texture when the skin has fewer.
     private static @Nullable SpriteKey reskin(@NonNull RenderQueues queues, @NonNull SpriteKey stock,
-            @NonNull SkinEntry entry) {
+            @NonNull SkinLine entry) {
         SpriteFile stock_file = queues.getSpriteFile(stock);
-        String replaced = spritePath(entry.group(), entry.replaces());
+        String replaced = GeometryRegistry.spritePath(entry.group(), entry.replaces());
         if (!stock_file.equals(stock_file.withLocation(replaced)))
             return null;
-        String location = spritePath(entry.group(), entry.name());
+        String location = GeometryRegistry.spritePath(entry.group(), entry.name());
         SpriteKey skin = queues.register(stock_file.withLocation(location),
                 textureIndex(entry.textures(), queues.getTexIndex(stock)));
         if (queues.getRenderer(skin).getSpriteList().getAnimationTypes().length != queues.getRenderer(
@@ -486,7 +357,7 @@ public final class RacesResources {
     public RacesResources(@NonNull RenderQueues queues) {
         int num_progress = 25;
         ProgressForm.progress(1f / num_progress);
-        List<AttachmentEntry> attachments = loadAttachments();
+        List<AttachmentLine> attachments = GeometryRegistry.attachments();
         Map<Class<? extends Supply>, SpriteKey> native_supply_sprite_lists = carried(queues, attachments, "natives");
         ProgressForm.progress(1f / num_progress);
         ProgressForm.progress(1f / num_progress);

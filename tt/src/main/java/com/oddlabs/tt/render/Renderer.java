@@ -29,7 +29,7 @@ import com.oddlabs.tt.landscape.LandscapeResources;
 import com.oddlabs.tt.landscape.NotificationListener;
 import com.oddlabs.tt.landscape.World;
 import com.oddlabs.tt.landscape.WorldParameters;
-import com.oddlabs.tt.model.RacesResources;
+import com.oddlabs.tt.model.GeometryRegistry;
 import com.oddlabs.tt.player.Player;
 import com.oddlabs.tt.player.PlayerInfo;
 import com.oddlabs.tt.procedural.Landscape;
@@ -769,8 +769,8 @@ public final class Renderer implements AutoCloseable {
         MatrixStack projectionStack = new MatrixStack();
         WorldParameters world_params = WorldParameters.builder().initialGameSpeed(
                 Game.GAMESPEED_NORMAL).initialUnitCount(
-                        2).maxUnitCount(Player.DEFAULT_MAX_UNIT_COUNT).night(RacesResources.isEventActive(
-                                RacesResources.HALLOWEEN)).build();
+                        2).maxUnitCount(Player.DEFAULT_MAX_UNIT_COUNT).night(GeometryRegistry.isEventActive(
+                                GeometryRegistry.HALLOWEEN)).build();
         PlayerInfo[] players = new PlayerInfo[]{player_info};
         WorldInfo world_info = generator.generate(players.length, world_params.getInitialUnitCount(), 0f);
         FogInfo fog_info = generator.getFogInfo();

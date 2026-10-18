@@ -1,5 +1,6 @@
 package com.oddlabs.converter;
 
+import com.oddlabs.geometry.Listings;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 import org.w3c.dom.Node;
@@ -16,7 +17,6 @@ public record SpriteEntry(@NonNull Node node, @NonNull String name, float scale,
     private static final Set<String> DECORATION_GROUNDS = Set.of("beach", "dirt", "grass", "snow", "land");
     private static final int DEFAULT_DECORATION_COUNT = 20;
     private static final int MAX_DECORATION_COUNT = 1000;
-    static final String NO_EVENT = "-";
 
     static @NonNull SpriteEntry read(@NonNull Node n) {
         String name = n.getAttributes().getNamedItem("name").getNodeValue();
@@ -46,7 +46,7 @@ public record SpriteEntry(@NonNull Node node, @NonNull String name, float scale,
             throw new RuntimeException(
                     "Sprite " + name + " needs a count from 1 to " + MAX_DECORATION_COUNT + ", not " + count);
         return new SpriteEntry(n, name, scale != null ? Float.parseFloat(scale) : 1f, base, slot,
-                Boolean.parseBoolean(attribute(n, "default")), event != null ? event : NO_EVENT, skin,
+                Boolean.parseBoolean(attribute(n, "default")), event != null ? event : Listings.NO_EVENT, skin,
                 attribute(n, "replaces"), decoration, Integer.parseInt(count));
     }
 

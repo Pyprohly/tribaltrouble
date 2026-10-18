@@ -2,7 +2,7 @@ package com.oddlabs.tt.render;
 
 import com.oddlabs.geometry.AnimationInfo;
 import com.oddlabs.tt.camera.CameraState;
-import com.oddlabs.tt.model.RacesResources;
+import com.oddlabs.tt.model.GeometryRegistry;
 import com.oddlabs.tt.render.state.RenderContext;
 import com.oddlabs.tt.resource.Resources;
 import com.oddlabs.tt.resource.SpriteFile;
@@ -88,14 +88,14 @@ public final class RenderQueues implements AutoCloseable {
         int index = sprite_list_lookup.size();
         SpriteList sprite_list = Resources.findResource(sprite_file);
         // The key keeps the stock bounds and clips, so an event skin changes only what is drawn.
-        SpriteFile drawn_file = RacesResources.eventSkin(sprite_file);
+        SpriteFile drawn_file = GeometryRegistry.eventSkin(sprite_file);
         SpriteList drawn = Resources.findResource(drawn_file);
         if (drawn.getAnimationTypes().length != sprite_list.getAnimationTypes().length)
             throw new IllegalStateException(
                     "Event skin of " + sprite_file.getLocation() + " has other clips than it; give it that sprite as its base");
         int drawn_index = tex_index < drawn.getSprite(0).getNumTextures() ? tex_index : FIRST_TEXTURE;
         SpriteRenderer sprite_renderer = new SpriteRenderer(drawn, drawn_index, spriteRenderer,
-                RacesResources.getLights(drawn_file.getLocation(), drawn_index), glow_lights);
+                GeometryRegistry.getLights(drawn_file.getLocation(), drawn_index), glow_lights);
         sprite_list_lookup.add(sprite_renderer);
         sprite_file_lookup.add(sprite_file);
         tex_index_lookup.add(tex_index);
@@ -107,9 +107,9 @@ public final class RenderQueues implements AutoCloseable {
             type_array[i] = animation_types[i].ordinal();
         }
         // A skin only changes the look: the sprite keeps its own props and the skin adds its own.
-        List<String> props = new ArrayList<>(RacesResources.getProps(sprite_file.getLocation()));
+        List<String> props = new ArrayList<>(GeometryRegistry.getProps(sprite_file.getLocation()));
         if (!drawn_file.getLocation().equals(sprite_file.getLocation()))
-            props.addAll(RacesResources.getProps(drawn_file.getLocation()));
+            props.addAll(GeometryRegistry.getProps(drawn_file.getLocation()));
         props_lookup.set(index, props.stream().map(prop -> register(sprite_file.withLocation(prop),
                 tex_index)).toList());
         return new SpriteKey(index, sprite_list.getBounds(), type_array);

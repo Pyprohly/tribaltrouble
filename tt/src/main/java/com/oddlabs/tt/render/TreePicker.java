@@ -6,7 +6,7 @@ import com.oddlabs.tt.landscape.TreeGroup;
 import com.oddlabs.tt.landscape.TreeLeaf;
 import com.oddlabs.tt.landscape.TreeNodeVisitor;
 import com.oddlabs.tt.landscape.TreeSupply;
-import com.oddlabs.tt.model.RacesResources;
+import com.oddlabs.tt.model.GeometryRegistry;
 import com.oddlabs.tt.resource.Resources;
 import com.oddlabs.tt.resource.SpriteFile;
 import com.oddlabs.tt.util.BoundingBox;
@@ -64,11 +64,11 @@ class TreePicker implements TreeNodeVisitor {
                 CROWN_MIPMAP_CUTOFF, true, true, true, false);
         SpriteFile crown = new SpriteFile("/geometry/misc/" + crown_name + ".binsprite",
                 CROWN_MIPMAP_CUTOFF, false, false, true, false, true);
-        List<SpriteList> props = Stream.of(trunk, crown).flatMap(part -> RacesResources.getProps(
-                RacesResources.eventSkin(part).getLocation()).stream().map(part::withLocation)).map(
-                        prop -> Resources.findResource(RacesResources.eventSkin(prop))).toList();
-        return new Tree(Resources.findResource(RacesResources.eventSkin(trunk)), Resources.findResource(
-                RacesResources.eventSkin(crown)), props);
+        List<SpriteList> props = Stream.of(trunk, crown).flatMap(part -> GeometryRegistry.getProps(
+                GeometryRegistry.eventSkin(part).getLocation()).stream().map(part::withLocation)).map(
+                        prop -> Resources.findResource(GeometryRegistry.eventSkin(prop))).toList();
+        return new Tree(Resources.findResource(GeometryRegistry.eventSkin(trunk)), Resources.findResource(
+                GeometryRegistry.eventSkin(crown)), props);
     }
 
     final @NonNull Map<@NonNull TreeType, @NonNull Tree> getTrees() {

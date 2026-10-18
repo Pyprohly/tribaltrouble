@@ -1,8 +1,9 @@
 package com.oddlabs.tt.landscape;
 
+import com.oddlabs.geometry.DecorationLine;
 import com.oddlabs.tt.global.Globals;
 import com.oddlabs.tt.model.Plants;
-import com.oddlabs.tt.model.RacesResources;
+import com.oddlabs.tt.model.GeometryRegistry;
 import com.oddlabs.tt.pathfinder.UnitGrid;
 import com.oddlabs.tt.procedural.Landscape;
 import com.oddlabs.tt.render.RenderQueues;
@@ -10,11 +11,6 @@ import com.oddlabs.tt.render.SpriteKey;
 import com.oddlabs.tt.resource.SpriteFile;
 import org.jspecify.annotations.NonNull;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.UncheckedIOException;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
@@ -24,7 +20,6 @@ import java.util.Set;
 
 // Render-only scenery scattered by its own random, so it never touches the simulation or its checksum.
 public final class Decorations {
-    private static final String DECORATIONS_FILE = "/geometry/decorations.txt";
     private static final String ANY_GROUND = "land";
 
     private record Decoration(@NonNull SpriteKey sprite, @NonNull Set<Landscape.Ground> grounds, int count) {
@@ -32,17 +27,11 @@ public final class Decorations {
 
     private final @NonNull List<Decoration> decorations = new ArrayList<>();
 
-    // Lines of "group name ground count event" written by the geometry converter.
     public Decorations(@NonNull RenderQueues queues) {
-        try (var reader = new BufferedReader(new InputStreamReader(
-                com.oddlabs.util.Utils.makeURL(DECORATIONS_FILE).openStream(), StandardCharsets.UTF_8))) {
-            reader.lines().map(line -> line.split(" ")).filter(f -> RacesResources.isEventActive(f[4])).forEach(
-                    f -> decorations.add(new Decoration(queues.register(new SpriteFile(
-                            "/geometry/" + f[0] + "/" + f[1] + ".binsprite", Globals.NO_MIPMAP_CUTOFF, true, false,
-                            true, false, true)),
-                            grounds(f[2]), Integer.parseInt(f[3]))));
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
+        for (DecorationLine line : GeometryRegistry.decorations()) {
+            decorations.add(new Decoration(queues.register(new SpriteFile(GeometryRegistry.spritePath(line.group(),
+                    line.name()), Globals.NO_MIPMAP_CUTOFF, true, false, true, false, true)), grounds(line.grounds()),
+                    line.count()));
         }
     }
 
