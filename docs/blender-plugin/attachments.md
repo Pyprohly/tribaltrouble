@@ -105,7 +105,7 @@ A skin is another look, a texture and/or a mesh, for a unit, building, item or a
 
 **Event skins** (`event="halloween"`) belong to nobody. While that event is on, the skin replaces the Default look for every player, and it works on any sprite, including trees, rocks and other scenery nobody owns. Outside its event it is not loaded. Where a player owns a skin for the same sprite, the owned skin wins. Which event is on comes from `com.oddlabs.tt.event`, as for props.
 
-Both kinds are render-only: an event skin keeps the stock sprite's bounds and clips, clip timing still comes from the template, and nothing a skin changes reaches the simulation or its checksums. Textures cannot carry `event` any more; the converter refuses one and asks for an event skin instead.
+Both kinds are render-only: an event skin keeps the stock sprite's bounds and clips, clip timing still comes from the template, and nothing a skin changes reaches the simulation or its checksums.
 
 ## Map decorations (game side implemented 2026-09-25)
 

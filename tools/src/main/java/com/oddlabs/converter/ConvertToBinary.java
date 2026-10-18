@@ -110,7 +110,6 @@ public final class ConvertToBinary {
                     attachments.add(attachmentLine(getName(n), sprite, slot.getNodeValue(), src_dir));
                 if (skin != null)
                     skins.add(skinLine(getName(n), sprite, skin.getNodeValue(), sprites, src_dir));
-                rejectEventTextures(sprite);
                 Node decoration = sprite.getAttributes().getNamedItem("decoration");
                 if (decoration != null)
                     decorations.add(decorationLine(getName(n), sprite, decoration.getNodeValue()));
@@ -215,19 +214,6 @@ public final class ConvertToBinary {
         Node event = sprite.getAttributes().getNamedItem("event");
         return String.join(" ", group, getName(sprite), ground, Integer.toString(Integer.parseInt(count)),
                 event != null ? event.getNodeValue() : NO_EVENT);
-    }
-
-    private static void rejectEventTextures(@NonNull Node sprite) {
-        NodeList models = sprite.getChildNodes();
-        for (int i = 0; i < models.getLength(); i++) {
-            NodeList textures = models.item(i).getChildNodes();
-            for (int j = 0; j < textures.getLength(); j++) {
-                if (textures.item(j).getNodeName().equals("texture") && textures.item(j).getAttributes().getNamedItem(
-                        "event") != null)
-                    throw new RuntimeException("Sprite " + getName(
-                            sprite) + " has a texture with an event; make it" + " an event skin instead: a sprite with skin=, replaces= and event=");
-            }
-        }
     }
 
     private static boolean isModified(@NonNull Path src, @NonNull Path dest) {
