@@ -1,8 +1,8 @@
 package com.oddlabs.tt.model;
 
-import com.oddlabs.geometry.AttachmentLine;
-import com.oddlabs.geometry.Listings;
-import com.oddlabs.geometry.SkinLine;
+import com.oddlabs.geometry.AttachmentEntry;
+import com.oddlabs.geometry.Registry;
+import com.oddlabs.geometry.SkinEntry;
 import com.oddlabs.tt.audio.Audio;
 import com.oddlabs.tt.audio.AudioFile;
 import com.oddlabs.tt.form.ProgressForm;
@@ -221,8 +221,8 @@ public final class RacesResources {
 
     // What a peon holds is decided by the simulation, so these never reach the unit's own slots.
     private static @NonNull Map<Class<? extends Supply>, SpriteKey> carried(@NonNull RenderQueues queues,
-            @NonNull List<AttachmentLine> entries, @NonNull String group) {
-        AttachmentLine rock = carriedEntry(entries, group, "rock_resource");
+            @NonNull List<AttachmentEntry> entries, @NonNull String group) {
+        AttachmentEntry rock = carriedEntry(entries, group, "rock_resource");
         return Map.of(
                 TreeSupply.class, registerItem(queues, carriedEntry(entries, group, "wood_resource"), DEFAULT_TEXTURE),
                 RockSupply.class, registerItem(queues, rock, DEFAULT_TEXTURE),
@@ -235,10 +235,10 @@ public final class RacesResources {
     }
 
     // During an event, <name>_<event> stands in for <name> when the registry has one.
-    private static @NonNull AttachmentLine carriedEntry(@NonNull List<AttachmentLine> entries, @NonNull String group,
+    private static @NonNull AttachmentEntry carriedEntry(@NonNull List<AttachmentEntry> entries, @NonNull String group,
             @NonNull String name) {
-        AttachmentLine found = null;
-        for (AttachmentLine entry : entries) {
+        AttachmentEntry found = null;
+        for (AttachmentEntry entry : entries) {
             if (!entry.group().equals(group) || !entry.base().equals(CARRIED_UNIT) || !entry.slot().equals(
                     CARRIED_SLOT))
                 continue;
@@ -252,7 +252,7 @@ public final class RacesResources {
         return found;
     }
 
-    private static @NonNull SpriteKey registerItem(@NonNull RenderQueues queues, @NonNull AttachmentLine entry,
+    private static @NonNull SpriteKey registerItem(@NonNull RenderQueues queues, @NonNull AttachmentEntry entry,
             int tex_index) {
         String location = GeometryRegistry.spritePath(entry.group(), entry.name());
         return queues.register(new SpriteFile(location, Globals.NO_MIPMAP_CUTOFF, true, true, true, false),
@@ -264,9 +264,9 @@ public final class RacesResources {
     }
 
     private static @NonNull Map<String, Map<String, SpriteKey>> attachments(@NonNull RenderQueues queues,
-            @NonNull List<AttachmentLine> entries, @NonNull String group, @NonNull String base, int tex_index) {
+            @NonNull List<AttachmentEntry> entries, @NonNull String group, @NonNull String base, int tex_index) {
         Map<String, Map<String, SpriteKey>> slots = new LinkedHashMap<>();
-        for (AttachmentLine entry : entries) {
+        for (AttachmentEntry entry : entries) {
             if (!entry.group().equals(group) || !entry.base().equals(base) || entry.slot().equals(CARRIED_SLOT))
                 continue;
             slots.computeIfAbsent(entry.slot(), _ -> new LinkedHashMap<>()).put(entry.name(),
@@ -275,10 +275,10 @@ public final class RacesResources {
         return slots;
     }
 
-    private static @NonNull Set<String> defaultAttachments(@NonNull List<AttachmentLine> entries,
+    private static @NonNull Set<String> defaultAttachments(@NonNull List<AttachmentEntry> entries,
             @NonNull String group, @NonNull String base) {
         Set<String> slots = new HashSet<>();
-        for (AttachmentLine entry : entries) {
+        for (AttachmentEntry entry : entries) {
             if (entry.defaultOn() && entry.group().equals(group) && entry.base().equals(base))
                 slots.add(entry.slot());
         }
@@ -297,8 +297,8 @@ public final class RacesResources {
             for (int i = 0; i < Race.NUM_UNITS; i++)
                 race.getUnitTemplate(i).getAttachments().values().forEach(slot -> item_keys.addAll(slot.values()));
         }
-        for (SkinLine entry : GeometryRegistry.skins()) {
-            if (!entry.event().equals(Listings.NO_EVENT))
+        for (SkinEntry entry : GeometryRegistry.skins()) {
+            if (!entry.event().equals(Registry.NO_EVENT))
                 continue;
             for (SpriteKey item : item_keys) {
                 SpriteKey skin = reskin(queues, item, entry);
@@ -339,7 +339,7 @@ public final class RacesResources {
 
     // Drawn with the replaced sprite's flags and texture, or the first texture when the skin has fewer.
     private static @Nullable SpriteKey reskin(@NonNull RenderQueues queues, @NonNull SpriteKey stock,
-            @NonNull SkinLine entry) {
+            @NonNull SkinEntry entry) {
         SpriteFile stock_file = queues.getSpriteFile(stock);
         String replaced = GeometryRegistry.spritePath(entry.group(), entry.replaces());
         if (!stock_file.equals(stock_file.withLocation(replaced)))
@@ -357,7 +357,7 @@ public final class RacesResources {
     public RacesResources(@NonNull RenderQueues queues) {
         int num_progress = 25;
         ProgressForm.progress(1f / num_progress);
-        List<AttachmentLine> attachments = GeometryRegistry.attachments();
+        List<AttachmentEntry> attachments = GeometryRegistry.attachments();
         Map<Class<? extends Supply>, SpriteKey> native_supply_sprite_lists = carried(queues, attachments, "natives");
         ProgressForm.progress(1f / num_progress);
         ProgressForm.progress(1f / num_progress);

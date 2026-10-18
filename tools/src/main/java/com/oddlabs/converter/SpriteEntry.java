@@ -1,6 +1,6 @@
 package com.oddlabs.converter;
 
-import com.oddlabs.geometry.Listings;
+import com.oddlabs.geometry.Registry;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 import org.w3c.dom.Node;
@@ -46,7 +46,7 @@ public record SpriteEntry(@NonNull Node node, @NonNull String name, float scale,
             throw new RuntimeException(
                     "Sprite " + name + " needs a count from 1 to " + MAX_DECORATION_COUNT + ", not " + count);
         return new SpriteEntry(n, name, scale != null ? Float.parseFloat(scale) : 1f, base, slot,
-                Boolean.parseBoolean(attribute(n, "default")), event != null ? event : Listings.NO_EVENT, skin,
+                Boolean.parseBoolean(attribute(n, "default")), event != null ? event : Registry.NO_EVENT, skin,
                 attribute(n, "replaces"), decoration, Integer.parseInt(count));
     }
 

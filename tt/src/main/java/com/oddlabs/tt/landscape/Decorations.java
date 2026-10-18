@@ -1,6 +1,6 @@
 package com.oddlabs.tt.landscape;
 
-import com.oddlabs.geometry.DecorationLine;
+import com.oddlabs.geometry.DecorationEntry;
 import com.oddlabs.tt.global.Globals;
 import com.oddlabs.tt.model.Plants;
 import com.oddlabs.tt.model.GeometryRegistry;
@@ -28,10 +28,10 @@ public final class Decorations {
     private final @NonNull List<Decoration> decorations = new ArrayList<>();
 
     public Decorations(@NonNull RenderQueues queues) {
-        for (DecorationLine line : GeometryRegistry.decorations()) {
-            decorations.add(new Decoration(queues.register(new SpriteFile(GeometryRegistry.spritePath(line.group(),
-                    line.name()), Globals.NO_MIPMAP_CUTOFF, true, false, true, false, true)), grounds(line.grounds()),
-                    line.count()));
+        for (DecorationEntry entry : GeometryRegistry.decorations()) {
+            decorations.add(new Decoration(queues.register(new SpriteFile(GeometryRegistry.spritePath(entry.group(),
+                    entry.name()), Globals.NO_MIPMAP_CUTOFF, true, false, true, false, true)), grounds(entry.grounds()),
+                    entry.count()));
         }
     }
 

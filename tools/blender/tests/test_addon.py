@@ -10,6 +10,7 @@ the game and must never be copied into the repo.
 """
 import glob
 import importlib.util
+import json
 import os
 import re
 import shutil
@@ -1464,9 +1465,9 @@ def a_building_stage_skin_is_static_and_has_no_base():
     assert file_bytes(stock) == stock
 
 
-def converter_skins(geometry, listing="skins.txt"):
-    """skins.txt, or another listing, as the game's geometry converter writes it for this geometry folder; None
-    without a built converter and a JDK that runs it."""
+def converter_registry(geometry):
+    """registry.json as the game's geometry converter writes it for this geometry folder, parsed; None without a
+    built converter and a JDK that runs it."""
     classes = [os.path.join(REPO, p, "build", "classes", "java", "main") for p in ("tools", "common")]
     jars = [j for j in glob.glob(os.path.join(os.path.expanduser("~"), ".gradle", "caches", "modules-2", "files-2.1",
                                               "org.joml", "joml", "*", "*", "joml-*.jar"))
@@ -1480,7 +1481,8 @@ def converter_skins(geometry, listing="skins.txt"):
         # An older JDK refuses the converter's class files; the next one may run them.
         if subprocess.run([java, "-cp", os.pathsep.join(classes + jars[-1:]), "com.oddlabs.converter.ConvertToBinary",
                            "geometry.xml", geometry, out], cwd=geometry, capture_output=True).returncode == 0:
-            return open(os.path.join(out, listing), encoding="utf-8").read().splitlines()
+            with open(os.path.join(out, "registry.json"), encoding="utf-8") as f:
+                return json.load(f)
     return None
 
 
@@ -1500,11 +1502,11 @@ def one_skin_name_covers_several_models():
     skins = {(s["name"], s["replaces"]) for s in addon.read_registry(TEMP) if s["skin"] == "harvest"}
     assert skins == {("warrior_harvest", "warrior"), ("quarters_harvest", "quarters")}, skins
     expect_error(lambda: save_skin("harvest"), "quarters already has a harvest skin")
-    lines = converter_skins(GEOMETRY)
-    if lines is None:
-        return "skins.txt skipped: no built converter or JDK"
-    harvest = sorted(line.rsplit(" ", 2)[0] for line in lines if line.split(" ")[1] == "harvest")
-    assert harvest == ["vikings harvest quarters quarters_harvest", "vikings harvest warrior warrior_harvest"], lines
+    registry = converter_registry(GEOMETRY)
+    if registry is None:
+        return "registry.json skipped: no built converter or JDK"
+    harvest = sorted((s["group"], s["replaces"], s["name"]) for s in registry["skins"] if s["skin"] == "harvest")
+    assert harvest == [("vikings", "quarters", "quarters_harvest"), ("vikings", "warrior", "warrior_harvest")], harvest
 
 
 @test
@@ -1701,13 +1703,14 @@ def a_skin_preview_swaps_the_body_and_the_items_it_covers():
     assert "tt_skin" not in body and hammer()["tt_skin"] == "peon_hammer_big"
     assert bpy.ops.object.tt_show_skin(skin="", item=hammer().name) == {"FINISHED"}
     assert "tt_skin" not in hammer() and hammer().data.materials[0].name == "tt_viking_peon_hammer"
-    skins = converter_skins(GEOMETRY)
-    if skins is None:
-        return "converter listings skipped: no built converter or JDK"
-    attachments = converter_skins(GEOMETRY, "attachments.txt")
-    assert "vikings gold peon_hammer peon_hammer_gold 1 -" in skins, skins
-    assert "vikings big peon_hammer peon_hammer_big 1 -" in skins, skins
-    assert not [line for line in attachments if "peon_hammer_gold" in line or "peon_hammer_big" in line], attachments
+    registry = converter_registry(GEOMETRY)
+    if registry is None:
+        return "converter registry skipped: no built converter or JDK"
+    skins = {(s["group"], s["skin"], s["replaces"], s["name"], s["textures"], s["event"]) for s in registry["skins"]}
+    assert ("vikings", "gold", "peon_hammer", "peon_hammer_gold", 1, "-") in skins, skins
+    assert ("vikings", "big", "peon_hammer", "peon_hammer_big", 1, "-") in skins, skins
+    names = {a["name"] for a in registry["attachments"]}
+    assert not names & {"peon_hammer_gold", "peon_hammer_big"}, names
 
 class Recorder:
     """Stands in for a panel's layout and records the buttons and labels drawn on it."""

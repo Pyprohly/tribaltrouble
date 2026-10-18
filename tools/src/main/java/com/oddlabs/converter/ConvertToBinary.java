@@ -1,11 +1,11 @@
 package com.oddlabs.converter;
 
 import com.oddlabs.geometry.AnimationInfo;
-import com.oddlabs.geometry.AttachmentLine;
-import com.oddlabs.geometry.DecorationLine;
-import com.oddlabs.geometry.LightLine;
-import com.oddlabs.geometry.Listings;
-import com.oddlabs.geometry.SkinLine;
+import com.oddlabs.geometry.AttachmentEntry;
+import com.oddlabs.geometry.DecorationEntry;
+import com.oddlabs.geometry.LightEntry;
+import com.oddlabs.geometry.Registry;
+import com.oddlabs.geometry.SkinEntry;
 import com.oddlabs.geometry.SpriteInfo;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
@@ -22,7 +22,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -57,24 +56,21 @@ public final class ConvertToBinary {
             @NonNull Path build_dir) {
         if (n.hasChildNodes()) {
             NodeList nl = n.getChildNodes();
-            List<String> attachments = new ArrayList<>();
-            List<String> skins = new ArrayList<>();
-            List<String> decorations = new ArrayList<>();
-            List<String> lights = new ArrayList<>();
+            List<AttachmentEntry> attachments = new ArrayList<>();
+            List<SkinEntry> skins = new ArrayList<>();
+            List<DecorationEntry> decorations = new ArrayList<>();
+            List<LightEntry> lights = new ArrayList<>();
             for (int i = 0; i < nl.getLength(); i++) {
                 if (nl.item(i).getNodeType() == Node.ELEMENT_NODE)
                     parseGroup(nl.item(i), registry, src_dir, build_dir, attachments, skins, decorations, lights);
             }
-            Collections.sort(attachments);
-            Collections.sort(skins);
-            Collections.sort(decorations);
-            Collections.sort(lights);
+            attachments.sort(AttachmentEntry.ORDER);
+            skins.sort(SkinEntry.ORDER);
+            decorations.sort(DecorationEntry.ORDER);
+            lights.sort(LightEntry.ORDER);
             try {
                 Files.createDirectories(build_dir);
-                Files.write(build_dir.resolve(Listings.ATTACHMENTS), attachments);
-                Files.write(build_dir.resolve(Listings.SKINS), skins);
-                Files.write(build_dir.resolve(Listings.DECORATIONS), decorations);
-                Files.write(build_dir.resolve(Listings.LIGHTS), lights);
+                new Registry(attachments, skins, decorations, lights).write(build_dir.resolve(Registry.FILE));
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
@@ -83,8 +79,8 @@ public final class ConvertToBinary {
 
     private static void parseGroup(@NonNull Node n, @NonNull Path registry, @NonNull Path src_dir,
             @NonNull Path build_dir,
-            @NonNull List<String> attachments, @NonNull List<String> skins, @NonNull List<String> decorations,
-            @NonNull List<String> lights) {
+            @NonNull List<AttachmentEntry> attachments, @NonNull List<SkinEntry> skins,
+            @NonNull List<DecorationEntry> decorations, @NonNull List<LightEntry> lights) {
         if (n.hasChildNodes()) {
             String group = getName(n);
             Path new_build_dir = build_dir.resolve(group);
@@ -106,24 +102,23 @@ public final class ConvertToBinary {
                 String decoration = sprite.decoration();
                 // An item skin only stands in for its item, so it is never offered as an item of its own.
                 if (slot != null && base != null && skin == null)
-                    attachments.add(attachmentLine(group, sprite, base, slot, models));
+                    attachments.add(attachment(group, sprite, base, slot, models));
                 if (skin != null)
-                    skins.add(skinLine(group, sprite, skin, models, sprites));
+                    skins.add(skin(group, sprite, skin, models, sprites));
                 if (decoration != null)
-                    decorations.add(decorationLine(group, sprite, decoration));
-                lights.addAll(lightLines(group, sprite, models, src_dir));
+                    decorations.add(decoration(group, sprite, decoration));
+                lights.addAll(lights(group, sprite, models, src_dir));
             }
         }
     }
 
-    private static @NonNull String attachmentLine(@NonNull String group, @NonNull SpriteEntry sprite,
-            @NonNull String base,
-            @NonNull String slot, ModelObjectInfo @NonNull [] models) {
-        return new AttachmentLine(group, base, slot, sprite.defaultOn(), sprite.name(), models[0].getTextures().length,
-                sprite.event()).toLine();
+    private static @NonNull AttachmentEntry attachment(@NonNull String group, @NonNull SpriteEntry sprite,
+            @NonNull String base, @NonNull String slot, ModelObjectInfo @NonNull [] models) {
+        return new AttachmentEntry(group, base, slot, sprite.defaultOn(), sprite.name(),
+                models[0].getTextures().length, sprite.event());
     }
 
-    private static @NonNull String skinLine(@NonNull String group, @NonNull SpriteEntry sprite, @NonNull String skin,
+    private static @NonNull SkinEntry skin(@NonNull String group, @NonNull SpriteEntry sprite, @NonNull String skin,
             ModelObjectInfo @NonNull [] models, @NonNull Map<String, SpriteEntry> group_sprites) {
         String replaces = sprite.replaces();
         if (replaces == null || !group_sprites.containsKey(replaces))
@@ -134,16 +129,15 @@ public final class ConvertToBinary {
                 sprite.base(), replaced.base())))
             throw new RuntimeException(
                     "Sprite " + sprite.name() + " needs the slot and base of " + replaces + ", the item it replaces");
-        return new SkinLine(group, skin, replaces, sprite.name(), models[0].getTextures().length,
-                sprite.event()).toLine();
+        return new SkinEntry(group, skin, replaces, sprite.name(), models[0].getTextures().length, sprite.event());
     }
 
-    // One line per spot where the glow of a texture of the sprite lights its surroundings at night.
-    private static @NonNull List<String> lightLines(@NonNull String group, @NonNull SpriteEntry sprite,
+    // One entry per spot where the glow of a texture of the sprite lights its surroundings at night.
+    private static @NonNull List<LightEntry> lights(@NonNull String group, @NonNull SpriteEntry sprite,
             ModelObjectInfo @NonNull [] models, @NonNull Path src_dir) {
-        List<String> lines = new ArrayList<>();
+        List<LightEntry> entries = new ArrayList<>();
         if (models.length == 0)
-            return lines;
+            return entries;
         TextureInfo[] textures = models[0].getTextures();
         for (int i = 0; i < textures.length; i++) {
             TextureInfo.Light light = textures[i].light();
@@ -153,19 +147,19 @@ public final class ConvertToBinary {
                     Objects.requireNonNull(textures[i].emissive()) + ".png");
             try {
                 for (float[] spot : LightSpots.find(models[0].getFile(), glow, sprite.scale())) {
-                    lines.add(new LightLine(group, sprite.name(), i, light.color(), light.reach(), light.strength(),
-                            spot[0], spot[1], spot[2]).toLine());
+                    entries.add(new LightEntry(group, sprite.name(), i, light.color(), Float.parseFloat(light.reach()),
+                            Float.parseFloat(light.strength()), spot[0], spot[1], spot[2]));
                 }
             } catch (Exception e) {
                 throw new RuntimeException("Sprite " + sprite.name() + " has a light but its glow cannot be read", e);
             }
         }
-        return lines;
+        return entries;
     }
 
-    private static @NonNull String decorationLine(@NonNull String group, @NonNull SpriteEntry sprite,
+    private static @NonNull DecorationEntry decoration(@NonNull String group, @NonNull SpriteEntry sprite,
             @NonNull String ground) {
-        return new DecorationLine(group, sprite.name(), ground, sprite.count(), sprite.event()).toLine();
+        return new DecorationEntry(group, sprite.name(), ground, sprite.count(), sprite.event());
     }
 
     private static boolean isModified(@NonNull Path src, @NonNull Path dest) {
