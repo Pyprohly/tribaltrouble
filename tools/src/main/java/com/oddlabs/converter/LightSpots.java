@@ -1,13 +1,12 @@
 package com.oddlabs.converter;
 
+import com.oddlabs.converter.xml.MeshFile;
+import com.oddlabs.converter.xml.Polygon;
+import com.oddlabs.converter.xml.Vertex;
+import com.oddlabs.converter.xml.Xml;
 import org.jspecify.annotations.NonNull;
-import org.w3c.dom.Element;
-import org.w3c.dom.NodeList;
-import org.xml.sax.SAXException;
 
 import javax.imageio.ImageIO;
-import javax.xml.parsers.DocumentBuilderFactory;
-import javax.xml.parsers.ParserConfigurationException;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.nio.file.Path;
@@ -21,37 +20,35 @@ final class LightSpots {
     private static final int MAX_SPOTS = 4;
     private static final float GLOWING = 0.3f;
     private static final int SETTLE_PASSES = 10;
-    private static final String[] VERTEX_KEYS = {"x", "y", "z", "u", "v"};
 
     private LightSpots() {
     }
 
     /** Up to MAX_SPOTS points as x y z, in the model's space times scale; none when nothing glows. */
     static @NonNull List<float @NonNull []> find(@NonNull Path mesh, @NonNull Path glow,
-            float scale) throws IOException, ParserConfigurationException, SAXException {
+            float scale) throws IOException {
         BufferedImage image = ImageIO.read(glow.toFile());
         if (image == null)
             throw new IOException("Cannot read the glow picture " + glow);
         // x y z weight of every glowing triangle
         List<float[]> glowing = new ArrayList<>();
-        NodeList polygons = DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(
-                mesh.toFile()).getElementsByTagName("polygon");
-        for (int i = 0; i < polygons.getLength(); i++) {
-            NodeList vertices = ((Element) polygons.item(i)).getElementsByTagName("vertex");
-            float[] middle = new float[VERTEX_KEYS.length];
-            for (int v = 0; v < vertices.getLength(); v++) {
-                Element vertex = (Element) vertices.item(v);
-                for (int k = 0; k < VERTEX_KEYS.length; k++)
-                    middle[k] += Float.parseFloat(vertex.getAttribute(VERTEX_KEYS[k])) / vertices.getLength();
+        for (Polygon polygon : Xml.read(mesh, MeshFile.class).polygons().triangles()) {
+            float x = 0, y = 0, z = 0, u = 0, v = 0;
+            for (Vertex vertex : polygon.vertices()) {
+                x += vertex.x() / Polygon.CORNERS;
+                y += vertex.y() / Polygon.CORNERS;
+                z += vertex.z() / Polygon.CORNERS;
+                u += vertex.u() / Polygon.CORNERS;
+                v += vertex.v() / Polygon.CORNERS;
             }
             // Texture rows run from the top of the picture, v from its bottom.
-            int px = Math.min(image.getWidth() - 1, (int) (fraction(middle[3]) * image.getWidth()));
-            int py = Math.min(image.getHeight() - 1, (int) ((1f - fraction(middle[4])) * image.getHeight()));
+            int px = Math.min(image.getWidth() - 1, (int) (fraction(u) * image.getWidth()));
+            int py = Math.min(image.getHeight() - 1, (int) ((1f - fraction(v)) * image.getHeight()));
             int argb = image.getRGB(px, py);
             float brightest = Math.max(argb >> 16 & 0xff, Math.max(argb >> 8 & 0xff, argb & 0xff)) / 255f;
             float weight = brightest * (argb >>> 24) / 255f;
             if (weight > GLOWING)
-                glowing.add(new float[]{middle[0] * scale, middle[1] * scale, middle[2] * scale, weight});
+                glowing.add(new float[]{x * scale, y * scale, z * scale, weight});
         }
         if (glowing.isEmpty())
             return List.of();
