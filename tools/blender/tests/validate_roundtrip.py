@@ -2,9 +2,9 @@
 
 Run headless from the repo root, with either a skeleton plus clips or one or more mesh files:
 
-    blender -b --factory-startup --python tools/blender/validate_roundtrip.py -- \
+    blender -b --factory-startup --python tools/blender/tests/validate_roundtrip.py -- \
         assets/geometry/vikings/peon/peon_skeleton.xml assets/geometry/vikings/peon/peon_run.xml [more clips...]
-    blender -b --factory-startup --python tools/blender/validate_roundtrip.py -- assets/geometry/vikings/warrior/warrior_mesh.xml
+    blender -b --factory-startup --python tools/blender/tests/validate_roundtrip.py -- assets/geometry/vikings/warrior/warrior_mesh.xml
 --factory-startup keeps an installed copy of the addon from loading next to the one under test.
 
 Exit code 0 when every value matches within tolerance (1e-4 for positions, UVs, weights and matrices; 1.5e-2 for
@@ -21,7 +21,7 @@ import bpy
 
 TOLERANCE = 1e-4
 
-addon_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "io_tribaltrouble")
+addon_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "io_tribaltrouble")
 spec = importlib.util.spec_from_file_location("io_tribaltrouble", os.path.join(addon_dir, "__init__.py"),
                                               submodule_search_locations=[addon_dir])
 addon = importlib.util.module_from_spec(spec)
