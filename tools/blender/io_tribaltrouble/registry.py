@@ -24,9 +24,9 @@ def find_base_sprite(skeleton_path):
     for group in root.iter("group"):
         for sprite in group.iter("sprite"):
             skeleton = sprite.find("skeleton")
-            if skeleton is None or not skeleton.text or sprite.find("animation") is None:
+            if skeleton is None or not skeleton.get("path") or sprite.find("animation") is None:
                 continue
-            if skeleton_norm.endswith(skeleton.text.strip().replace("\\", "/").lower()):
+            if skeleton_norm.endswith(skeleton.get("path").strip().replace("\\", "/").lower()):
                 return group.get("name"), sprite.get("name")
     return None, None
 
@@ -36,13 +36,13 @@ def sprite_text(attrs, models, skeleton=None, clips=()):
     attribute)], one per tier) and clips (name, type, path)."""
     lines = ["        <sprite " + " ".join(f"{key}={quoteattr(value)}" for key, value in attrs) + ">"]
     if skeleton:
-        lines.append(f"            <skeleton>{escape(skeleton)}</skeleton>")
+        lines.append(f"            <skeleton path={quoteattr(skeleton)}/>")
     for path, textures in models:
-        lines += ['            <model r="90" g="60" b="30">', f"                {escape(path)}"]
+        lines.append(f'            <model path={quoteattr(path)} r="90" g="60" b="30">')
         lines += [f"                <texture name={quoteattr(texture)}{team}/>" for texture, team in textures]
         lines.append("            </model>")
     for name, kind, path in clips:
-        lines.append(f'            <animation name={quoteattr(name)} wpc="1" type="{kind}">{escape(path)}</animation>')
+        lines.append(f'            <animation name={quoteattr(name)} wpc="1" type="{kind}" path={quoteattr(path)}/>')
     return "\n".join(lines + ["        </sprite>"])
 
 
@@ -129,10 +129,10 @@ def read_registry(root):
                              for m in sprite.findall("model")],
                 "light": [next((tuple(t.get(a) for a in LIGHT_ATTRIBUTES) for t in m.findall("texture")
                                 if all(t.get(a) for a in LIGHT_ATTRIBUTES)), ()) for m in sprite.findall("model")],
-                "skeleton": skeleton.text.strip() if skeleton is not None and skeleton.text else "",
-                "models": [(m.text or "").strip() for m in sprite.findall("model")],
-                "clips": [(a.text or "").strip() for a in sprite.findall("animation")],
-                "clip_info": {a.get("name"): (a.get("wpc"), a.get("type"), (a.text or "").strip())
+                "skeleton": (skeleton.get("path") or "").strip() if skeleton is not None else "",
+                "models": [(m.get("path") or "").strip() for m in sprite.findall("model")],
+                "clips": [(a.get("path") or "").strip() for a in sprite.findall("animation")],
+                "clip_info": {a.get("name"): (a.get("wpc"), a.get("type"), (a.get("path") or "").strip())
                               for a in sprite.findall("animation")},
             })
     return sprites
@@ -267,21 +267,20 @@ def set_clip_line(registry_path, group, skeleton, name, line=None):
     touched, out, cursor = [], [], 0
     for sprite_group, sprite, start, end in sprite_blocks(text):
         block = text[start:end]
-        listed = re.search(r"<skeleton>\s*([^<]+?)\s*</skeleton>", block)
+        listed = re.search(r'<skeleton\s+path="([^"]+)"', block)
         if sprite_group != group or listed is None or listed.group(1).replace("\\", "/") != skeleton:
             continue
         if line is None:
-            existing = re.search(r'[ \t]*<animation\s+name="%s"[^>]*>[^<]*</animation>[ \t]*\r?\n' % re.escape(name),
-                                 block)
+            existing = re.search(r'[ \t]*<animation\s+name="%s"[^>]*/>[ \t]*\r?\n' % re.escape(name), block)
             if existing is None:
                 continue
             edited = block[:existing.start()] + block[existing.end():]
         else:
-            existing = re.search(r'<animation\s+name="%s"[^>]*>[^<]*</animation>' % re.escape(name), block)
+            existing = re.search(r'<animation\s+name="%s"[^>]*/>' % re.escape(name), block)
             if existing is not None:
                 edited = block[:existing.start()] + line + block[existing.end():]
             else:
-                anchors = list(re.finditer(r"([ \t]*)<(?:animation|model)\b.*?</(?:animation|model)>[ \t]*(\r?\n)", block,
+                anchors = list(re.finditer(r"([ \t]*)<(?:animation\b[^>]*/>|model\b.*?</model>)[ \t]*(\r?\n)", block,
                                            re.S))
                 last = anchors[-1]
                 edited = block[:last.end()] + last.group(1) + line + last.group(2) + block[last.end():]
@@ -349,11 +348,11 @@ def set_model_path(registry_path, group, name, level, path):
         if (sprite_group, sprite) != (group, name):
             continue
         block = text[start:end]
-        models = list(re.finditer(r"(<model\b[^>]*>\s*)([^<\s][^<]*?)(\s*<)", block))
+        models = list(re.finditer(r'<model\b[^>]*?\bpath="([^"]*)"', block))
         if level >= len(models):
             return False
         model = models[level]
-        block = block[:model.start(2)] + escape(path) + block[model.end(2):]
+        block = block[:model.start(1)] + escape(path, {'"': "&quot;"}) + block[model.end(1):]
         with open(registry_path, "wb") as f:
             f.write((text[:start] + block + text[end:]).encode("utf-8"))
         return True

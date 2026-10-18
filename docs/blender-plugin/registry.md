@@ -10,20 +10,20 @@
 <geometry>
   <group name="vikings">
     <sprite name="peon" scale="1">
-      <skeleton>vikings/peon/peon_skeleton.xml</skeleton>
-      <model r="255" g="255" b="255">vikings/peon/peon_mesh.xml
+      <skeleton path="vikings/peon/peon_skeleton.xml"/>
+      <model path="vikings/peon/peon_mesh.xml" r="255" g="255" b="255">
         <texture name="viking_peon" team="viking_peon_team"/>
       </model>
-      <model r="255" g="255" b="255">vikings/peon/peon_low_poly_mesh.xml
+      <model path="vikings/peon/peon_low_poly_mesh.xml" r="255" g="255" b="255">
         <texture name="viking_peon" team="viking_peon_team"/>
       </model>
-      <animation name="run" wpc="1" type="loop">vikings/peon/peon_run.xml</animation>
+      <animation name="run" wpc="1" type="loop" path="vikings/peon/peon_run.xml"/>
     </sprite>
   </group>
 </geometry>
 ```
 
-A group is a folder of related sprites: `vikings`, `natives`, `misc`. A sprite is one drawable thing. Its first `model` is the close-up mesh, a second one is the far-away mesh. `r g b` tint the model, `255 255 255` for none. Each `texture` names a PNG in `assets/textures/models` without the extension; several textures on one model are tiers the game picks between (rock, iron, rubber). `animation` lines name clip files; `type` is `loop` or `plain` (plays once), `wpc` is world units travelled per cycle for walks.
+A group is a folder of related sprites: `vikings`, `natives`, `misc`. A sprite is one drawable thing. Its first `model` is the close-up mesh, a second one is the far-away mesh. `r g b` tint the model, `255 255 255` for none. Each `texture` names a PNG in `assets/textures/models` without the extension; several textures on one model are tiers the game picks between (rock, iron, rubber). `animation` lines name clip files in `path`; `type` is `loop` or `plain` (plays once), `wpc` is world units travelled per cycle for walks.
 
 ## Sprite attributes
 

@@ -470,7 +470,8 @@ def register_a_unit_with_its_own_rig():
     assert e["skeleton"] == "misc/goblin/goblin_skeleton.xml", e
     assert sorted(e["clips"]) == ["misc/goblin/goblin_attack.xml", "misc/goblin/goblin_run.xml"], e
     text = open(registry_path, encoding="utf-8").read()
-    assert '<animation name="run" wpc="1" type="loop">' in text and '<animation name="attack" wpc="1" type="plain">' in text
+    assert '<animation name="run" wpc="1" type="loop" path="misc/goblin/goblin_run.xml"/>' in text, text
+    assert '<animation name="attack" wpc="1" type="plain" path="misc/goblin/goblin_attack.xml"/>' in text, text
     a = load("misc", "goblin")
     assert len(a.data.bones) == 28
 
@@ -1471,11 +1472,14 @@ def converter_registry(geometry):
     classes = [os.path.join(REPO, p, "build", "classes", "java", "main") for p in ("tools", "common")]
     cache = os.path.join(os.path.expanduser("~"), ".gradle", "caches", "modules-2", "files-2.1")
     jars = []
+    pins = "".join(open(os.path.join(REPO, module, "build.gradle.kts")).read() for module in ("common", "tools"))
     for group, artifact in (("org.joml", "joml"), ("com.fasterxml.jackson.core", "jackson-core"),
                             ("com.fasterxml.jackson.core", "jackson-databind"),
-                            ("com.fasterxml.jackson.core", "jackson-annotations")):
-        # The version common/build.gradle.kts pins, else the newest in the cache.
-        pinned = re.search(artifact + r':([\d.]+)"', open(os.path.join(REPO, "common", "build.gradle.kts")).read())
+                            ("com.fasterxml.jackson.core", "jackson-annotations"),
+                            ("com.fasterxml.jackson.dataformat", "jackson-dataformat-xml"),
+                            ("com.fasterxml.woodstox", "woodstox-core"), ("org.codehaus.woodstox", "stax2-api")):
+        # The version a build file pins, else the newest in the cache.
+        pinned = re.search(artifact + r':([\d.]+)"', pins)
         found = sorted(j for j in glob.glob(os.path.join(cache, group, artifact, pinned.group(1) if pinned else "*",
                                                          "*", artifact + "-*.jar"))
                        if not j.endswith(("-sources.jar", "-javadoc.jar")))

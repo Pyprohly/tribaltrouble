@@ -245,7 +245,7 @@ def publish_clip(context, arm, action, name, kind, wpc, report):
         path = os.path.join(geometry, rig["clip_info"][name][2])
     write_animation_xml(context, arm, action, path)
     relative = os.path.relpath(path, geometry).replace(os.sep, "/")
-    line = f'<animation name="{name}" wpc="{wpc:g}" type="{kind}">{escape(relative)}</animation>'
+    line = f'<animation name="{name}" wpc="{wpc:g}" type="{kind}" path="{escape(relative)}"/>'
     touched = set_clip_line(os.path.join(root, REGISTRY_FILE), group, rig["skeleton"].replace("\\", "/"), name, line)
     action.name = os.path.splitext(os.path.basename(path))[0]
     action["tt_clip"], action["tt_armature"], action[BROWSER_TAG] = os.path.basename(path), arm.name, True
