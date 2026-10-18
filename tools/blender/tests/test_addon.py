@@ -488,8 +488,6 @@ def update_button_appears_only_for_a_newer_repo_copy():
     addons = os.path.join(TEMP, "addons")
     installed = os.path.join(addons, "io_tribaltrouble")
     shutil.copytree(ADDON_DIR, installed, ignore=shutil.ignore_patterns("__pycache__"))
-    old_single_file = os.path.join(addons, "io_tribaltrouble.py")
-    shutil.copy(source, old_single_file)
     update = sys.modules[addon.update_available.__module__]
     real_dir, update.ADDON_DIR = update.ADDON_DIR, installed
     try:
@@ -498,7 +496,6 @@ def update_button_appears_only_for_a_newer_repo_copy():
         installed_version = addon.version_from_source(os.path.join(installed, "__init__.py"))
         assert installed_version == (99, 0, 0), "the installed add-on was not replaced"
         assert os.path.isfile(os.path.join(installed, "new_module.py")), "every module of the add-on is copied"
-        assert not os.path.exists(old_single_file), "Blender cannot load the old single-file add-on next to the package"
         open(os.path.join(repo_copy, "__init__.py"), "w", encoding="utf-8").write(text)
         os.utime(os.path.join(repo_copy, "__init__.py"), (1, 1))
         assert addon.update_available(bpy.context) is None, "an equal or older repo copy must not offer an update"

@@ -286,7 +286,6 @@ class RemoveFromRegistry(bpy.types.Operator):
 
 ADDON_SOURCE = os.path.join("tools", "blender", "io_tribaltrouble")
 ADDON_DIR = os.path.dirname(os.path.abspath(__file__))
-OLD_SINGLE_FILE = "io_tribaltrouble.py"  # the old single-file install; Blender cannot load it next to this folder
 _repo_version_cache = {}
 
 
@@ -339,9 +338,6 @@ def install_repo_addon(context):
         for name in os.listdir(source):
             if name.endswith(".py"):
                 shutil.copyfile(os.path.join(source, name), os.path.join(ADDON_DIR, name))
-        old_single_file = os.path.join(os.path.dirname(ADDON_DIR), OLD_SINGLE_FILE)
-        if os.path.isfile(old_single_file):
-            os.remove(old_single_file)
     return version
 
 
