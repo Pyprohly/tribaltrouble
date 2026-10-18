@@ -8,7 +8,7 @@ import java.util.List;
 
 /** One frame of a clip, numbered from 0. */
 public record Frame(int index,
-                    @JacksonXmlElementWrapper(useWrapping = false) @JacksonXmlProperty(localName = "transform") @NonNull List<Transform> transforms) {
+                    @JacksonXmlElementWrapper(useWrapping = false) @JacksonXmlProperty(localName = "transform") @NonNull List<BoneTransform> transforms) {
 
     public Frame {
         if (index < 0)

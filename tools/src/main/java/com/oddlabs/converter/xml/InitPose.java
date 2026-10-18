@@ -8,7 +8,7 @@ import java.util.List;
 
 /** The rest pose of a skeleton file: one transform per bone. */
 public record InitPose(
-                       @JacksonXmlElementWrapper(useWrapping = false) @JacksonXmlProperty(localName = "transform") @NonNull List<Transform> transforms) {
+                       @JacksonXmlElementWrapper(useWrapping = false) @JacksonXmlProperty(localName = "transform") @NonNull List<BoneTransform> transforms) {
 
     public InitPose {
         if (transforms == null)

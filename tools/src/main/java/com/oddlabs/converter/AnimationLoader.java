@@ -2,7 +2,7 @@ package com.oddlabs.converter;
 
 import com.oddlabs.converter.xml.ClipFile;
 import com.oddlabs.converter.xml.Frame;
-import com.oddlabs.converter.xml.Transform;
+import com.oddlabs.converter.xml.BoneTransform;
 import com.oddlabs.converter.xml.Xml;
 import org.jspecify.annotations.NonNull;
 
@@ -35,9 +35,9 @@ public final class AnimationLoader {
         return poses;
     }
 
-    static @NonNull Map<@NonNull String, float @NonNull []> pose(@NonNull List<Transform> transforms) {
+    static @NonNull Map<@NonNull String, float @NonNull []> pose(@NonNull List<BoneTransform> transforms) {
         Map<String, float[]> pose = new HashMap<>();
-        for (Transform transform : transforms)
+        for (BoneTransform transform : transforms)
             pose.put(transform.name(), transform.matrix());
         return pose;
     }
