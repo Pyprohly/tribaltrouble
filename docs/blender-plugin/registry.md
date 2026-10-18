@@ -56,6 +56,16 @@ Rules the converter enforces: a `slot` without a `base`, a `skin` without a matc
 
 The three `light_` attributes go together and need `emissive`. The converter finds up to four bright spots of the glow image on the mesh and writes them to `lights.txt`; the game draws the eight lights nearest the camera.
 
+## What the game does with them
+
+Everything below is render-only. Nothing an item, prop, skin or decoration does reaches the simulation, so players in one game may see different looks and replays stay in step.
+
+- **Items** (`base` + `slot`): the game reads `attachments.txt` at load and wires each item onto every template of its base unit. A unit shows one item per slot, default items first, then by name. An item with one texture uses it for every tier; one with as many textures as the unit follows the tier, as the warrior's axe does. In single player, `/iamacheater` in chat then H cycles the `hat` slot on the selected units; the choice is local, other players never see it.
+- **Carried items** (`slot="carried"`): the same mechanism, but the simulation decides what a peon holds and the game asks for wood, rock, rubber and the paddles by name. They never enter the player-facing slots.
+- **Props** (`slot="prop"`): no bone. Drawn where they were placed relative to the base and following its position, rotation and scale; a falling tree takes its props with it. A building prop shows only on its stage. Trees and their props draw the full mesh at any distance; other sprites draw props at their own detail level and drop them where the sprite is a dot. The chicken is animated, so its prop is skinned to its bones like a unit item. Props are not picked and do not change the base's bounds.
+- **Skins** (`skin` + `replaces`): drawn wherever the stock sprite would be, with the same texture tier or the first texture when the skin has fewer. An owned skin (no `event`) belongs to a player and every client draws that player's units, buildings and items with it; nothing assigns one yet, `RacesResources.getSkins` hands one to `Player.setSkins`. An event skin belongs to nobody and replaces the default look for everyone while the event is on, scenery included; an owned skin for the same sprite wins over it. A unit skin must have the clips of the unit it replaces. A building skin replaces one stage and keeps that stage's props plus any whose `base` is the skin sprite. An item skin is listed in `skins.txt` only, so nobody wears it as an extra item.
+- **Decorations** (`decoration`): scattered after trees, rocks and iron on dry, reachable ground no tree or resource holds, one per unit grid cell, from a random generator seeded with the map seed so a map always gets the same ones. Drawn at any distance, not picked; units walk through them.
+
 ## Event stand-ins for carried items
 
 A carried item (`slot="carried"` on the peon: wood, rock, rubber and the paddles) is asked for by name from code. During an event a sprite named `<name>_<event>` with that `event` stands in for `<name>`, so `wood_resource_halloween` replaces `wood_resource` in October. Event skins work on carried items too.
