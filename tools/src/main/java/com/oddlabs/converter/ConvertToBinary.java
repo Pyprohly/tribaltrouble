@@ -29,8 +29,9 @@ import java.util.Map;
 import java.util.Objects;
 
 public final class ConvertToBinary {
-    private static final float[][] IDENTITY_FRAME = {{1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0}};
-    private static final String STATIC_CLIP = "identity";
+    // A model with no skeleton still needs a clip: one frame of one bone whose 3x4 matrix leaves the mesh where it is.
+    private static final float[][] STATIC_MODEL_FRAME = {{1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0}};
+    private static final String STATIC_MODEL_CLIP = "identity";
 
     void main(@NonNull String @NonNull... args) {
         if (args.length != 3)
@@ -180,8 +181,8 @@ public final class ConvertToBinary {
                         animation.type(), animation.wpc(), animation.name());
             }
         } else {
-            clips = new AnimationInfo[]{new AnimationInfo(IDENTITY_FRAME, AnimationInfo.AnimationType.LOOP, 1f,
-                    STATIC_CLIP)};
+            clips = new AnimationInfo[]{new AnimationInfo(STATIC_MODEL_FRAME, AnimationInfo.AnimationType.LOOP, 1f,
+                    STATIC_MODEL_CLIP)};
             name_to_bone_map = null;
         }
         SpriteInfo[] sprite_models = new SpriteInfo[sprite.models().size()];
