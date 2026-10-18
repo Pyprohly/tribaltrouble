@@ -27,7 +27,10 @@ public final class Sprite {
     static final int TEXTURE_TEAM = 1;
     static final int TEXTURE_BUMP = 2;
     static final int TEXTURE_EMISSIVE = 3;
-    private static final int EMISSIVE_NAME = 2; // texture names are name, team, emissive
+    // Where each image sits in a tier's name list in the sprite file; bump has no entry, it comes from the diffuse name.
+    private static final int DIFFUSE_NAME_INDEX = 0;
+    private static final int TEAM_NAME_INDEX = 1;
+    private static final int EMISSIVE_NAME_INDEX = 2;
     private static final String GENERATOR_STRING = "Generator:";
 
     final Texture @NonNull [] @NonNull [] textures;
@@ -112,16 +115,18 @@ public final class Sprite {
         String[][] texture_names = sprite_info.getTextures();
         textures = new Texture[texture_names.length][4];
         for (int i = 0; i < texture_names.length; i++) {
-            Texture[] diffuseAndBump = getTextureForName(texture_names[i][0], color_format, mipmap_cutoff, max_alpha);
+            Texture[] diffuseAndBump = getTextureForName(texture_names[i][DIFFUSE_NAME_INDEX], color_format,
+                    mipmap_cutoff, max_alpha);
             textures[i][TEXTURE_NORMAL] = diffuseAndBump[0];
             if (diffuseAndBump.length > 1) {
                 textures[i][TEXTURE_BUMP] = diffuseAndBump[1];
             }
 
-            textures[i][TEXTURE_TEAM] = texture_names[i][TEXTURE_TEAM] != null ? getTextureForName(texture_names[i][1],
+            textures[i][TEXTURE_TEAM] = texture_names[i][TEAM_NAME_INDEX] != null ? getTextureForName(
+                    texture_names[i][TEAM_NAME_INDEX],
                     Globals.COMPRESSED_RGB_FORMAT, mipmap_cutoff, max_alpha)[0] : null;
-            textures[i][TEXTURE_EMISSIVE] = texture_names[i].length > EMISSIVE_NAME ? getTextureForName(
-                    texture_names[i][EMISSIVE_NAME], Globals.COMPRESSED_RGBA_FORMAT, mipmap_cutoff,
+            textures[i][TEXTURE_EMISSIVE] = texture_names[i].length > EMISSIVE_NAME_INDEX ? getTextureForName(
+                    texture_names[i][EMISSIVE_NAME_INDEX], Globals.COMPRESSED_RGBA_FORMAT, mipmap_cutoff,
                     max_alpha)[0] : null;
         }
         this.respond_texture = Resources.findResource(new GeneratorRespond())[0];
