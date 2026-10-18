@@ -39,7 +39,7 @@ public final class MeshLoader {
             float scale) {
 //		String texture_name = cutTextureName(node.getAttributes().getNamedItem("texture").getNodeValue());
 
-        NodeList polygon_list = ConvertToBinary.getNodeByName("polygons", node).getChildNodes();
+        NodeList polygon_list = Dom.childNamed(node, "polygons").getChildNodes();
         int num_polygons = countPolys(polygon_list);
         int num_vertices = num_polygons * 3;
         float[] vertices = new float[num_vertices * 3];

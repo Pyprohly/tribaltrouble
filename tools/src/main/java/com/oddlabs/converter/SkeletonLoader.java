@@ -35,9 +35,8 @@ public final class SkeletonLoader {
 
     private static @NonNull Skeleton parseSkeleton(@NonNull Node skel_node) {
         Map<String, Bone> name_to_bone_map = new HashMap<>();
-        Map<String, float[]> initial_pose = AnimationLoader.parseFrame(ConvertToBinary.getNodeByName("init_pose",
-                skel_node));
-        NodeList bone_list = ConvertToBinary.getNodeByName("bones", skel_node).getChildNodes();
+        Map<String, float[]> initial_pose = AnimationLoader.parseFrame(Dom.childNamed(skel_node, "init_pose"));
+        NodeList bone_list = Dom.childNamed(skel_node, "bones").getChildNodes();
         Map<String, String> bone_parent_map = new HashMap<>();
         for (int i = 0; i < bone_list.getLength(); i++) {
             Node bone_node = bone_list.item(i);
