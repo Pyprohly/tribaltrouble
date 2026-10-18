@@ -2,7 +2,7 @@
 
 Make models, hats, props, skins and animations for Tribal Trouble inside Blender and publish them straight into the game files. No code needed for any of that.
 
-Maintainer notes (every button in full, code layout, tests, file format) are in `docs/blender-plugin/internals.md`.
+Maintainer notes (code layout, tests, file format) are in `docs/blender-plugin/internals.md`.
 
 ## Install
 
