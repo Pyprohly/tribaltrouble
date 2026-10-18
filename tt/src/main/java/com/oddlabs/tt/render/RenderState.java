@@ -367,8 +367,8 @@ final class RenderState implements ElementVisitor {
     @Override
     public void visitPlants(final @NonNull Plants plants) {
         if (!picking && Globals.draw_plants) {
-            float camera_dist_sqr = RenderTools.getEyeDistanceSquared(plants, camera.getCurrentX(),
-                    camera.getCurrentY(), camera.getCurrentZ());
+            float camera_dist_sqr = plants.fades() ? RenderTools.getEyeDistanceSquared(plants, camera.getCurrentX(),
+                    camera.getCurrentY(), camera.getCurrentZ()) : 0f;
             if (camera_dist_sqr <= PLANTS_CUT_DIST * PLANTS_CUT_DIST) {
                 addToRenderList(getCachedState(plants_model_visitor, plants, camera_dist_sqr));
                 if (plants.getShadowDiameter() > 0f) {
