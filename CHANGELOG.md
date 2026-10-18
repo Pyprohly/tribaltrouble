@@ -12,6 +12,18 @@ release is cut.
 
 ## [Unreleased]
 
+### Added
+
+- Night games: pick Day or Night when creating a game. The moon lights the island, glowing models light their surroundings and the water darkens.
+- The sun and moon are drawn in the sky, with sun rays by day and moonlight through the clouds at night.
+- Dynamic shadows that follow the sun, with a static or dynamic shadows choice in the graphics settings.
+- Seasonal looks by date: autumn leaves on the oak trees through October, and Halloween from October 16 to 31 with pumpkins on native quarters and rally points, pumpkin patches, pumpkin hats and viking pumpkin pants.
+- Framework for adding new art to the game: hats, held items, props, skins, glowing parts and map decorations are plain assets now, with a Blender add-on for the artists, so new looks no longer need code changes.
+
+### Changed
+
+- Server: simulation version 1010, so this build only plays multiplayer games with players on the same version.
+
 ### Fixed
 
 - Spectating from the chat panel while in a game lobby now leaves the lobby first, so you no longer appear twice when you rejoin it.

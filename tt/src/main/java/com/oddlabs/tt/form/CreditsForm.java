@@ -72,7 +72,11 @@ public final class CreditsForm extends Form {
         credits_box.append(i18n("audio") + "\n");
         credits_box.append("Michael Huang\n");
         credits_box.append("Nicklas Schmidt\n");
-        credits_box.append("Herman Witkam");
+        credits_box.append("Herman Witkam\n");
+        credits_box.append("\n");
+        credits_box.append(i18n("moon_texture") + "\n");
+        credits_box.append("Image courtesy of the Earth Science and Remote Sensing Unit, NASA Johnson Space Center\n");
+        credits_box.append("ISS030-E-275770, eol.jsc.nasa.gov");
         credits_box.place();
         credits.compileCanvas();
         return credits;

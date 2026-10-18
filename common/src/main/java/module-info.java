@@ -9,6 +9,7 @@ module com.oddlabs.common {
     exports com.oddlabs.bugreport;
     exports com.oddlabs.event;
     exports com.oddlabs.geometry;
+    exports com.oddlabs.geometry.registry;
     exports com.oddlabs.http;
     exports com.oddlabs.matchmaking;
     exports com.oddlabs.net;
