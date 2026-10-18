@@ -2599,6 +2599,32 @@ def work_not_yet_published_is_listed_before_another_model_loads():
     bpy.data.objects.remove(hat)
 
 
+@test
+def every_registry_attribute_is_declared_in_the_schema():
+    """docs/blender-plugin/registry.md: a new registry attribute goes into geometry.rng in the same commit."""
+    import xml.etree.ElementTree as ET
+    used = {}
+    for el in ET.parse(os.path.join(REPO, "assets", "geometry", "geometry.xml")).iter():
+        used.setdefault(el.tag, set()).update(el.attrib)
+    ns = "{http://relaxng.org/ns/structure/1.0}"
+    declared = {}
+
+    def walk(node, element):
+        for child in node:
+            if child.tag == ns + "element":
+                walk(child, child.get("name"))
+            elif child.tag == ns + "attribute":
+                declared.setdefault(element, set()).add(child.get("name"))
+            else:
+                walk(child, element)
+
+    walk(ET.parse(os.path.join(REPO, "assets", "schemas", "geometry.rng")).getroot(), None)
+    missing = {tag: sorted(attrs - declared.get(tag, set())) for tag, attrs in used.items()
+               if attrs - declared.get(tag, set())}
+    assert not missing, f"geometry.xml uses attributes geometry.rng does not declare: {missing}"
+    return ", ".join(f"{tag} {len(attrs)}" for tag, attrs in sorted(used.items()))
+
+
 print("\n==== ADDON TESTS (Blender %s, addon %s) ====" % (bpy.app.version_string, ".".join(map(str, addon.bl_info["version"]))))
 for name, status, detail in results:
     print(f"{status}  {name}" + (f": {detail}" if detail else ""))

@@ -1,6 +1,6 @@
 # Blender add-on internals
 
-Maintainer notes for `tools/blender/io_tribaltrouble`. Artists start with `tools/blender/README.md`.
+Maintainer notes for `tools/blender/io_tribaltrouble`. Artists start with `tools/blender/README.md`. The attributes the add-on writes into `geometry.xml` are listed in `registry.md` next to this file, with the schema that must follow them.
 
 ## Reference by panel
 
