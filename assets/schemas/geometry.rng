@@ -16,6 +16,46 @@
                                 </attribute>
                             </optional>
                             <optional>
+                                <attribute name="base">
+                                    <text/>
+                                </attribute>
+                            </optional>
+                            <optional>
+                                <attribute name="slot">
+                                    <text/>
+                                </attribute>
+                            </optional>
+                            <optional>
+                                <attribute name="default">
+                                    <data type="boolean"/>
+                                </attribute>
+                            </optional>
+                            <optional>
+                                <attribute name="event">
+                                    <text/>
+                                </attribute>
+                            </optional>
+                            <optional>
+                                <attribute name="skin">
+                                    <text/>
+                                </attribute>
+                            </optional>
+                            <optional>
+                                <attribute name="replaces">
+                                    <text/>
+                                </attribute>
+                            </optional>
+                            <optional>
+                                <attribute name="decoration">
+                                    <text/>
+                                </attribute>
+                            </optional>
+                            <optional>
+                                <attribute name="count">
+                                    <data type="positiveInteger"/>
+                                </attribute>
+                            </optional>
+                            <optional>
                                 <element name="skeleton">
                                     <text/>
                                 </element>
@@ -40,6 +80,26 @@
                                                 </optional>
                                                 <optional>
                                                     <attribute name="normal"/>
+                                                </optional>
+                                                <optional>
+                                                    <attribute name="emissive">
+                                                        <text/>
+                                                    </attribute>
+                                                </optional>
+                                                <optional>
+                                                    <attribute name="light_color">
+                                                        <text/>
+                                                    </attribute>
+                                                </optional>
+                                                <optional>
+                                                    <attribute name="light_strength">
+                                                        <data type="float"/>
+                                                    </attribute>
+                                                </optional>
+                                                <optional>
+                                                    <attribute name="light_reach">
+                                                        <data type="float"/>
+                                                    </attribute>
                                                 </optional>
                                             </element>
                                         </zeroOrMore>

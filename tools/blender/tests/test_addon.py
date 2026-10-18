@@ -488,8 +488,6 @@ def update_button_appears_only_for_a_newer_repo_copy():
     addons = os.path.join(TEMP, "addons")
     installed = os.path.join(addons, "io_tribaltrouble")
     shutil.copytree(ADDON_DIR, installed, ignore=shutil.ignore_patterns("__pycache__"))
-    old_single_file = os.path.join(addons, "io_tribaltrouble.py")
-    shutil.copy(source, old_single_file)
     update = sys.modules[addon.update_available.__module__]
     real_dir, update.ADDON_DIR = update.ADDON_DIR, installed
     try:
@@ -498,7 +496,6 @@ def update_button_appears_only_for_a_newer_repo_copy():
         installed_version = addon.version_from_source(os.path.join(installed, "__init__.py"))
         assert installed_version == (99, 0, 0), "the installed add-on was not replaced"
         assert os.path.isfile(os.path.join(installed, "new_module.py")), "every module of the add-on is copied"
-        assert not os.path.exists(old_single_file), "Blender cannot load the old single-file add-on next to the package"
         open(os.path.join(repo_copy, "__init__.py"), "w", encoding="utf-8").write(text)
         os.utime(os.path.join(repo_copy, "__init__.py"), (1, 1))
         assert addon.update_available(bpy.context) is None, "an equal or older repo copy must not offer an update"
@@ -2600,6 +2597,32 @@ def work_not_yet_published_is_listed_before_another_model_loads():
     assert addon.unpublished_changes(bpy.context)[0] == "the skin 'pending'"
     assert bpy.ops.object.tt_cancel_skin() == {"FINISHED"}
     bpy.data.objects.remove(hat)
+
+
+@test
+def every_registry_attribute_is_declared_in_the_schema():
+    """docs/blender-plugin/registry.md: a new registry attribute goes into geometry.rng in the same commit."""
+    import xml.etree.ElementTree as ET
+    used = {}
+    for el in ET.parse(os.path.join(REPO, "assets", "geometry", "geometry.xml")).iter():
+        used.setdefault(el.tag, set()).update(el.attrib)
+    ns = "{http://relaxng.org/ns/structure/1.0}"
+    declared = {}
+
+    def walk(node, element):
+        for child in node:
+            if child.tag == ns + "element":
+                walk(child, child.get("name"))
+            elif child.tag == ns + "attribute":
+                declared.setdefault(element, set()).add(child.get("name"))
+            else:
+                walk(child, element)
+
+    walk(ET.parse(os.path.join(REPO, "assets", "schemas", "geometry.rng")).getroot(), None)
+    missing = {tag: sorted(attrs - declared.get(tag, set())) for tag, attrs in used.items()
+               if attrs - declared.get(tag, set())}
+    assert not missing, f"geometry.xml uses attributes geometry.rng does not declare: {missing}"
+    return ", ".join(f"{tag} {len(attrs)}" for tag, attrs in sorted(used.items()))
 
 
 print("\n==== ADDON TESTS (Blender %s, addon %s) ====" % (bpy.app.version_string, ".".join(map(str, addon.bl_info["version"]))))

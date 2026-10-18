@@ -8,7 +8,7 @@ Panels: 3D view sidebar, "Tribal Trouble" tab.
 Skeleton and clip files hold absolute model-space 4x4 matrices per bone (m<column><row>,
 translation in m30..m32). Import builds an armature whose rest pose equals the file's and
 solves each pose bone's basis from the file matrices; export samples pose_bone.matrix per
-frame. tools/blender/validate_roundtrip.py is the numeric gate for that path.
+frame. tools/blender/tests/validate_roundtrip.py is the numeric gate for that path.
 
 Static props (plants, rocks, a torch) have no skeleton: every vertex is skinned
 to "dummy_bone" with weight 1, which is what the exporter writes when an object
@@ -53,7 +53,7 @@ from .props import (CloseItem, DonePainting, item_index_update, MakeTexture, New
 bl_info = {
     "name": "Tribal Trouble Mesh (.xml)",
     "author": "Tribal Trouble tooling",
-    "version": (2, 6, 2),
+    "version": (1, 0, 0),
     "blender": (4, 2, 0),
     "location": "File > Import-Export",
     "description": "Import/export Tribal Trouble geometry XML meshes",
