@@ -19,7 +19,7 @@ import java.util.Set;
 public record Sprite(@NonNull String name, @NonNull Float scale, @Nullable String base, @Nullable String slot,
                      @JsonProperty("default") boolean defaultOn, @NonNull String event, @Nullable String skin,
                      @Nullable String replaces, @Nullable String decoration, @NonNull Integer count,
-                     @Nullable Skeleton skeleton,
+                     @Nullable SkeletonRef skeleton,
                      @JacksonXmlElementWrapper(useWrapping = false) @JacksonXmlProperty(localName = "model") @NonNull List<Model> models,
                      @JacksonXmlElementWrapper(useWrapping = false) @JacksonXmlProperty(localName = "animation") @NonNull List<Animation> animations) {
 

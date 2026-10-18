@@ -1,10 +1,10 @@
 package com.oddlabs.converter;
 
 import com.oddlabs.converter.xml.Animation;
-import com.oddlabs.converter.xml.Geometry;
+import com.oddlabs.converter.xml.GeometryFile;
 import com.oddlabs.converter.xml.Group;
 import com.oddlabs.converter.xml.Model;
-import com.oddlabs.converter.xml.Skeleton;
+import com.oddlabs.converter.xml.SkeletonRef;
 import com.oddlabs.converter.xml.Sprite;
 import com.oddlabs.converter.xml.Texture;
 import com.oddlabs.geometry.AnimationInfo;
@@ -41,7 +41,7 @@ public final class ConvertToBinary {
         Path build_dir = Path.of(args[2]);
         try {
             Path registry = src_dir.resolve(xml_file);
-            convert(Geometry.read(registry), registry, src_dir, build_dir);
+            convert(GeometryFile.read(registry), registry, src_dir, build_dir);
         } catch (Exception e) {
             System.err.println("Error processing " + xml_file);
             e.printStackTrace(System.err);
@@ -49,7 +49,7 @@ public final class ConvertToBinary {
         }
     }
 
-    private static void convert(@NonNull Geometry geometry, @NonNull Path registry, @NonNull Path src_dir,
+    private static void convert(@NonNull GeometryFile geometry, @NonNull Path registry, @NonNull Path src_dir,
             @NonNull Path build_dir) throws IOException {
         List<AttachmentEntry> attachments = new ArrayList<>();
         List<SkinEntry> skins = new ArrayList<>();
@@ -148,7 +148,7 @@ public final class ConvertToBinary {
             if (base == null || depth > group_sprites.size())
                 throw new IllegalArgumentException("Sprite " + name + " has an unknown or circular base " + base_name);
         }
-        Skeleton skeleton = sprite.skeleton();
+        SkeletonRef skeleton = sprite.skeleton();
         List<Animation> animations = sprite.animations();
         // A sprite that brings nothing of its own refers to its base's clips instead of carrying a copy of them.
         boolean shares_clips = !base.name().equals(name) && skeleton == null && animations.isEmpty();
@@ -171,7 +171,7 @@ public final class ConvertToBinary {
         AnimationInfo[] clips;
         @Nullable Map<String, Bone> name_to_bone_map;
         if (skeleton != null) {
-            com.oddlabs.converter.Skeleton bones = SkeletonLoader.loadSkeleton(src_dir.resolve(skeleton.path()));
+            Skeleton bones = SkeletonLoader.loadSkeleton(src_dir.resolve(skeleton.path()));
             name_to_bone_map = bones.getNameToBoneMap();
             clips = new AnimationInfo[animations.size()];
             for (int i = 0; i < clips.length; i++) {

@@ -9,14 +9,14 @@ import java.nio.file.Path;
 import java.util.List;
 
 /** The whole of geometry.xml, one record per element. */
-public record Geometry(@JacksonXmlElementWrapper(useWrapping = false) @JacksonXmlProperty(localName = "group") @NonNull List<Group> groups) {
+public record GeometryFile(@JacksonXmlElementWrapper(useWrapping = false) @JacksonXmlProperty(localName = "group") @NonNull List<Group> groups) {
 
-    public Geometry {
+    public GeometryFile {
         if (groups == null)
             groups = List.of();
     }
 
-    public static @NonNull Geometry read(@NonNull Path file) throws IOException {
-        return Xml.read(file, Geometry.class);
+    public static @NonNull GeometryFile read(@NonNull Path file) throws IOException {
+        return Xml.read(file, GeometryFile.class);
     }
 }
