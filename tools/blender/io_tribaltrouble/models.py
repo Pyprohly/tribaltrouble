@@ -286,7 +286,7 @@ class RemoveFromRegistry(bpy.types.Operator):
 
 ADDON_SOURCE = os.path.join("tools", "blender", "io_tribaltrouble")
 ADDON_DIR = os.path.dirname(os.path.abspath(__file__))
-OLD_SINGLE_FILE = "io_tribaltrouble.py"  # how 1.x was installed; Blender cannot load it next to this folder
+OLD_SINGLE_FILE = "io_tribaltrouble.py"  # the old single-file install; Blender cannot load it next to this folder
 _repo_version_cache = {}
 
 
