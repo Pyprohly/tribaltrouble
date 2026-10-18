@@ -6,16 +6,16 @@ import java.nio.file.Path;
 
 public final class ModelObjectInfo extends ObjectInfo {
     private final float @NonNull [] clear_color;
-    private final @NonNull String @NonNull [] @NonNull [] textures;
+    private final @NonNull TextureInfo @NonNull [] textures;
 
-    public ModelObjectInfo(@NonNull Path file, @NonNull String @NonNull [] @NonNull [] textures,
+    public ModelObjectInfo(@NonNull Path file, @NonNull TextureInfo @NonNull [] textures,
             float @NonNull [] clear_color) {
         super(file);
         this.textures = textures;
         this.clear_color = clear_color;
     }
 
-    public @NonNull String @NonNull [] @NonNull [] getTextures() {
+    public @NonNull TextureInfo @NonNull [] getTextures() {
         return textures;
     }
 
