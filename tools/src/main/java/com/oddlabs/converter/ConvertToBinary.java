@@ -23,7 +23,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Set;
 import java.util.stream.IntStream;
 
 public final class ConvertToBinary {
@@ -31,50 +30,6 @@ public final class ConvertToBinary {
     private static final String SKINS_FILE = "skins.txt";
     private static final String DECORATIONS_FILE = "decorations.txt";
     private static final String LIGHTS_FILE = "lights.txt";
-    private static final Set<String> DECORATION_GROUNDS = Set.of("beach", "dirt", "grass", "snow", "land");
-    private static final int DEFAULT_DECORATION_COUNT = 20;
-    private static final int MAX_DECORATION_COUNT = 1000;
-    private static final String NO_EVENT = "-";
-
-    // Every attribute geometry.xml declares on a sprite, read and checked once; the node is kept for the model,
-    // skeleton and animation children. Checks against other sprites of the group happen where the group is known.
-    private record Sprite(@NonNull Node node, @NonNull String name, float scale, @Nullable String base,
-                          @Nullable String slot, boolean defaultOn, @NonNull String event, @Nullable String skin,
-                          @Nullable String replaces, @Nullable String decoration, int count) {
-
-        static @NonNull Sprite read(@NonNull Node n) {
-            String name = getName(n);
-            String scale = attribute(n, "scale");
-            String event = attribute(n, "event");
-            String base = attribute(n, "base");
-            String slot = attribute(n, "slot");
-            String skin = attribute(n, "skin");
-            String decoration = attribute(n, "decoration");
-            String count = attribute(n, "count");
-            if (slot != null && base == null)
-                throw new RuntimeException("Sprite " + name + " has a slot but no base");
-            if (decoration == null && count != null)
-                throw new RuntimeException("Sprite " + name + " has a count but no decoration");
-            if (decoration != null) {
-                if (!DECORATION_GROUNDS.containsAll(List.of(decoration.split(",", -1))))
-                    throw new RuntimeException(
-                            "Sprite " + name + " has decoration=\"" + decoration + "\"; use one or more of " + String.join(
-                                    ", ",
-                                    DECORATION_GROUNDS.stream().sorted().toList()) + ", comma separated");
-                if (slot != null || skin != null)
-                    throw new RuntimeException("Sprite " + name + " cannot be a decoration and an attachment or skin");
-            }
-            if (count == null)
-                count = Integer.toString(DEFAULT_DECORATION_COUNT);
-            if (!count.matches("[0-9]{1,4}") || Integer.parseInt(count) < 1 || Integer.parseInt(
-                    count) > MAX_DECORATION_COUNT)
-                throw new RuntimeException(
-                        "Sprite " + name + " needs a count from 1 to " + MAX_DECORATION_COUNT + ", not " + count);
-            return new Sprite(n, name, scale != null ? Float.parseFloat(scale) : 1f, base, slot,
-                    Boolean.parseBoolean(attribute(n, "default")), event != null ? event : NO_EVENT, skin,
-                    attribute(n, "replaces"), decoration, Integer.parseInt(count));
-        }
-    }
 
     void main(@NonNull String @NonNull... args) {
         if (args.length != 3)
@@ -134,15 +89,15 @@ public final class ConvertToBinary {
             String group = getName(n);
             Path new_build_dir = build_dir.resolve(group);
             NodeList nl = n.getChildNodes();
-            Map<String, Sprite> sprites = new HashMap<>();
+            Map<String, SpriteEntry> sprites = new HashMap<>();
             for (int i = 0; i < nl.getLength(); i++) {
                 Node child = nl.item(i);
                 if (child.getNodeType() == Node.ELEMENT_NODE && child.getNodeName().equals("sprite")) {
-                    Sprite sprite = Sprite.read(child);
+                    SpriteEntry sprite = SpriteEntry.read(child);
                     sprites.put(sprite.name(), sprite);
                 }
             }
-            for (Sprite sprite : sprites.values()) {
+            for (SpriteEntry sprite : sprites.values()) {
                 ModelObjectInfo[] models = getModelObjectInfos(sprite, src_dir);
                 parseSprite(sprite, models, sprites, registry, src_dir, new_build_dir);
                 String base = sprite.base();
@@ -163,7 +118,8 @@ public final class ConvertToBinary {
 
     // group base slot order name textures event: one line per sprite with a slot, default-on sprites sorted first in
     // their slot.
-    private static @NonNull String attachmentLine(@NonNull String group, @NonNull Sprite sprite, @NonNull String base,
+    private static @NonNull String attachmentLine(@NonNull String group, @NonNull SpriteEntry sprite,
+            @NonNull String base,
             @NonNull String slot, ModelObjectInfo @NonNull [] models) {
         int order = sprite.defaultOn() ? 0 : 1;
         return String.join(" ", group, base, slot, Integer.toString(order), sprite.name(),
@@ -172,24 +128,24 @@ public final class ConvertToBinary {
 
     // group skin replaces name textures event: one line per sprite that stands in for another sprite of its group in a
     // skin.
-    private static @NonNull String skinLine(@NonNull String group, @NonNull Sprite sprite, @NonNull String skin,
-            ModelObjectInfo @NonNull [] models, @NonNull Map<String, Sprite> group_sprites) {
+    private static @NonNull String skinLine(@NonNull String group, @NonNull SpriteEntry sprite, @NonNull String skin,
+            ModelObjectInfo @NonNull [] models, @NonNull Map<String, SpriteEntry> group_sprites) {
         String replaces = sprite.replaces();
         if (replaces == null || !group_sprites.containsKey(replaces))
             throw new RuntimeException(
-                    "Sprite " + sprite.name() + " is in skin " + skin + " but replaces no sprite of group " + group);
-        Sprite replaced = group_sprites.get(replaces);
+                    "SpriteEntry " + sprite.name() + " is in skin " + skin + " but replaces no sprite of group " + group);
+        SpriteEntry replaced = group_sprites.get(replaces);
         if (!Objects.equals(sprite.slot(), replaced.slot()) || (sprite.slot() != null && !Objects.equals(
                 sprite.base(), replaced.base())))
             throw new RuntimeException(
-                    "Sprite " + sprite.name() + " needs the slot and base of " + replaces + ", the item it replaces");
+                    "SpriteEntry " + sprite.name() + " needs the slot and base of " + replaces + ", the item it replaces");
         return String.join(" ", group, skin, replaces, sprite.name(), Integer.toString(
                 models[0].getTextures().length), sprite.event());
     }
 
     // group name texture color radius strength x y z: one line per spot where the glow of a texture of the sprite lights
     // its surroundings at night.
-    private static @NonNull List<String> lightLines(@NonNull String group, @NonNull Sprite sprite,
+    private static @NonNull List<String> lightLines(@NonNull String group, @NonNull SpriteEntry sprite,
             ModelObjectInfo @NonNull [] models, @NonNull Path src_dir) {
         List<String> lines = new ArrayList<>();
         if (models.length == 0)
@@ -208,19 +164,15 @@ public final class ConvertToBinary {
                             String.format(Locale.ROOT, "%.2f %.2f %.2f", spot[0], spot[1], spot[2])));
                 }
             } catch (Exception e) {
-                throw new RuntimeException("Sprite " + sprite.name() + " has a light but its glow cannot be read", e);
+                throw new RuntimeException("SpriteEntry " + sprite.name() + " has a light but its glow cannot be read",
+                        e);
             }
         }
         return lines;
     }
 
-    private static @Nullable String attribute(@NonNull Node n, @NonNull String name) {
-        Node attribute = n.getAttributes().getNamedItem(name);
-        return attribute != null ? attribute.getNodeValue() : null;
-    }
-
     // group name ground count event: one line per sprite the game scatters over the map as scenery.
-    private static @NonNull String decorationLine(@NonNull String group, @NonNull Sprite sprite,
+    private static @NonNull String decorationLine(@NonNull String group, @NonNull SpriteEntry sprite,
             @NonNull String ground) {
         return String.join(" ", group, sprite.name(), ground, Integer.toString(sprite.count()), sprite.event());
     }
@@ -234,7 +186,7 @@ public final class ConvertToBinary {
         }
     }
 
-    private static ModelObjectInfo @NonNull [] getModelObjectInfos(@NonNull Sprite sprite, @NonNull Path src_dir) {
+    private static ModelObjectInfo @NonNull [] getModelObjectInfos(@NonNull SpriteEntry sprite, @NonNull Path src_dir) {
         NodeList nl = sprite.node().getChildNodes();
         List<ModelObjectInfo> object_infos = new ArrayList<>();
         for (int i = 0; i < nl.getLength(); i++) {
@@ -280,17 +232,17 @@ public final class ConvertToBinary {
         return textures.toArray(new TextureInfo[0]);
     }
 
-    private static void parseSprite(@NonNull Sprite sprite, ModelObjectInfo @NonNull [] model_object_infos,
-            @NonNull Map<String, Sprite> group_sprites, @NonNull Path registry, @NonNull Path src_dir,
+    private static void parseSprite(@NonNull SpriteEntry sprite, ModelObjectInfo @NonNull [] model_object_infos,
+            @NonNull Map<String, SpriteEntry> group_sprites, @NonNull Path registry, @NonNull Path src_dir,
             @NonNull Path build_dir) {
         String name = sprite.name();
         // base="peon" makes an attachment share the unit's skeleton and clip list without repeating them.
-        Sprite base = sprite;
+        SpriteEntry base = sprite;
         for (int depth = 0; base.base() != null; depth++) {
             String base_name = base.base();
             base = group_sprites.get(base_name);
             if (base == null || depth > group_sprites.size())
-                throw new RuntimeException("Sprite " + name + " has an unknown or circular base " + base_name);
+                throw new RuntimeException("SpriteEntry " + name + " has an unknown or circular base " + base_name);
         }
         ObjectInfo skeleton_info = getSkeletonObjectInfo(sprite.node(), src_dir);
         AnimObjectInfo[] anim_object_infos = getAnimObjectInfos(sprite.node(), src_dir);

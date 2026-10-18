@@ -17,10 +17,10 @@ public record TextureInfo(@NonNull String name, @Nullable String team, @Nullable
     }
 
     static @NonNull TextureInfo read(@NonNull Node n, @NonNull String sprite) {
-        String emissive = attribute(n, "emissive");
-        String color = attribute(n, "light_color");
-        String strength = attribute(n, "light_strength");
-        String reach = attribute(n, "light_reach");
+        String emissive = SpriteEntry.attribute(n, "emissive");
+        String color = SpriteEntry.attribute(n, "light_color");
+        String strength = SpriteEntry.attribute(n, "light_strength");
+        String reach = SpriteEntry.attribute(n, "light_reach");
         Light light = null;
         if (color != null || strength != null || reach != null) {
             if (emissive == null || color == null || !color.matches(LIGHT_COLOR_FORMAT) || strength == null
@@ -29,17 +29,13 @@ public record TextureInfo(@NonNull String name, @Nullable String team, @Nullable
                         "Sprite " + sprite + " needs a glow (emissive=) and all three of " + LIGHT_EXAMPLE + " to cast light");
             light = new Light(color, strength, reach);
         }
-        return new TextureInfo(n.getAttributes().getNamedItem("name").getNodeValue(), attribute(n, "team"), emissive,
+        return new TextureInfo(n.getAttributes().getNamedItem("name").getNodeValue(), SpriteEntry.attribute(n, "team"),
+                emissive,
                 light);
     }
 
     // The list the game loads: name, team decal and, when there is one, the glow image.
     String @NonNull [] names() {
         return emissive != null ? new String[]{name, team, emissive} : new String[]{name, team};
-    }
-
-    private static @Nullable String attribute(@NonNull Node n, @NonNull String name) {
-        Node attribute = n.getAttributes().getNamedItem(name);
-        return attribute != null ? attribute.getNodeValue() : null;
     }
 }
