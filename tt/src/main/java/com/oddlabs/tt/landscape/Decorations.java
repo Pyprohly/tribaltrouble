@@ -1,6 +1,6 @@
 package com.oddlabs.tt.landscape;
 
-import com.oddlabs.geometry.DecorationEntry;
+import com.oddlabs.geometry.registry.DecorationEntry;
 import com.oddlabs.tt.global.Globals;
 import com.oddlabs.tt.model.Plants;
 import com.oddlabs.tt.model.GeometryRegistry;

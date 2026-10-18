@@ -1,4 +1,4 @@
-package com.oddlabs.geometry;
+package com.oddlabs.geometry.registry;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;

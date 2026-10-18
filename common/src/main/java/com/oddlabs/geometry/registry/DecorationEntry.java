@@ -1,4 +1,4 @@
-package com.oddlabs.geometry;
+package com.oddlabs.geometry.registry;
 
 import org.jspecify.annotations.NonNull;
 

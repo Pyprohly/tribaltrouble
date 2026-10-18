@@ -1,6 +1,6 @@
 package com.oddlabs.converter;
 
-import com.oddlabs.geometry.Registry;
+import com.oddlabs.geometry.registry.Registry;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 import org.w3c.dom.Node;

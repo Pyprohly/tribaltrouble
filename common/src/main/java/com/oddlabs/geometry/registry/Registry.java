@@ -1,4 +1,4 @@
-package com.oddlabs.geometry;
+package com.oddlabs.geometry.registry;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;

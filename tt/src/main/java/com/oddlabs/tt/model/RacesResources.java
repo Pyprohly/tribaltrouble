@@ -1,8 +1,8 @@
 package com.oddlabs.tt.model;
 
-import com.oddlabs.geometry.AttachmentEntry;
-import com.oddlabs.geometry.Registry;
-import com.oddlabs.geometry.SkinEntry;
+import com.oddlabs.geometry.registry.AttachmentEntry;
+import com.oddlabs.geometry.registry.Registry;
+import com.oddlabs.geometry.registry.SkinEntry;
 import com.oddlabs.tt.audio.Audio;
 import com.oddlabs.tt.audio.AudioFile;
 import com.oddlabs.tt.form.ProgressForm;

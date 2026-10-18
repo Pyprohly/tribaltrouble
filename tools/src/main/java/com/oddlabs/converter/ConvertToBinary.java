@@ -1,11 +1,11 @@
 package com.oddlabs.converter;
 
 import com.oddlabs.geometry.AnimationInfo;
-import com.oddlabs.geometry.AttachmentEntry;
-import com.oddlabs.geometry.DecorationEntry;
-import com.oddlabs.geometry.LightEntry;
-import com.oddlabs.geometry.Registry;
-import com.oddlabs.geometry.SkinEntry;
+import com.oddlabs.geometry.registry.AttachmentEntry;
+import com.oddlabs.geometry.registry.DecorationEntry;
+import com.oddlabs.geometry.registry.LightEntry;
+import com.oddlabs.geometry.registry.Registry;
+import com.oddlabs.geometry.registry.SkinEntry;
 import com.oddlabs.geometry.SpriteInfo;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
