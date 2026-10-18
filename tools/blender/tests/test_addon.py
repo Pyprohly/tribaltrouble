@@ -1469,17 +1469,27 @@ def converter_registry(geometry):
     """registry.json as the game's geometry converter writes it for this geometry folder, parsed; None without a
     built converter and a JDK that runs it."""
     classes = [os.path.join(REPO, p, "build", "classes", "java", "main") for p in ("tools", "common")]
-    jars = [j for j in glob.glob(os.path.join(os.path.expanduser("~"), ".gradle", "caches", "modules-2", "files-2.1",
-                                              "org.joml", "joml", "*", "*", "joml-*.jar"))
-            if not j.endswith(("-sources.jar", "-javadoc.jar"))]
+    cache = os.path.join(os.path.expanduser("~"), ".gradle", "caches", "modules-2", "files-2.1")
+    jars = []
+    for group, artifact in (("org.joml", "joml"), ("com.fasterxml.jackson.core", "jackson-core"),
+                            ("com.fasterxml.jackson.core", "jackson-databind"),
+                            ("com.fasterxml.jackson.core", "jackson-annotations")):
+        # The version common/build.gradle.kts pins, else the newest in the cache.
+        pinned = re.search(artifact + r':([\d.]+)"', open(os.path.join(REPO, "common", "build.gradle.kts")).read())
+        found = sorted(j for j in glob.glob(os.path.join(cache, group, artifact, pinned.group(1) if pinned else "*",
+                                                         "*", artifact + "-*.jar"))
+                       if not j.endswith(("-sources.jar", "-javadoc.jar")))
+        if not found:
+            return None
+        jars.append(found[-1])
     javas = [os.path.join(os.environ.get("JAVA_HOME", ""), "bin", "java"), "C:/Program Files/Java/jdk-26/bin/java",
              shutil.which("java") or ""]
-    if not jars or not all(os.path.isdir(c) for c in classes):
+    if not all(os.path.isdir(c) for c in classes):
         return None
     out = os.path.join(TEMP, "geometry_bin")
     for java in [j for j in javas if os.path.isfile(j) or os.path.isfile(j + ".exe")]:
         # An older JDK refuses the converter's class files; the next one may run them.
-        if subprocess.run([java, "-cp", os.pathsep.join(classes + jars[-1:]), "com.oddlabs.converter.ConvertToBinary",
+        if subprocess.run([java, "-cp", os.pathsep.join(classes + jars), "com.oddlabs.converter.ConvertToBinary",
                            "geometry.xml", geometry, out], cwd=geometry, capture_output=True).returncode == 0:
             with open(os.path.join(out, "registry.json"), encoding="utf-8") as f:
                 return json.load(f)
