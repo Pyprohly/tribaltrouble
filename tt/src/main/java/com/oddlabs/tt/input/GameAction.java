@@ -134,7 +134,6 @@ public enum GameAction {
     NOTIFICATION_JUMP,
 
     // Cheats
-    CHEAT_CYCLE_HAT,
     CHEAT_1,
     CHEAT_2,
     CHEAT_3,

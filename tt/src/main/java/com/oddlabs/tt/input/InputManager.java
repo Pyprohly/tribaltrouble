@@ -202,7 +202,6 @@ public final class InputManager {
         def(GameAction.NOTIFICATION_JUMP, Key.TAB);
 
         // Cheats
-        def(GameAction.CHEAT_CYCLE_HAT, Key.H);
         def(GameAction.CHEAT_1, Key.F1);
         def(GameAction.CHEAT_2, Key.F2);
         def(GameAction.CHEAT_3, Key.F3);

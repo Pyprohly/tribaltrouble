@@ -49,7 +49,6 @@ import java.util.ResourceBundle;
 public final class SelectionDelegate extends ControllableCameraDelegate {
     private static final ResourceBundle bundle = ResourceBundle.getBundle(SelectionDelegate.class.getName());
     private static final Vector4fc SELECTION_COLOR = Color.argb4v(0xFF_4C_FF_00);
-    private static final String HAT_SLOT = "hat";
     private static final GameAction[] ARMY_CREATES = new GameAction[]{GameAction.ARMY_CREATE_0, GameAction.ARMY_CREATE_1, GameAction.ARMY_CREATE_2, GameAction.ARMY_CREATE_3, GameAction.ARMY_CREATE_4, GameAction.ARMY_CREATE_5, GameAction.ARMY_CREATE_6, GameAction.ARMY_CREATE_7, GameAction.ARMY_CREATE_8, GameAction.ARMY_CREATE_9,
     };
     private static final GameAction[] ARMY_SELECTS = new GameAction[]{GameAction.ARMY_SELECT_0, GameAction.ARMY_SELECT_1, GameAction.ARMY_SELECT_2, GameAction.ARMY_SELECT_3, GameAction.ARMY_SELECT_4, GameAction.ARMY_SELECT_5, GameAction.ARMY_SELECT_6, GameAction.ARMY_SELECT_7, GameAction.ARMY_SELECT_8, GameAction.ARMY_SELECT_9
@@ -259,24 +258,6 @@ public final class SelectionDelegate extends ControllableCameraDelegate {
                 if (event.consumeAction(GameAction.UNIT_BEACON)) {
                     if (!map_mode && !observer) {
                         getGUIRoot().pushDelegate(new BeaconDelegate(getViewer(), (GameCamera) getCamera()));
-                    }
-                    event.consume();
-                    return;
-                }
-
-                // Hats are local and unseen by other players until they travel on the wire, so this stays a cheat.
-                if (getViewer().getCheat().isEnabled() && event.consumeAction(GameAction.CHEAT_CYCLE_HAT)) {
-                    boolean first = true;
-                    int next = Unit.NO_ATTACHMENT;
-                    for (Selectable<?> selectable : getViewer().getSelection().getCurrentSelection().getSet()) {
-                        if (!(selectable instanceof Unit unit) || !unit.getTemplate().getAttachments().containsKey(
-                                HAT_SLOT))
-                            continue;
-                        if (first) {
-                            next = unit.getAttachment(HAT_SLOT) + 1;
-                            first = false;
-                        }
-                        unit.setAttachment(HAT_SLOT, next);
                     }
                     event.consume();
                     return;
