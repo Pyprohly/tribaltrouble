@@ -18,13 +18,11 @@ release is cut.
 - The sun and moon are drawn in the sky, with sun rays by day and moonlight through the clouds at night.
 - Dynamic shadows that follow the sun, with a static or dynamic shadows choice in the graphics settings.
 - Seasonal looks by date: autumn leaves on the oak trees through October, and Halloween from October 16 to 31 with pumpkins on native quarters and rally points, pumpkin patches, pumpkin hats and viking pumpkin pants.
-- Map decorations scattered around the island without affecting the simulation.
-- Blender add-on for artists: import and export models, skeletons and animations, paint textures, add items, props and skins, and publish straight into the game files.
+- Framework for adding new art to the game: hats, held items, props, skins, glowing parts and map decorations are plain assets now, with a Blender add-on for the artists, so new looks no longer need code changes.
 
 ### Changed
 
-- Held items such as the viking warrior's axe, the chieftains' lur and club, the native warrior's spear and the peons' carried goods are separate pieces attached to the unit, so they can be swapped and skinned.
-- Server: simulation version 1010, so clients on this build only see games from the same version.
+- Server: simulation version 1010, so this build only plays multiplayer games with players on the same version.
 
 ### Fixed
 
