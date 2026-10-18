@@ -96,7 +96,8 @@ public final class SkyShader extends ShaderProgram {
                 vec3 moonColor = vec3(0.0);
                 vec3 sunColor = vec3(0.0);
                 if (dot(dir, u_skyBodyDirection) > 0.0 && all(lessThanEqual(abs(skyBodyCoord), vec2(1.0)))) {
-                    moonColor = texture(u_moonTexture, skyBodyCoord * 0.5 + 0.5).rgb;
+                    // The disc ends at 0.93; fading out before the texture border hides mip bleed along it.
+                    moonColor = texture(u_moonTexture, skyBodyCoord * 0.5 + 0.5).rgb * (1.0 - smoothstep(0.94, 0.99, length(skyBodyCoord)));
                     sunColor = 0.5 * (1.0 - tanh((length(skyBodyCoord) - 0.95) / 0.0465)) * vec3(1.0, 1.0, 1.0);
                 }
                 skyBodyColor = moonColor * u_nightFactor + (1.0 - u_nightFactor) * sunColor;
