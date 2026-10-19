@@ -27,6 +27,7 @@ release is cut.
 ### Fixed
 
 - Spectating from the chat panel while in a game lobby now leaves the lobby first, so you no longer appear twice when you rejoin it.
+- Starting ships no longer spawn on water the pathfinder cannot reach, which left them stuck at the start of the game.
 
 ## [2.1.96] - 2026-10-15
 
