@@ -84,8 +84,8 @@ Commands:
 Prefer `warp` and `wait` to sleeping. `warp 60000` runs a minute of game time in a few frames and
 returns when the ticks have actually been simulated, so the next `state` is exact. The game loop
 refuses any single frame step over thirty seconds, so `warp` feeds the clock in chunks internally;
-you can ask for as much as you like. Warp only pushes the local clock, so use it in single player.
-In multiplayer the peers set the pace and a warped client would wait for them.
+you can ask for as much as you like. `warp` only moves the local clock. In multiplayer the simulation
+advances at the pace the router reports, so a warped client gets no further ahead and just waits.
 
 Every command is answered `ok ...` or `err ...` once it has been applied on the game thread, so a
 client can simply send, read one line, and move on. A `click` is answered after the release has been
