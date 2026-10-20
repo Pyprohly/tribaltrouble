@@ -440,8 +440,10 @@ public final class DefaultRenderer implements UIRenderer, AutoCloseable {
         // rendered from there. The output image will be used to color the water as if it's a reflection
         CameraState waterCamera = frustum_state.reflectCamera(world.getHeightMap().getSeaLevelMeters());
         if (!lowDetail) {
+            // The reflection is rippled and tinted, so shadow lookups in it are not visible
             globalUniforms.update(waterCamera, Globals.REAL_SKY_BODY_DIRECTION, ga, gga, sunColor, sceneTint,
-                    LocalEventQueue.getQueue().getTime(), pointLights, numLights, shadowMatrix, shadowMode);
+                    LocalEventQueue.getQueue().getTime(), pointLights, numLights, shadowMatrix,
+                    Globals.SHADOWS_STATIC);
             context.updateGlobalState(globalUniforms.getBuffer());
             modelViewStack.current().set(waterCamera.getModelView());
             projectionStack.current().set(waterCamera.getProjectionMatrix());
