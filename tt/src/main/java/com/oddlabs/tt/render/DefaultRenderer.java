@@ -425,7 +425,8 @@ public final class DefaultRenderer implements UIRenderer, AutoCloseable {
 
         boolean lowDetail = Settings.getSettings().graphic_detail == Globals.DETAIL_LOW;
 
-        int shadowMode = Settings.getSettings().shadow_mode;
+        // Map mode is a flat overview, so the sun pass is skipped there and nothing samples the shadow map
+        int shadowMode = frustum_state.inNoDetailMode() ? Globals.SHADOWS_STATIC : Settings.getSettings().shadow_mode;
         if (shadowMode == Globals.SHADOWS_DYNAMIC) {
             sunCamera = frustum_state.sunCamera(Globals.REAL_SKY_BODY_DIRECTION, min_height, max_height + 10.0f,
                     world.getHeightMap().getMetersPerWorld(), world.getHeightMap().getSeaLevelMeters(), SUN_VIEW_WIDTH,
