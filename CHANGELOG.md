@@ -14,11 +14,10 @@ release is cut.
 
 ### Added
 
-- Night games: pick Day or Night when creating a game. The moon lights the island, glowing models light their surroundings and the water darkens.
-- The sun and moon are drawn in the sky, with sun rays by day and moonlight through the clouds at night.
-- Dynamic shadows that follow the sun, with a static or dynamic shadows choice in the graphics settings.
+- Night games: pick Day or Night when creating a game
+- Dynamic shadows that follow the sun, with a static or dynamic shadows choice in the graphics settings (default is still static shadows)
 - Seasonal looks by date: autumn leaves on the oak trees through October, and Halloween from October 16 to 31 with pumpkins on native quarters and rally points, pumpkin patches, pumpkin hats and viking pumpkin pants.
-- Framework for adding new art to the game: hats, held items, props, skins, glowing parts and map decorations are plain assets now, with a Blender add-on for the artists, so new looks no longer need code changes.
+- Adds framework for adding new assets to the game
 
 ### Changed
 
