@@ -18,6 +18,7 @@ release is cut.
 - Dynamic shadows that follow the sun, with a static or dynamic shadows choice in the graphics settings (default is still static shadows)
 - Seasonal looks by date: autumn leaves on the oak trees through October, and Halloween from October 16 to 31 with pumpkins on native quarters and rally points, pumpkin patches, pumpkin hats and viking pumpkin pants.
 - Adds framework for adding new assets to the game
+- Polish translation, chosen under Options > Language.
 
 ### Changed
 
