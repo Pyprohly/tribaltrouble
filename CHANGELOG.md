@@ -35,6 +35,7 @@ section when a release is cut.
 - Fixed a crash that could occur when certain letter codes were used as a map code.
 - Replay island keeps the time of day and the advanced settings of the game you just played. During Halloween it used to switch a daytime game to night.
 - Linking a profile to Discord now accepts a plain "yes" whispered to yourself, and the in-game message explains how to send it.
+- Placing a building no longer crashes the game when not all units can be displaced.
 
 ## [2.2.155] - 2026-10-24
 
