@@ -234,6 +234,78 @@ public final class DBInterface {
         }
     }
 
+    public static boolean setNameLocked(String nick, boolean locked) {
+        try (Connection conn = DBUtils.createDatabaseConnection(); PreparedStatement stmt = conn.prepareStatement(
+                "UPDATE profiles P SET P.name_locked = ? WHERE lower(P.nick) = lower(?)")) {
+            stmt.setBoolean(1, locked);
+            stmt.setString(2, nick);
+            return stmt.executeUpdate() > 0;
+        } catch (SQLException e) {
+            System.out.println("Exception: " + e);
+            MatchmakingServer.getLogger().throwing(DBInterface.class.getName(), "setNameLocked", e);
+            throw new RuntimeException(e);
+        }
+    }
+
+    /**
+     * Fails open (not locked) so a missing name_locked column does not block profile deletion.
+     */
+    public static boolean isNameLocked(String nick) {
+        try (Connection conn = DBUtils.createDatabaseConnection(); PreparedStatement stmt = conn.prepareStatement(
+                "SELECT name_locked FROM profiles P WHERE lower(P.nick) = lower(?)")) {
+            stmt.setString(1, nick);
+            try (ResultSet result = stmt.executeQuery()) {
+                return result.next() && result.getBoolean("name_locked");
+            }
+        } catch (SQLException e) {
+            System.out.println("Exception: " + e);
+            MatchmakingServer.getLogger().throwing(DBInterface.class.getName(), "isNameLocked", e);
+            return false;
+        }
+    }
+
+    /**
+     * Renames a profile in every table that keys on its nick, in one transaction. Returns false
+     * when no profile has the old nick.
+     */
+    public static boolean renameProfile(String nick, String new_nick) {
+        // spotless:off
+        String[] updates = {
+            "UPDATE profiles SET nick = ? WHERE lower(nick) = lower(?)",
+            "UPDATE openskill_rating SET nick = ? WHERE lower(nick) = lower(?)",
+            "UPDATE game_players SET nick = ? WHERE lower(nick) = lower(?)",
+            "UPDATE discord_to_profiles SET nick = ? WHERE lower(nick) = lower(?)",
+            "UPDATE registrations SET last_used_profile = ? WHERE lower(last_used_profile) = lower(?)"};
+        // spotless:on
+        try (Connection conn = DBUtils.createDatabaseConnection()) {
+            conn.setAutoCommit(false);
+            try {
+                for (int i = 0; i < updates.length; i++) {
+                    try (PreparedStatement stmt = conn.prepareStatement(updates[i])) {
+                        stmt.setString(1, new_nick);
+                        stmt.setString(2, nick);
+                        int row_count = stmt.executeUpdate();
+                        if (i == 0 && row_count == 0) {
+                            conn.rollback();
+                            return false;
+                        }
+                    }
+                }
+                conn.commit();
+                return true;
+            } catch (SQLException e) {
+                conn.rollback();
+                throw e;
+            } finally {
+                conn.setAutoCommit(true);
+            }
+        } catch (SQLException e) {
+            System.out.println("Exception: " + e);
+            MatchmakingServer.getLogger().throwing(DBInterface.class.getName(), "renameProfile", e);
+            throw new RuntimeException(e);
+        }
+    }
+
     public static void saveGameReport(int game_id, int tick, int[] team_score) {
         try (Connection conn = DBUtils.createDatabaseConnection(); PreparedStatement stmt = conn.prepareStatement(
                 "INSERT INTO game_report_teams (game_id, tick, team_index, score) VALUES (?, ?, ?, ?)")) {

@@ -12,6 +12,10 @@ release is cut.
 
 ## [Unreleased]
 
+### Added
+
+- Moderators can rename a profile from Discord and lock it so it cannot be deleted.
+
 ### Fixed
 
 - Pressing a chieftain magic hotkey right after the campaign unlocks that magic no longer crashes the game, and the new magic button now appears without reselecting the chieftain.

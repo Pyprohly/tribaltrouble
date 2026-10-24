@@ -141,7 +141,7 @@ public final class Client implements MatchmakingServerInterface, ConnectionInter
     }
 
     public void deleteProfile(String nick) {
-        if (!guest) {
+        if (!guest && !DBInterface.isNameLocked(nick)) {
             DBInterface.deleteProfile(username, nick);
         }
     }
