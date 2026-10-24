@@ -16,6 +16,7 @@ release is cut.
 
 - The game starts without sound instead of crashing when the default audio device cannot be opened, and tries the other audio devices first.
 - Clicking the background of the multiplayer screen after joining a game lobby no longer crashes the game.
+- Opening the key bindings while cheats are enabled no longer crashes the game.
 
 ## [2.2.139] - 2026-10-24
 
