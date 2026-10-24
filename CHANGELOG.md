@@ -12,6 +12,10 @@ release is cut.
 
 ## [Unreleased]
 
+### Fixed
+
+- The game starts without sound instead of crashing when the default audio device cannot be opened, and tries the other audio devices first.
+
 ## [2.2.139] - 2026-10-24
 
 ### Added
