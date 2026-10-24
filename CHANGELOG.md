@@ -12,6 +12,8 @@ release is cut.
 
 ## [Unreleased]
 
+## [2.2.139] - 2026-10-24
+
 ### Added
 
 - Night games: pick Day or Night when creating a game
@@ -98,5 +100,6 @@ Everything since the original Oddlabs source was released on 2014-09-01. Builds 
 - The server guards against malformed client data.
 - Steam auth tickets are validated through the Steam Web API.
 
-[Unreleased]: https://github.com/Tribal-Trouble/tribaltrouble/compare/v2.1.96-103.1009...main
+[Unreleased]: https://github.com/Tribal-Trouble/tribaltrouble/compare/v2.2.139-103.1010...main
+[2.2.139]: https://github.com/Tribal-Trouble/tribaltrouble/releases/tag/v2.2.139-103.1010
 [2.1.96]: https://github.com/Tribal-Trouble/tribaltrouble/releases/tag/v2.1.96-103.1009
