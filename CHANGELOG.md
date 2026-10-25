@@ -12,6 +12,10 @@ release is cut.
 
 ## [Unreleased]
 
+### Fixed
+
+- Pressing a chieftain magic hotkey right after the campaign unlocks that magic no longer crashes the game, and the new magic button now appears without reselecting the chieftain.
+
 ## [2.2.155] - 2026-10-24
 
 ### Fixed
