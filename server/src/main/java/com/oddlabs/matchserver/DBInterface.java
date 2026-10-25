@@ -492,20 +492,29 @@ public final class DBInterface {
         BLOCKED
     }
 
-    public record SteamLinkResult(SteamLinkStatus status, String username) {
+    /**
+     * Fields other than status are only set when the status is LINKED. nicks are the profiles the
+     * linked registration already had. dropped_username is null when the Steam account never logged
+     * in, so it had no registration to drop.
+     */
+    public record SteamLinkResult(SteamLinkStatus status, String username, List<String> nicks,
+                                  String dropped_username, List<String> moved_nicks) {
+        SteamLinkResult(SteamLinkStatus status) {
+            this(status, null, List.of(), null, List.of());
+        }
     }
 
     /**
      * Links a Steam account ID to the registration with the given email, in one transaction. The
      * profiles of the registration auto-created at Steam login move over and that registration is
-     * deleted. username is null unless the status is LINKED.
+     * deleted. A dry run rolls the transaction back, so its result previews the real one.
      */
-    public static SteamLinkResult linkSteamAccount(long steam_account_id, String email) {
+    public static SteamLinkResult linkSteamAccount(long steam_account_id, String email, boolean dry_run) {
         try (Connection conn = DBUtils.createDatabaseConnection()) {
             conn.setAutoCommit(false);
             try {
                 SteamLinkResult result = linkSteamAccount(conn, steam_account_id, email);
-                if (result.status() == SteamLinkStatus.LINKED)
+                if (result.status() == SteamLinkStatus.LINKED && !dry_run)
                     conn.commit();
                 else
                     conn.rollback();
@@ -532,32 +541,37 @@ public final class DBInterface {
             stmt.setString(1, email);
             try (ResultSet result = stmt.executeQuery()) {
                 if (!result.next())
-                    return new SteamLinkResult(SteamLinkStatus.NO_ACCOUNT, null);
+                    return new SteamLinkResult(SteamLinkStatus.NO_ACCOUNT);
                 target_id = result.getInt("id");
                 target_username = result.getString("username").trim();
                 long target_steam_id = result.getLong("steam_id");
                 boolean target_has_steam = !result.wasNull();
                 boolean target_blocked = result.getBoolean("banned") || result.getBoolean("disabled");
                 if (result.next())
-                    return new SteamLinkResult(SteamLinkStatus.SEVERAL_ACCOUNTS, null);
+                    return new SteamLinkResult(SteamLinkStatus.SEVERAL_ACCOUNTS);
                 if (target_has_steam && target_steam_id == steam_account_id)
-                    return new SteamLinkResult(SteamLinkStatus.ALREADY_LINKED, null);
+                    return new SteamLinkResult(SteamLinkStatus.ALREADY_LINKED);
                 if (target_has_steam)
-                    return new SteamLinkResult(SteamLinkStatus.ACCOUNT_HAS_OTHER_STEAM, null);
+                    return new SteamLinkResult(SteamLinkStatus.ACCOUNT_HAS_OTHER_STEAM);
                 if (target_blocked)
-                    return new SteamLinkResult(SteamLinkStatus.BLOCKED, null);
+                    return new SteamLinkResult(SteamLinkStatus.BLOCKED);
             }
         }
+        List<String> nicks = getNicksByRegId(conn, target_id);
+        String dropped_username = null;
+        List<String> moved_nicks = List.of();
         try (PreparedStatement stmt = conn.prepareStatement(
                 "SELECT id, username, banned, disabled FROM registrations WHERE steam_id = ?")) {
             stmt.setLong(1, steam_account_id);
             try (ResultSet result = stmt.executeQuery()) {
                 if (result.next()) {
-                    if (!result.getString("username").trim().equals(STEAM_USERNAME_PREFIX + steam_account_id))
-                        return new SteamLinkResult(SteamLinkStatus.STEAM_ON_OTHER_ACCOUNT, null);
+                    dropped_username = result.getString("username").trim();
+                    if (!dropped_username.equals(STEAM_USERNAME_PREFIX + steam_account_id))
+                        return new SteamLinkResult(SteamLinkStatus.STEAM_ON_OTHER_ACCOUNT);
                     if (result.getBoolean("banned") || result.getBoolean("disabled"))
-                        return new SteamLinkResult(SteamLinkStatus.BLOCKED, null);
+                        return new SteamLinkResult(SteamLinkStatus.BLOCKED);
                     int source_id = result.getInt("id");
+                    moved_nicks = getNicksByRegId(conn, source_id);
                     try (PreparedStatement move = conn.prepareStatement(
                             "UPDATE profiles SET reg_id = ? WHERE reg_id = ?")) {
                         move.setInt(1, target_id);
@@ -579,7 +593,20 @@ public final class DBInterface {
             stmt.setInt(2, target_id);
             stmt.executeUpdate();
         }
-        return new SteamLinkResult(SteamLinkStatus.LINKED, target_username);
+        return new SteamLinkResult(SteamLinkStatus.LINKED, target_username, nicks, dropped_username, moved_nicks);
+    }
+
+    private static List<String> getNicksByRegId(Connection conn, int reg_id) throws SQLException {
+        List<String> nicks = new ArrayList<>();
+        try (PreparedStatement stmt = conn.prepareStatement(
+                "SELECT nick FROM profiles WHERE reg_id = ? ORDER BY nick")) {
+            stmt.setInt(1, reg_id);
+            try (ResultSet result = stmt.executeQuery()) {
+                while (result.next())
+                    nicks.add(result.getString("nick").trim());
+            }
+        }
+        return nicks;
     }
 
     public static void updateStreaks(String nick, int currentStreak, int bestStreak) {
