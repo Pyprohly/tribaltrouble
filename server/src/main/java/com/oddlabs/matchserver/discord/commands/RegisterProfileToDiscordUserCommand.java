@@ -106,11 +106,12 @@ public class RegisterProfileToDiscordUserCommand extends DiscordCommand {
                                         true).then().subscribe();
                         processingProfiles.remove(registration.getNick());
                     });
+            String nick = client.getProfile().getNick();
             client.sendPrivateMessage(
                     profileToRegisterName,
-                    "A discord user is requesting to register this profile. Allow this? Reply with" + " y/n");
+                    "A Discord user wants to link this profile. To allow it, whisper yes to yourself: /msg " + nick + " yes. If you did not ask for this, ignore it.");
             return event.createFollowup(
-                    "Sent registration request to profile: " + profileToRegisterName + ". Please respond in-game.").withEphemeral(
+                    "Sent a link request to " + nick + ". In game, whisper yes to yourself to confirm: /msg " + nick + " yes").withEphemeral(
                             true).then();
         } else {
             // Handle not found
