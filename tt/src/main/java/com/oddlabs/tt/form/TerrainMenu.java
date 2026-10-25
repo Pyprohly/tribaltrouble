@@ -10,6 +10,7 @@ import com.oddlabs.matchmaking.StandardOptions;
 import com.oddlabs.matchmaking.WorldConfig;
 import com.oddlabs.net.NetworkSelector;
 import com.oddlabs.registration.RegistrationKey;
+import com.oddlabs.registration.RegistrationKeyFormatException;
 import com.oddlabs.tt.delegate.Menu;
 import com.oddlabs.tt.event.LocalEventQueue;
 import com.oddlabs.tt.gamemode.PresetLibrary;
@@ -56,6 +57,7 @@ import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
 import java.math.BigInteger;
+import java.util.Locale;
 import java.util.Random;
 import java.util.ResourceBundle;
 import java.util.UUID;
@@ -578,24 +580,43 @@ public final class TerrainMenu extends Group {
     }
 
     public void parseMapcode(@NonNull String text) {
-        if (text.indexOf(' ') == -1) {
+        String trimmed = text.trim();
+        if (trimmed.indexOf(' ') == -1) {
             // Legacy letter-based notation
-            String code = text.toUpperCase();
-            BigInteger result = RegistrationKey.parseBits(code);
-            parseBigIntegerLegacy(result);
-            label_mapcode.clear();
-            label_mapcode.append(code);
+            try {
+                String code = trimmed.toUpperCase();
+                BigInteger result = RegistrationKey.parseBits(code);
+                parseBigIntegerLegacy(result);
+                label_mapcode.clear();
+                label_mapcode.append(code);
+            } catch (RegistrationKeyFormatException _) {
+                parseText(trimmed);
+            }
         } else {
             // New word-based notation
             try {
-                BigInteger result = WordsEncoding.decode(text);
+                BigInteger result = WordsEncoding.decode(trimmed);
                 parseBigInteger(result);
                 label_mapcode.clear();
-                label_mapcode.append(text);
+                label_mapcode.append(trimmed);
             } catch (IllegalArgumentException _) {
-                // Invalid word code — ignore
+                parseText(trimmed);
             }
         }
+    }
+
+    /** Turns text that is not a map code into an island, the same one every time for the same text. */
+    private void parseText(@NonNull String text) {
+        String normalized = text.replaceAll("\\s+", " ").toLowerCase(Locale.ROOT);
+        Random random = new Random(normalized.hashCode());
+        pulldown_size.chooseItem(random.nextInt(pulldown_size.getSize()));
+        pm_terrain_type.chooseItem(random.nextInt(pm_terrain_type.getSize()));
+        slider_supplies.setValue(random.nextInt(SLIDER_CARDINALITY));
+        slider_vegetation.setValue(random.nextInt(SLIDER_CARDINALITY));
+        slider_hills.setValue(random.nextInt(SLIDER_CARDINALITY));
+        seed = random.nextInt(Integer.parseInt(SEED_CARDINALITY));
+        label_mapcode.clear();
+        label_mapcode.append(text);
     }
 
     private void parseBigInteger(BigInteger result) {

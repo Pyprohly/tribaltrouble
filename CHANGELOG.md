@@ -20,6 +20,7 @@ release is cut.
 ### Fixed
 
 - Pressing a chieftain magic hotkey right after the campaign unlocks that magic no longer crashes the game, and the new magic button now appears without reselecting the chieftain.
+- Any text typed in the map code box now makes an island, and the same text always makes the same island. Text that was not a real map code used to be ignored, or crashed the game when it had no spaces.
 - Linking a profile to Discord now accepts a plain "yes" whispered to yourself, and the in-game message explains how to send it.
 
 ## [2.2.155] - 2026-10-24
