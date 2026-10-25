@@ -4,6 +4,7 @@ import com.oddlabs.tt.global.Settings;
 import com.oddlabs.tt.render.SerializableDisplayMode;
 import com.oddlabs.tt.util.OsPlatform;
 import org.jspecify.annotations.NonNull;
+import org.lwjgl.PointerBuffer;
 import org.lwjgl.glfw.Callbacks;
 import org.lwjgl.glfw.GLFWErrorCallback;
 import org.lwjgl.glfw.GLFWImage;
@@ -22,6 +23,7 @@ import java.util.Objects;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.BinaryOperator;
 import java.util.function.Function;
+import java.util.logging.Logger;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -46,6 +48,7 @@ import static org.lwjgl.glfw.GLFW.glfwCreateWindow;
 import static org.lwjgl.glfw.GLFW.glfwDefaultWindowHints;
 import static org.lwjgl.glfw.GLFW.glfwDestroyWindow;
 import static org.lwjgl.glfw.GLFW.glfwFocusWindow;
+import static org.lwjgl.glfw.GLFW.glfwGetError;
 import static org.lwjgl.glfw.GLFW.glfwGetFramebufferSize;
 import static org.lwjgl.glfw.GLFW.glfwGetMonitorContentScale;
 import static org.lwjgl.glfw.GLFW.glfwGetMonitorPhysicalSize;
@@ -80,6 +83,7 @@ import static org.lwjgl.glfw.GLFW.glfwTerminate;
 import static org.lwjgl.glfw.GLFW.glfwWindowHint;
 
 public final class LWJGL3Window implements Window {
+    private static final Logger logger = Logger.getLogger(LWJGL3Window.class.getName());
 
     private long windowHandle = MemoryUtil.NULL;
     private @NonNull String title = "Tribal Trouble";
@@ -93,7 +97,9 @@ public final class LWJGL3Window implements Window {
 
     private static void ensureGLFW() {
         if (initialized.compareAndSet(false, true)) {
-            GLFWErrorCallback.createPrint(System.err).set();
+            GLFWErrorCallback.create((error, description) -> logger.warning(
+                    "GLFW error " + String.format("0x%X", error) + ": " + GLFWErrorCallback.getDescription(
+                            description))).set();
             if (!glfwInit()) {
                 initialized.set(false);
                 throw new IllegalStateException("Unable to initialize GLFW");
@@ -175,7 +181,16 @@ public final class LWJGL3Window implements Window {
 
         windowHandle = glfwCreateWindow(createWidth, createHeight, title, MemoryUtil.NULL, MemoryUtil.NULL);
         if (windowHandle == MemoryUtil.NULL) {
-            throw new RuntimeException("Failed to create the GLFW window");
+            String reason;
+            try (MemoryStack stack = MemoryStack.stackPush()) {
+                PointerBuffer description = stack.mallocPointer(1);
+                int error = glfwGetError(description);
+                String text = MemoryUtil.memUTF8Safe(description.get(0));
+                reason = text != null ? String.format("0x%X", error) + " " + text : "no GLFW error reported";
+            }
+            logger.severe(
+                    "Failed to create a " + createWidth + "x" + createHeight + " window with an OpenGL 4.1 core context" + (settings != null ? " and " + settings.view_samples + " samples" : "") + ": " + reason);
+            throw new RuntimeException("Failed to create the GLFW window: " + reason);
         }
 
         glfwSetWindowSizeLimits(windowHandle, 800, 600, GLFW_DONT_CARE, GLFW_DONT_CARE);
