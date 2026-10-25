@@ -588,8 +588,8 @@ public final class TerrainMenu extends Group {
                 String code = trimmed.toUpperCase();
                 BigInteger result = RegistrationKey.parseBits(code);
                 parseBigIntegerLegacy(result);
-                label_mapcode.clear();
-                label_mapcode.append(code);
+                // Letter codes can spell any word, so show the island's word code instead of what was typed.
+                setMapcode();
             } catch (RegistrationKeyFormatException _) {
                 parseText(trimmed);
             }
