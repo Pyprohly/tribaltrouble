@@ -32,6 +32,8 @@ import com.oddlabs.util.DBUtils;
 
 public final class DBInterface {
 
+    public static final String STEAM_USERNAME_PREFIX = "steam_";
+
     public static boolean usernameExists(String username) {
         try (Connection conn = DBUtils.createDatabaseConnection(); PreparedStatement stmt = conn.prepareStatement(
                 "SELECT username FROM registrations R WHERE lower(R.username) = lower(?)")) {
@@ -423,7 +425,7 @@ public final class DBInterface {
 
         // No registration yet — create one. Profile is left unset; the client will
         // be routed to the profile-creation screen so the player picks their own nick.
-        String username = "steam_" + steamId;
+        String username = STEAM_USERNAME_PREFIX + steamId;
         String email = "steam_" + steamId + "@steam.internal";
 
         try (Connection conn = DBUtils.createDatabaseConnection(); PreparedStatement stmt = conn.prepareStatement(
@@ -478,6 +480,106 @@ public final class DBInterface {
             MatchmakingServer.getLogger().throwing(DBInterface.class.getName(), "getSteamIdByNick", e);
             return null;
         }
+    }
+
+    public enum SteamLinkStatus {
+        LINKED,
+        NO_ACCOUNT,
+        SEVERAL_ACCOUNTS,
+        ALREADY_LINKED,
+        ACCOUNT_HAS_OTHER_STEAM,
+        STEAM_ON_OTHER_ACCOUNT,
+        BLOCKED
+    }
+
+    public record SteamLinkResult(SteamLinkStatus status, String username) {
+    }
+
+    /**
+     * Links a Steam account ID to the registration with the given email, in one transaction. The
+     * profiles of the registration auto-created at Steam login move over and that registration is
+     * deleted. username is null unless the status is LINKED.
+     */
+    public static SteamLinkResult linkSteamAccount(long steam_account_id, String email) {
+        try (Connection conn = DBUtils.createDatabaseConnection()) {
+            conn.setAutoCommit(false);
+            try {
+                SteamLinkResult result = linkSteamAccount(conn, steam_account_id, email);
+                if (result.status() == SteamLinkStatus.LINKED)
+                    conn.commit();
+                else
+                    conn.rollback();
+                return result;
+            } catch (SQLException e) {
+                conn.rollback();
+                throw e;
+            } finally {
+                conn.setAutoCommit(true);
+            }
+        } catch (SQLException e) {
+            System.out.println("Exception: " + e);
+            MatchmakingServer.getLogger().throwing(DBInterface.class.getName(), "linkSteamAccount", e);
+            throw new RuntimeException(e);
+        }
+    }
+
+    private static SteamLinkResult linkSteamAccount(Connection conn, long steam_account_id,
+            String email) throws SQLException {
+        int target_id;
+        String target_username;
+        try (PreparedStatement stmt = conn.prepareStatement(
+                "SELECT id, username, steam_id, banned, disabled FROM registrations WHERE lower(email) = lower(?)")) {
+            stmt.setString(1, email);
+            try (ResultSet result = stmt.executeQuery()) {
+                if (!result.next())
+                    return new SteamLinkResult(SteamLinkStatus.NO_ACCOUNT, null);
+                target_id = result.getInt("id");
+                target_username = result.getString("username").trim();
+                long target_steam_id = result.getLong("steam_id");
+                boolean target_has_steam = !result.wasNull();
+                boolean target_blocked = result.getBoolean("banned") || result.getBoolean("disabled");
+                if (result.next())
+                    return new SteamLinkResult(SteamLinkStatus.SEVERAL_ACCOUNTS, null);
+                if (target_has_steam && target_steam_id == steam_account_id)
+                    return new SteamLinkResult(SteamLinkStatus.ALREADY_LINKED, null);
+                if (target_has_steam)
+                    return new SteamLinkResult(SteamLinkStatus.ACCOUNT_HAS_OTHER_STEAM, null);
+                if (target_blocked)
+                    return new SteamLinkResult(SteamLinkStatus.BLOCKED, null);
+            }
+        }
+        try (PreparedStatement stmt = conn.prepareStatement(
+                "SELECT id, username, banned, disabled FROM registrations WHERE steam_id = ?")) {
+            stmt.setLong(1, steam_account_id);
+            try (ResultSet result = stmt.executeQuery()) {
+                if (result.next()) {
+                    if (!result.getString("username").trim().equals(STEAM_USERNAME_PREFIX + steam_account_id))
+                        return new SteamLinkResult(SteamLinkStatus.STEAM_ON_OTHER_ACCOUNT, null);
+                    if (result.getBoolean("banned") || result.getBoolean("disabled"))
+                        return new SteamLinkResult(SteamLinkStatus.BLOCKED, null);
+                    int source_id = result.getInt("id");
+                    try (PreparedStatement move = conn.prepareStatement(
+                            "UPDATE profiles SET reg_id = ? WHERE reg_id = ?")) {
+                        move.setInt(1, target_id);
+                        move.setInt(2, source_id);
+                        move.executeUpdate();
+                    }
+                    // steam_id is unique, so the old registration goes before the target takes it
+                    try (PreparedStatement delete = conn.prepareStatement(
+                            "DELETE FROM registrations WHERE id = ?")) {
+                        delete.setInt(1, source_id);
+                        delete.executeUpdate();
+                    }
+                }
+            }
+        }
+        try (PreparedStatement stmt = conn.prepareStatement(
+                "UPDATE registrations SET steam_id = ? WHERE id = ?")) {
+            stmt.setLong(1, steam_account_id);
+            stmt.setInt(2, target_id);
+            stmt.executeUpdate();
+        }
+        return new SteamLinkResult(SteamLinkStatus.LINKED, target_username);
     }
 
     public static void updateStreaks(String nick, int currentStreak, int bestStreak) {

@@ -7,6 +7,7 @@ import com.oddlabs.matchserver.discord.commands.KickCommand;
 import com.oddlabs.matchserver.discord.commands.LeaderboardsCommand;
 import com.oddlabs.matchserver.discord.commands.MatchesCommand;
 import com.oddlabs.matchserver.discord.commands.MatchupCommand;
+import com.oddlabs.matchserver.discord.commands.MigrateSteamCommand;
 import com.oddlabs.matchserver.discord.commands.NameLockCommand;
 import com.oddlabs.matchserver.discord.commands.OnlineCommand;
 import com.oddlabs.matchserver.discord.commands.ProfileCommand;
@@ -91,6 +92,7 @@ public class DiscordBotService {
                     commands.add(new BannedWordsCommand());
                     commands.add(new RenameCommand());
                     commands.add(new NameLockCommand());
+                    commands.add(new MigrateSteamCommand());
                     chatroomCoordinator = new DiscordChatroomCoordinator();
                     reactionRoleService = new ReactionRoleService(gateway, serverId);
                     registerCommands();
