@@ -267,13 +267,13 @@ public final class DBInterface {
     }
 
     /**
-     * Renames a profile in every table that keys on its nick, in one transaction. Returns false
-     * when no profile has the old nick.
+     * Renames and name locks a profile in every table that keys on its nick, in one transaction.
+     * Returns false when no profile has the old nick.
      */
-    public static boolean renameProfile(String nick, String new_nick) {
+    public static boolean renameAndLockProfile(String nick, String new_nick) {
         // spotless:off
         String[] updates = {
-            "UPDATE profiles SET nick = ? WHERE lower(nick) = lower(?)",
+            "UPDATE profiles SET nick = ?, name_locked = 1 WHERE lower(nick) = lower(?)",
             "UPDATE openskill_rating SET nick = ? WHERE lower(nick) = lower(?)",
             "UPDATE game_players SET nick = ? WHERE lower(nick) = lower(?)",
             "UPDATE discord_to_profiles SET nick = ? WHERE lower(nick) = lower(?)",
@@ -303,7 +303,7 @@ public final class DBInterface {
             }
         } catch (SQLException e) {
             System.out.println("Exception: " + e);
-            MatchmakingServer.getLogger().throwing(DBInterface.class.getName(), "renameProfile", e);
+            MatchmakingServer.getLogger().throwing(DBInterface.class.getName(), "renameAndLockProfile", e);
             throw new RuntimeException(e);
         }
     }
