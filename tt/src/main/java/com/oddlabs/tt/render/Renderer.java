@@ -788,8 +788,8 @@ public final class Renderer implements AutoCloseable {
         Renderer.getRenderer().setMusicPath("/music/menu.ogg", 0f);
         MainMenu main_menu = new MainMenu(network, gui_root, new MenuCamera(world, manager));
         gui_root.pushDelegate(main_menu);
-        if (first_progress && !BuildInfo.BASE_VERSION.equals(Settings.getSettings().patch_notes_seen_version)) {
-            Settings.getSettings().patch_notes_seen_version = BuildInfo.BASE_VERSION;
+        if (first_progress && !BuildInfo.VERSION.equals(Settings.getSettings().patch_notes_seen_version)) {
+            Settings.getSettings().patch_notes_seen_version = BuildInfo.VERSION;
             Settings.getSettings().save();
             if (Settings.getSettings().show_patch_notes_on_update) {
                 gui_root.addModalForm(new PatchNotesForm());
