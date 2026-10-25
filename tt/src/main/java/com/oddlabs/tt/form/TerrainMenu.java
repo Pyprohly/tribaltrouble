@@ -126,6 +126,7 @@ public final class TerrainMenu extends Group {
     private final @Nullable ModeAndPresetsPanel mode_and_presets;
     private final @NonNull ScrollablePulldownMenu<Void> pulldown_menu_slots;
     private static final int DEFAULT_PLAYER_COUNT = 6;
+    private static final int DAY = 0;
     private static final int NIGHT = 1;
     private int player_count = DEFAULT_PLAYER_COUNT;
     private int seed;
@@ -1208,6 +1209,13 @@ public final class TerrainMenu extends Group {
                 team_pulldown_menus[i].chooseItem(slot.getTeam());
             }
         }
+    }
+
+    /** Applies the settings a map code does not hold: the time of day and the advanced settings. */
+    public void applyWorldParameters(@NonNull WorldParameters params) {
+        pm_time_of_day.chooseItem(params.isNight() ? NIGHT : DAY);
+        applyAdvancedSettings(new AdvancedSettingsForm.Values(params.getMaxUnitCount(), params.getInitialUnitCount(),
+                params.getMaxBuildingCount(), params.isShipsEnabled()));
     }
 
     private int fillToDifficultyIndex(RosterTemplate.@NonNull Fill fill, int slot_index) {
