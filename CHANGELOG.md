@@ -12,9 +12,15 @@ release is cut.
 
 ## [Unreleased]
 
+### Added
+
+- Moderators can rename a profile from Discord and lock it so it cannot be deleted.
+- Players from before the Steam release can ask a moderator on Discord to merge their old account into their Steam account, bringing their old profiles along.
+
 ### Fixed
 
 - Pressing a chieftain magic hotkey right after the campaign unlocks that magic no longer crashes the game, and the new magic button now appears without reselecting the chieftain.
+- Linking a profile to Discord now accepts a plain "yes" whispered to yourself, and the in-game message explains how to send it.
 
 ## [2.2.155] - 2026-10-24
 
