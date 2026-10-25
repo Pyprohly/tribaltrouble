@@ -791,7 +791,9 @@ public final class Renderer implements AutoCloseable {
         if (first_progress && !BuildInfo.BASE_VERSION.equals(Settings.getSettings().patch_notes_seen_version)) {
             Settings.getSettings().patch_notes_seen_version = BuildInfo.BASE_VERSION;
             Settings.getSettings().save();
-            gui_root.addModalForm(new PatchNotesForm());
+            if (Settings.getSettings().show_patch_notes_on_update) {
+                gui_root.addModalForm(new PatchNotesForm());
+            }
         }
         if (first_progress && Settings.getSettings().warning_no_sound && !Renderer.getLocalInput().audioIsCreated()) {
             ResourceBundle bundle = ResourceBundle.getBundle(Renderer.class.getName());
