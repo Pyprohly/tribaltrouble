@@ -606,7 +606,10 @@ public final class TerrainMenu extends Group {
         }
     }
 
-    /** Turns text that is not a map code into an island, the same one every time for the same text. */
+    /**
+     * Turns text that is not a map code into an island, the same one every time for the same text, and shows that
+     * island's word code so the typed text is never shown to other players.
+     */
     private void parseText(@NonNull String text) {
         String normalized = text.replaceAll("\\s+", " ").toLowerCase(Locale.ROOT);
         Random random = new Random(normalized.hashCode());
@@ -616,8 +619,7 @@ public final class TerrainMenu extends Group {
         slider_vegetation.setValue(random.nextInt(SLIDER_CARDINALITY));
         slider_hills.setValue(random.nextInt(SLIDER_CARDINALITY));
         seed = random.nextInt(Integer.parseInt(SEED_CARDINALITY));
-        label_mapcode.clear();
-        label_mapcode.append(text);
+        setMapcode();
     }
 
     private void parseBigInteger(BigInteger result) {
