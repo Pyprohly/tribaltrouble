@@ -84,6 +84,8 @@ import static org.lwjgl.glfw.GLFW.glfwWindowHint;
 
 public final class LWJGL3Window implements Window {
     private static final Logger logger = Logger.getLogger(LWJGL3Window.class.getName());
+    private static final int GL_MAJOR_VERSION = 4;
+    private static final int GL_MINOR_VERSION = 1;
 
     private long windowHandle = MemoryUtil.NULL;
     private @NonNull String title = "Tribal Trouble";
@@ -163,8 +165,8 @@ public final class LWJGL3Window implements Window {
         }
 
         // Request an OpenGL 4.1 Core Profile context
-        glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
-        glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 1);
+        glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, GL_MAJOR_VERSION);
+        glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, GL_MINOR_VERSION);
         glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
         glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GLFW_TRUE);
 
@@ -189,7 +191,7 @@ public final class LWJGL3Window implements Window {
                 reason = text != null ? String.format("0x%X", error) + " " + text : "no GLFW error reported";
             }
             logger.severe(
-                    "Failed to create a " + createWidth + "x" + createHeight + " window with an OpenGL 4.1 core context" + (settings != null ? " and " + settings.view_samples + " samples" : "") + ": " + reason);
+                    "Failed to create a " + createWidth + "x" + createHeight + " window with an OpenGL " + GL_MAJOR_VERSION + "." + GL_MINOR_VERSION + " core context" + (settings != null ? " and " + settings.view_samples + " samples" : "") + ": " + reason);
             throw new RuntimeException("Failed to create the GLFW window: " + reason);
         }
 
