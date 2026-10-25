@@ -53,7 +53,8 @@ public class RegisterProfileToDiscordUserCommand extends DiscordCommand {
                             RegisterProfileToDiscordUserCommand.processingProfiles.remove(
                                     profile_name);
                             event.createFollowup(
-                                    "No response from tribal trouble user. Profile" + " registration timed out.").then().subscribe();
+                                    "No response from tribal trouble user. Profile" + " registration timed out.").withEphemeral(
+                                            true).then().subscribe();
                             printDebug(
                                     "Timeout: Removed " + profile_name + " from processingProfiles");
                         }
@@ -116,8 +117,9 @@ public class RegisterProfileToDiscordUserCommand extends DiscordCommand {
         } else {
             // Handle not found
             printDebug("Could not find active client with profile name: " + profileToRegisterName);
-            return event.createFollowup("Failed to register profile: " + profileToRegisterName).withEphemeral(
-                    true).then();
+            return event.createFollowup(
+                    "Profile " + profileToRegisterName + " is not online. Log in to the game with it and try again.").withEphemeral(
+                            true).then();
         }
     }
 
