@@ -53,9 +53,7 @@ public class RenameCommand extends DiscordCommand {
             return event.reply("A profile named '" + new_nick + "' already exists.").withEphemeral(true);
 
         if (!DBInterface.setNameLocked(nick, true) || !DBInterface.renameProfile(nick, new_nick))
-            return event.reply(
-                    "No profile named '" + nick + "' found. Guest players have no profile to rename.").withEphemeral(
-                            true);
+            return event.reply("No profile named '" + nick + "' found.").withEphemeral(true);
         MatchmakingServer.getLogger().info(
                 "Profile " + nick + " renamed to " + new_nick + " and name locked by Discord moderator " + moderator + (reason != null ? " (" + reason + ")" : ""));
         boolean was_online = KickCommand.kickOnlineClient(nick, reason, moderator, "renamed to " + new_nick,
