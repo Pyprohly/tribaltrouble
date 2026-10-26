@@ -697,10 +697,10 @@ public class Unit extends Selectable<UnitTemplate> implements Occupant, Movable 
                 } else if (canGather(target)) {
                     pushController(new GatherController(this, (Supply) target, ((Supply) target).getClass(),
                             nearestSupplyBuilding((Supply) target)));
-                } else if (canRepair(target, false)) {
-                    pushController(new RepairController(this, (Building) target));
                 } else if (canEnter(target)) {
                     pushController(new EnterController(this, (Building) target));
+                } else if (canRepair(target, false)) {
+                    pushController(new RepairController(this, (Building) target));
                 } else if (canAttack(target, false)) {
                     pushController(new HuntController(this, (Selectable<?>) target));
                 } else {
