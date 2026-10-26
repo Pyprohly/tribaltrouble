@@ -19,11 +19,14 @@ section when a release is cut.
 
 ### Changed
 
+- Anything you type as a map code now gives you an island, and typing the same thing again gives the same island. The map code box then shows that island's word code, which you can share with friends.
 - Patch notes now open after every update, not only after big ones. Press "Don't show again" in the patch notes window to stop them opening. To turn them back on, open Patch notes in Options and press OK.
 
 ### Fixed
 
 - Pressing a chieftain magic hotkey right after the campaign unlocks that magic no longer crashes the game, and the new magic button now appears without reselecting the chieftain.
+- Fixed a crash that could occur when certain letter codes were used as a map code.
+- Replay island keeps the time of day and the advanced settings of the game you just played. During Halloween it used to switch a daytime game to night.
 - Linking a profile to Discord now accepts a plain "yes" whispered to yourself, and the in-game message explains how to send it.
 
 ## [2.2.155] - 2026-10-24
