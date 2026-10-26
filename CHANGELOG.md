@@ -17,9 +17,15 @@ release is cut.
 - Moderators can rename a profile from Discord and lock it so it cannot be deleted.
 - Players from before the Steam release can ask a moderator on Discord to merge their old account into their Steam account, bringing their old profiles along.
 
+### Changed
+
+- Anything you type as a map code now gives you an island, and typing the same thing again gives the same island. The map code box then shows that island's word code, which you can share with friends.
+
 ### Fixed
 
 - Pressing a chieftain magic hotkey right after the campaign unlocks that magic no longer crashes the game, and the new magic button now appears without reselecting the chieftain.
+- Fixed a crash that could occur when certain letter codes were used as a map code.
+- Replay island keeps the time of day and the advanced settings of the game you just played. During Halloween it used to switch a daytime game to night.
 - Linking a profile to Discord now accepts a plain "yes" whispered to yourself, and the in-game message explains how to send it.
 
 ## [2.2.155] - 2026-10-24
