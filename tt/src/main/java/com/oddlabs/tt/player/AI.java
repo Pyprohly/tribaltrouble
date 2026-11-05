@@ -15,12 +15,9 @@ import com.oddlabs.tt.model.RubberSupply;
 import com.oddlabs.tt.model.Selectable;
 import com.oddlabs.tt.model.Unit;
 import com.oddlabs.tt.model.Ship;
-import com.oddlabs.tt.model.behaviour.DefendController;
-import com.oddlabs.tt.model.behaviour.GatherController;
-import com.oddlabs.tt.model.behaviour.IdleController;
-import com.oddlabs.tt.model.behaviour.NullController;
-import com.oddlabs.tt.model.behaviour.PlaceBuildingController;
-import com.oddlabs.tt.model.behaviour.WalkController;
+import com.oddlabs.tt.model.behaviour.Order;
+import com.oddlabs.tt.model.behaviour.Posture;
+import com.oddlabs.tt.model.behaviour.Task;
 import com.oddlabs.tt.pathfinder.UnitGrid;
 import com.oddlabs.tt.util.Target;
 import org.jspecify.annotations.NonNull;
@@ -242,7 +239,7 @@ public abstract class AI implements Animated {
         for (int i = 0; i < lists.length; i++) {
             Selectable<?> s = lists[i][0];
 
-            if (s.getPrimaryController() instanceof IdleController) {
+            if (s.getPrimaryTask() instanceof Posture.Idle) {
                 if (s.getAbilities().hasAbilities(Abilities.BUILD)) {
                     INDEX_IDLE_PEONS = i;
                 } else if (s.getAbilities().hasAbilities(Abilities.MAGIC)) {
@@ -250,8 +247,8 @@ public abstract class AI implements Animated {
                 } else if (s.getAbilities().hasAbilities(Abilities.ATTACK)) {
                     INDEX_IDLE_WARRIORS = i;
                 }
-            } else if (s.getPrimaryController() instanceof GatherController<?> gc) {
-                Class<?> supply_type = gc.getSupplyType();
+            } else if (s.getPrimaryTask() instanceof Order.Gather gc) {
+                Class<?> supply_type = gc.supplyType();
                 if (supply_type == TreeSupply.class) {
                     INDEX_GATHER_TREE_PEONS = i;
                 } else if (supply_type == RockSupply.class) {
@@ -261,7 +258,7 @@ public abstract class AI implements Animated {
                 } else if (supply_type == RubberSupply.class) {
                     INDEX_GATHER_RUBBER_PEONS = i;
                 }
-            } else if (s.getPrimaryController() instanceof NullController) {
+            } else if (s.getPrimaryTask() instanceof Task.Inert) {
                 if (s.getAbilities().hasAbilities(Abilities.BUILD_ARMIES)) {
                     INDEX_ARMORY = i;
                     armory_under_construction = false;
@@ -279,9 +276,9 @@ public abstract class AI implements Animated {
                 } else {
                     INDEX_CONSTRUCTION_SITES = i;
                 }
-            } else if (s.getPrimaryController() instanceof PlaceBuildingController) {
+            } else if (s.getPrimaryTask() instanceof Order.Build) {
                 INDEX_PLACE_BUILDING_PEONS = i;
-            } else if (s.getPrimaryController() instanceof DefendController) {
+            } else if (s.getPrimaryTask() instanceof Order.Defend) {
                 INDEX_DEFENDING_UNITS = i;
             }
         }
@@ -355,8 +352,7 @@ public abstract class AI implements Animated {
         Selectable<?>[][] lists = owner.classifyUnits();
         for (Selectable<?>[] list : lists) {
             Selectable<?> s = list[0];
-            if (s instanceof Unit unit && !(s.getPrimaryController() instanceof WalkController
-                    && ((WalkController) s.getPrimaryController()).isAgressive())) {
+            if (s instanceof Unit unit && !(s.getPrimaryTask() instanceof Order.Walk walk && walk.aggressive())) {
                 for (Selectable<?> thrower : list) {
                     if (unit.getAbilities().hasAbilities(Abilities.THROW)) {
                         owner.setLandscapeTarget(Selectable.newArray(thrower), target.getGridX(), target.getGridY(),

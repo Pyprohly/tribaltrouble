@@ -5,11 +5,9 @@ import com.oddlabs.tt.audio.AudioPlayer;
 import com.oddlabs.tt.gui.BuildSpinner;
 import com.oddlabs.tt.landscape.TreeSupply;
 import com.oddlabs.tt.landscape.World;
-import com.oddlabs.tt.model.behaviour.AttackController;
-import com.oddlabs.tt.model.behaviour.GatherController;
-import com.oddlabs.tt.model.behaviour.NullController;
-import com.oddlabs.tt.model.behaviour.StunController;
-import com.oddlabs.tt.model.behaviour.TransferUnitController;
+import com.oddlabs.tt.model.behaviour.Controller;
+import com.oddlabs.tt.model.behaviour.InertController;
+import com.oddlabs.tt.model.behaviour.Order;
 import com.oddlabs.tt.model.weapon.IronAxeWeapon;
 import com.oddlabs.tt.model.weapon.IronSpearWeapon;
 import com.oddlabs.tt.model.weapon.RockAxeWeapon;
@@ -57,6 +55,7 @@ public final class LandBuilding extends Building {
     private static final float DAMAGED_PARTICLE_ALPHA = 3f;
 
     private final Map<@NonNull Class<?>, @NonNull SupplyContainer> supply_containers = new HashMap<>();
+    private final @NonNull InertController controller = new InertController();
     private final Map<@NonNull Class<?>, @NonNull BuildProductionContainer> build_containers = new HashMap<>();
     private final Map<@NonNull DeployType, @NonNull DeployContainer> deploy_containers = new EnumMap<>(
             DeployType.class);
@@ -80,7 +79,6 @@ public final class LandBuilding extends Building {
         float x = UnitGrid.coordinateFromGrid(grid_x);
         float y = UnitGrid.coordinateFromGrid(grid_y);
         setPosition(x, y);
-        pushController(new NullController(this));
         /*
            Vector3f position, float offset_z, float uv_angle,
            float emitter_radius, float emitter_height, float angle_bound, float angle_max_jump,
@@ -231,7 +229,7 @@ public final class LandBuilding extends Building {
     public boolean canExitTower() {
         return !isDead() && getAbilities().hasAbilities(Abilities.ATTACK) && getUnitContainer().getNumSupplies() > 0
                 && getOwner().canExitTowers() &&
-                !(((MountUnitContainer) getUnitContainer()).getUnit().getCurrentController() instanceof StunController);
+                !((MountUnitContainer) getUnitContainer()).getUnit().isStunned();
     }
 
     public void exitTower() {
@@ -268,7 +266,7 @@ public final class LandBuilding extends Building {
             getUnitContainer().prepareDeploy(-1);
             getUnitContainer().exit();
             Unit unit = createUnit(null, race.getUnitTemplate(Race.UNIT_PEON));
-            unit.pushController(new GatherController<>(unit, null, supply_type, this));
+            unit.order(new Order.Gather(supply_type, null, this));
         }
     }
 
@@ -330,7 +328,7 @@ public final class LandBuilding extends Building {
             getUnitContainer().exit();
             Unit unit = createUnit(hasRallyPoint() ? rally_point : null, race.getUnitTemplate(template));
             if (getAbilities().hasAbilities(Abilities.REPRODUCE) && !hasRallyPoint()) {
-                unit.pushController(new TransferUnitController(unit));
+                unit.order(new Order.Transfer());
             }
         }
     }
@@ -528,6 +526,11 @@ public final class LandBuilding extends Building {
     }
 
     @Override
+    protected @NonNull Controller getController() {
+        return controller;
+    }
+
+    @Override
     public AttackScanFilter.@NonNull Priority getAttackPriority() {
         return getAbilities().hasAbilities(
                 Abilities.ATTACK) ? AttackScanFilter.Priority.TOWER : getAbilities().hasAbilities(
@@ -541,7 +544,7 @@ public final class LandBuilding extends Building {
                 Unit unit = ((MountUnitContainer) getUnitContainer()).getUnit();
                 boolean kill_friendly = action == Action.ATTACK;
                 if (unit != null && unit.canAttack(target, kill_friendly))
-                    unit.pushController(new AttackController(unit, (Selectable<?>) target));
+                    unit.order(new Order.Attack((Selectable<?>) target));
             }
         } else {
             setRallyPoint(target);

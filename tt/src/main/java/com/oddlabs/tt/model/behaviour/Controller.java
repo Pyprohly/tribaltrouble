@@ -1,37 +1,16 @@
 package com.oddlabs.tt.model.behaviour;
 
-import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.NullMarked;
+import org.jspecify.annotations.Nullable;
 
-import java.util.Arrays;
+/** Runs a selectable's tasks: decides what to do, runs the behaviour for it, and decides again. */
+@NullMarked
+public interface Controller {
+    void animate(float t);
 
-public abstract class Controller {
-    private static final int MAX_TRIES = 1;
-    private final int @NonNull [] give_up_counters;
+    /** The running behaviour, or null when there is none, as for a unit that has just been removed. */
+    @Nullable
+    Behaviour getBehaviour();
 
-    protected Controller(int num_states) {
-        give_up_counters = new int[num_states];
-    }
-
-    public final void resetGiveUpCounters() {
-        Arrays.fill(give_up_counters, 0);
-    }
-
-    public final void resetGiveUpCounter(int state_index) {
-        give_up_counters[state_index] = 0;
-    }
-
-    protected final boolean shouldGiveUp(int state_index) {
-        if (give_up_counters[state_index] != MAX_TRIES) {
-            give_up_counters[state_index]++;
-            return false;
-        } else {
-            return true;
-        }
-    }
-
-    public @NonNull String getKey() {
-        return getClass().getName();
-    }
-
-    public abstract void decide();
+    Task getPrimaryTask();
 }

@@ -5,10 +5,9 @@ import com.oddlabs.tt.audio.AudioPlayer;
 import com.oddlabs.tt.landscape.HeightMap;
 import com.oddlabs.tt.landscape.TreeSupply;
 import com.oddlabs.tt.landscape.World;
-import com.oddlabs.tt.model.behaviour.GatherController;
-import com.oddlabs.tt.model.behaviour.NullController;
+import com.oddlabs.tt.model.behaviour.Order;
 import com.oddlabs.tt.model.behaviour.SailBehaviour;
-import com.oddlabs.tt.model.behaviour.SailController;
+import com.oddlabs.tt.model.behaviour.ShipController;
 import com.oddlabs.tt.model.weapon.IronAxeWeapon;
 import com.oddlabs.tt.model.weapon.IronSpearWeapon;
 import com.oddlabs.tt.model.weapon.RockAxeWeapon;
@@ -97,6 +96,8 @@ public class Ship extends Building implements Movable {
     private int build_points = 0;
 
     private boolean slid = false;
+
+    private final ShipController controller = new ShipController(this);
     private boolean flattened = false;
 
     private Target rally_point = this;
@@ -123,7 +124,7 @@ public class Ship extends Building implements Movable {
 
         setInitialShipDirection();
 
-        pushController(new NullController(this));
+        controller.start();
 
         /*
            Vector3f position, float offset_z, float uv_angle,
@@ -427,7 +428,7 @@ public class Ship extends Building implements Movable {
             getUnitContainer().exit();
             Unit unit = createUnit(null, race.getUnitTemplate(Race.UNIT_PEON));
             if (unit != null) {
-                unit.pushController(new GatherController(unit, null, supply_type, this));
+                unit.order(new Order.Gather(supply_type, null, this));
             }
         }
     }
@@ -675,10 +676,7 @@ public class Ship extends Building implements Movable {
 
     @Override
     protected void setTarget(@NonNull Target target, @NonNull Action action, boolean aggressive) {
-        forceDecide();
-        clearControllerStack();
-        pushController(new NullController(this));
-        pushController(new SailController(this, target));
+        controller.sail(target);
         free();
         occupy();
     }
@@ -756,8 +754,7 @@ public class Ship extends Building implements Movable {
     protected final void removeDying() {
         removeProxy();
 
-        pushController(new NullController(this));
-        forceDecide();
+        controller.dock();
 
         // If it's a ship and it's destroyed, kill everyone on board
         if (ship_hr != null) {
@@ -1031,8 +1028,13 @@ public class Ship extends Building implements Movable {
         return build_points / (float) getBuildingTemplate().getMaxHitPoints();
     }
 
+    @Override
+    protected final ShipController getController() {
+        return controller;
+    }
+
     public final boolean isMoving() {
-        return (getCurrentController() instanceof SailController);
+        return controller.isSailing();
     }
 
     public final void debugRender() {
@@ -1048,14 +1050,7 @@ public class Ship extends Building implements Movable {
         return null;
     }
 
-    public final void reportStuck() {
-        forceDecide();
-    }
-
     public final void endTrip() {
-        forceDecide();
-        clearControllerStack();
-        pushController(new NullController(this));
         free();
         reinsert();
         occupy();
@@ -1067,7 +1062,6 @@ public class Ship extends Building implements Movable {
 
     public final void endSlide() {
         slid = true;
-        forceDecide();
         free();
         reinsert();
         occupy();

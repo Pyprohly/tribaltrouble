@@ -6,7 +6,6 @@ import com.oddlabs.tt.model.Unit;
 import org.jspecify.annotations.NonNull;
 
 public final class SittingBehaviour implements Behaviour {
-    private final SittingController controller;
     private final Unit unit;
     private final Ship ship;
     private final ShipAllocation allocation;
@@ -14,13 +13,10 @@ public final class SittingBehaviour implements Behaviour {
     private float boarding_time = 0.0f;
     private final static float TOTAL_BOARDING_TIME = 1.0f;
 
-    public SittingBehaviour(
-            SittingController controller, Unit unit, Ship ship, ShipAllocation allocation, boolean boarded) {
-        this.controller = controller;
+    public SittingBehaviour(Unit unit, Ship ship, ShipAllocation allocation) {
         this.unit = unit;
         this.ship = ship;
         this.allocation = allocation;
-        this.boarded = boarded;
     }
 
     @Override

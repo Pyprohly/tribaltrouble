@@ -1,7 +1,7 @@
 package com.oddlabs.tt.tutorial;
 
 import com.oddlabs.tt.form.TutorialForm;
-import com.oddlabs.tt.model.behaviour.WalkController;
+import com.oddlabs.tt.model.behaviour.Order;
 import com.oddlabs.tt.player.Player;
 import org.jspecify.annotations.NonNull;
 
@@ -14,7 +14,7 @@ public final class MoveUnitTrigger extends TutorialTrigger {
     @Override
     protected void run(@NonNull Tutorial tutorial) {
         for (var s : tutorial.getViewer().getSelection().getCurrentSelection().getSet()) {
-            if (s.getPrimaryController() instanceof WalkController) {
+            if (s.getPrimaryTask() instanceof Order.Walk) {
                 tutorial.done(TutorialForm.TUTORIAL_CAMERA);
             }
         }

@@ -21,8 +21,8 @@ import com.oddlabs.tt.model.Supply;
 import com.oddlabs.tt.model.Ship;
 import com.oddlabs.tt.model.SupplyContainer;
 import com.oddlabs.tt.model.Unit;
-import com.oddlabs.tt.model.behaviour.GatherController;
-import com.oddlabs.tt.model.behaviour.NullController;
+import com.oddlabs.tt.model.behaviour.Order;
+import com.oddlabs.tt.model.behaviour.Task;
 import com.oddlabs.tt.model.weapon.IronAxeWeapon;
 import com.oddlabs.tt.model.weapon.RockAxeWeapon;
 import com.oddlabs.tt.model.weapon.RubberAxeWeapon;
@@ -412,7 +412,7 @@ public final class Player implements PlayerInterface {
         Selectable<?>[][] lists = classifyUnits();
         for (Selectable<?>[] list : lists) {
             Selectable<?> s = list[0];
-            if (s.getPrimaryController() instanceof NullController && s.getAbilities().hasAbilities(
+            if (s.getPrimaryTask() instanceof Task.Inert && s.getAbilities().hasAbilities(
                     Abilities.BUILD_ARMIES)) {
                 return (Building) s;
             }
@@ -424,7 +424,7 @@ public final class Player implements PlayerInterface {
         Selectable<?>[][] lists = classifyUnits();
         for (Selectable<?>[] list : lists) {
             Selectable<?> s = list[0];
-            if (s.getPrimaryController() instanceof NullController && s.getAbilities().hasAbilities(
+            if (s.getPrimaryTask() instanceof Task.Inert && s.getAbilities().hasAbilities(
                     Abilities.REPRODUCE)) {
                 return (Building) s;
             }
@@ -467,8 +467,8 @@ public final class Player implements PlayerInterface {
     public int getGathererCount(@NonNull Class<? extends Supply> supply_type, Building building) {
         int count = 0;
         for (Selectable<?> s : units.getSet()) {
-            if (s instanceof Unit && s.getPrimaryController() instanceof GatherController<?> gather) {
-                if (gather.getSupplyType() == supply_type && gather.getAssignedBuilding() == building) {
+            if (s instanceof Unit && s.getPrimaryTask() instanceof Order.Gather gather) {
+                if (gather.supplyType() == supply_type && gather.assignedBuilding() == building) {
                     count++;
                 }
             }
@@ -488,8 +488,8 @@ public final class Player implements PlayerInterface {
             float nearest_dist_sq = Float.MAX_VALUE;
 
             for (Selectable<?> s : units.getSet()) {
-                if (s instanceof Unit unit && s.getPrimaryController() instanceof GatherController<?> gather) {
-                    if (gather.getSupplyType() == supply_type && gather.getAssignedBuilding() == building) {
+                if (s instanceof Unit unit && s.getPrimaryTask() instanceof Order.Gather gather) {
+                    if (gather.supplyType() == supply_type && gather.assignedBuilding() == building) {
                         float dx = s.getPositionX() - bx;
                         float dy = s.getPositionY() - by;
                         float dist_sq = dx * dx + dy * dy;
@@ -686,7 +686,7 @@ public final class Player implements PlayerInterface {
 
     public @NonNull Selectable<?> @NonNull [] @NonNull [] classifyUnits() {
         Map<String, List<Selectable<?>>> map = units.getSet().stream().collect(Collectors.groupingBy(
-                u -> u.getPrimaryController().getKey(), LinkedHashMap::new, Collectors.toList()));
+                Selectable::getActivityKey, LinkedHashMap::new, Collectors.toList()));
         return map.values().stream().map(list -> list.toArray(Selectable[]::new)).toArray(Selectable[][]::new);
     }
 

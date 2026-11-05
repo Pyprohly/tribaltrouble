@@ -1,27 +1,34 @@
 package com.oddlabs.tt.model.behaviour;
 
+import com.oddlabs.tt.model.Abilities;
+import com.oddlabs.tt.model.AttackScanFilter;
+import com.oddlabs.tt.model.Selectable;
 import com.oddlabs.tt.model.Ship;
 import com.oddlabs.tt.model.ShipAllocation;
 import com.oddlabs.tt.model.Unit;
 import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
 
 public final class ShipAttackBehaviour implements Behaviour {
-    private final ShipAttackController controller;
+    private static final float MIN_SCAN_DELAY = 0.1f;
+    private static final float MAX_SCAN_DELAY = 0.2f;
+    private static final int SCAN_RANGE = AttackScanFilter.TOWER_RANGE + 10;
+    private final static float TOTAL_BOARDING_TIME = 1.0f;
+
     private final Unit unit;
     private final Ship ship;
     private final ShipAllocation allocation;
+    private final AttackScanFilter scan_filter;
     private boolean boarded = false;
     private float boarding_time = 0.0f;
-    private final static float TOTAL_BOARDING_TIME = 1.0f;
+    private float scan_delay;
+    private @Nullable Selectable<?> spotted;
 
-    public ShipAttackBehaviour(
-            ShipAttackController controller, Unit unit, Ship ship, ShipAllocation allocation, boolean boarded) {
-        this.controller = controller;
+    public ShipAttackBehaviour(Unit unit, Ship ship, ShipAllocation allocation) {
         this.unit = unit;
         this.ship = ship;
         this.allocation = allocation;
-        this.boarded = boarded;
-
+        this.scan_filter = new AttackScanFilter(unit.getOwner(), SCAN_RANGE);
     }
 
     @Override
@@ -33,17 +40,28 @@ public final class ShipAttackBehaviour implements Behaviour {
             boarded = true;
         }
         if (!boarded) {
-            var proxy = ship.getEntrance();
             boarding_time += t;
             unit.switchAnimation(3.0f, Unit.Animation.MOVING);
             allocation.updateIntermediate(unit, ship, boarding_time / TOTAL_BOARDING_TIME);
             return State.INTERRUPTIBLE;
-        } else {
-            unit.switchToIdleAnimation();
-            allocation.updateFinal(unit, ship);
-            if (!controller.shouldSleep(t)) return State.DONE;
-            else return State.INTERRUPTIBLE;
         }
+        unit.switchToIdleAnimation();
+        allocation.updateFinal(unit, ship);
+        scan_delay -= t;
+        if (scan_delay > 0)
+            return State.INTERRUPTIBLE;
+        scan_delay = MIN_SCAN_DELAY + unit.getOwner().getWorld().getRandom().nextFloat() * (MAX_SCAN_DELAY - MIN_SCAN_DELAY);
+        if (unit.getAbilities().hasAbilities(Abilities.ATTACK))
+            unit.scanVicinity(scan_filter);
+        spotted = scan_filter.removeTarget();
+        return spotted != null ? State.DONE : State.INTERRUPTIBLE;
+    }
+
+    @Override
+    public @NonNull Event outcome() {
+        Selectable<?> target = spotted;
+        spotted = null;
+        return target != null ? new Event.Spotted(target) : Event.COMPLETED;
     }
 
     public final boolean isBlocking() {

@@ -3,6 +3,7 @@ package com.oddlabs.tt.model;
 import com.oddlabs.tt.animation.Animated;
 import com.oddlabs.tt.model.behaviour.Behaviour;
 import com.oddlabs.tt.model.behaviour.Controller;
+import com.oddlabs.tt.model.behaviour.Task;
 import com.oddlabs.tt.pathfinder.Occupant;
 import com.oddlabs.tt.pathfinder.ScanFilter;
 import com.oddlabs.tt.pathfinder.UnitGrid;
@@ -10,23 +11,14 @@ import com.oddlabs.tt.player.Player;
 import com.oddlabs.tt.util.StateChecksum;
 import com.oddlabs.tt.util.Target;
 import org.jspecify.annotations.NonNull;
-import org.jspecify.annotations.NullMarked;
 import org.jspecify.annotations.Nullable;
-
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
 
 public abstract class Selectable<T extends Template> extends Model implements Target, Animated, ModelToolTip {
     private final @NonNull Player owner;
-    private @Nullable Behaviour current_behaviour;
     private final Abilities abilities = new Abilities(Abilities.NONE);
     private final @NonNull T template;
-    private final List<@NonNull Controller> controller_stack = new ArrayList<>();
 
     private boolean dead;
-    private boolean should_decide;
-    private Behaviour.@NonNull State last = Behaviour.State.DONE;
 
     private int grid_x;
     private int grid_y;
@@ -71,27 +63,21 @@ public abstract class Selectable<T extends Template> extends Model implements Ta
         return template.getHitOffsetZ(0);
     }
 
-    public final @NonNull Controller getCurrentController() {
-        return controller_stack.getLast();
+    protected abstract @NonNull Controller getController();
+
+    /** What the selectable is doing, for the AI, the GUI and triggers to inspect. */
+    public final @NonNull Task getPrimaryTask() {
+        return getController().getPrimaryTask();
     }
 
-    @NullMarked
-    protected final List<Controller> getControllerStack() {
-        return controller_stack;
+    /** Groups selectables doing the same job. */
+    public final @NonNull String getActivityKey() {
+        return getPrimaryTask().key(this);
     }
 
     @Override
     public final void animate(float t) {
-        last = current_behaviour.animate(t);
-        switch (last) {
-            case UNINTERRUPTIBLE -> {
-            }
-            case INTERRUPTIBLE -> {
-                if (should_decide)
-                    decide();
-            }
-            case DONE -> decide();
-        }
+        getController().animate(t);
         doAnimate(t);
         owner.getWorld().updateGlobalChecksum(grid_x + grid_y);
     }
@@ -100,11 +86,12 @@ public abstract class Selectable<T extends Template> extends Model implements Ta
     }
 
     protected final boolean isBlocking() {
-        return current_behaviour.isBlocking();
+        Behaviour behaviour = getController().getBehaviour();
+        return behaviour != null && behaviour.isBlocking();
     }
 
     public final @Nullable Behaviour getCurrentBehaviour() {
-        return current_behaviour;
+        return getController().getBehaviour();
     }
 
     public final @NonNull UnitGrid getUnitGrid() {
@@ -169,76 +156,11 @@ public abstract class Selectable<T extends Template> extends Model implements Ta
         enable();
     }
 
-    private void decide() {
-        if (last != Behaviour.State.UNINTERRUPTIBLE) {
-            doDecide();
-        } else {
-            should_decide = true;
-        }
-    }
-
-    private void doDecide() {
-        should_decide = false;
-        current_behaviour = null;
-        getCurrentController().decide();
-    }
-
-    protected final void forceDecide() {
-        current_behaviour.forceInterrupted();
-        last = Behaviour.State.INTERRUPTIBLE;
-        doDecide();
-    }
-
-    protected final void setShouldDecide(boolean value) {
-        this.should_decide = value;
-    }
-
-    public final void pushController(@NonNull Controller controller) {
-        assert !isDead();
-        controller_stack.add(controller);
-        decide();
-    }
-
-    public final void pushControllers(@NonNull Controller @NonNull... controllers) {
-        assert !isDead();
-        controller_stack.addAll(Arrays.asList(controllers));
-        decide();
-    }
-
-    public final void swapController(@NonNull Controller controller) {
-        assert !isDead();
-        controller_stack.removeLast();
-        pushController(controller);
-    }
-
-    public final void popController() {
-        assert !isDead();
-        controller_stack.removeLast();
-        decide();
-    }
-
-    public final void setBehaviour(@NonNull Behaviour behaviour) {
-        assert !isDead();
-        assert last != Behaviour.State.UNINTERRUPTIBLE : "Invalid behaviour state";
-        current_behaviour = behaviour;
-    }
-
-    public final @NonNull Controller getPrimaryController() {
-        assert !isDead();
-        return controller_stack.size() > 1 ? controller_stack.get(1) : controller_stack.getFirst(); // Jump over the default controller
-    }
-
-    protected final void clearControllerStack() {
-        Controller default_controller = controller_stack.getFirst();
-        controller_stack.clear();
-        controller_stack.add(default_controller);
-    }
-
+    /** A player's or AI's command: it replaces whatever the selectable was ordered to do before. */
     public final void initTarget(@Nullable Target target, @NonNull Action action, boolean aggressive) {
         assert !isDead();
         if (target == null)
             return;
-        clearControllerStack();
         setTarget(target, action, aggressive);
     }
 

@@ -16,8 +16,7 @@ public final class ShipUnstuckBehaviour implements Behaviour {
 
     private ShipTrajectory trajectory = null;
 
-    private boolean finished = false;
-    private boolean failed = false;
+    private @NonNull Event outcome = Event.COMPLETED;
 
     public ShipUnstuckBehaviour(Ship ship) {
         this.ship = ship;
@@ -46,14 +45,6 @@ public final class ShipUnstuckBehaviour implements Behaviour {
         return true;
     }
 
-    public final boolean isFinished() {
-        return finished;
-    }
-
-    public final boolean hasFailed() {
-        return failed;
-    }
-
     public final ShipTrajectory getTrajectory() {
         return trajectory;
     }
@@ -75,9 +66,8 @@ public final class ShipUnstuckBehaviour implements Behaviour {
         ship.setLayer(UnitGrid.SEA);
 
         if (trajectory == null || !trajectory.exists()) {
-            failed = true;
-            ship.reportStuck();
-            return State.INTERRUPTIBLE;
+            outcome = Event.NO_ROUTE;
+            return State.DONE;
         }
 
         int rowers = ship.getShipHR().countRowers() + 1;
@@ -88,7 +78,6 @@ public final class ShipUnstuckBehaviour implements Behaviour {
         }
 
         if (trajectory.reachedGoal()) {
-            finished = true;
             return State.DONE;
         }
 
@@ -98,9 +87,8 @@ public final class ShipUnstuckBehaviour implements Behaviour {
 
         if (fromPoint.distanceTo(next_pose) > 0.0001f && ShipTrajectory.checkShipsCollision(grid, ship, fromPoint,
                 next_pose.moved(8)) != null) {
-            failed = true;
-            ship.reportStuck();
-            return State.INTERRUPTIBLE;
+            outcome = Event.BLOCKED;
+            return State.DONE;
         }
 
         ship.free();
@@ -111,6 +99,11 @@ public final class ShipUnstuckBehaviour implements Behaviour {
         ship.occupy();
 
         return State.UNINTERRUPTIBLE;
+    }
+
+    @Override
+    public @NonNull Event outcome() {
+        return outcome;
     }
 
     public final void forceInterrupted() {

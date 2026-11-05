@@ -9,9 +9,8 @@ import com.oddlabs.tt.model.Race;
 import com.oddlabs.tt.model.Selectable;
 import com.oddlabs.tt.model.Ship;
 import com.oddlabs.tt.model.Unit;
-import com.oddlabs.tt.model.behaviour.Controller;
-import com.oddlabs.tt.model.behaviour.PlaceBuildingController;
-import com.oddlabs.tt.model.behaviour.RepairController;
+import com.oddlabs.tt.model.behaviour.Order;
+import com.oddlabs.tt.model.behaviour.Task;
 import com.oddlabs.tt.model.weapon.IronAxeWeapon;
 import com.oddlabs.tt.model.weapon.IronSpearWeapon;
 import com.oddlabs.tt.model.weapon.RockAxeWeapon;
@@ -885,8 +884,8 @@ public final class AdvancedAI extends AI {
         Selectable<?>[] placing = getPlaceBuildingPeons();
         if (placing != null) {
             for (Selectable<?> s : placing) {
-                if (!s.isDead() && s.getPrimaryController() instanceof PlaceBuildingController controller
-                        && controller.getBuilding() instanceof Ship ship && !ship.isDead())
+                if (!s.isDead() && s.getPrimaryTask() instanceof Order.Build build
+                        && build.building() instanceof Ship ship && !ship.isDead())
                     return ship;
             }
         }
@@ -907,10 +906,10 @@ public final class AdvancedAI extends AI {
             if (s.isDead()) {
                 continue;
             }
-            Controller controller = s.getPrimaryController();
-            if (controller instanceof RepairController repair && repair.getBuilding() == b) {
+            Task task = s.getPrimaryTask();
+            if (task instanceof Order.Repair repair && repair.building() == b) {
                 builders++;
-            } else if (controller instanceof PlaceBuildingController placing && placing.getBuilding() == b) {
+            } else if (task instanceof Order.Build placing && placing.building() == b) {
                 builders++;
             }
         }

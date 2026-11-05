@@ -9,8 +9,8 @@ import com.oddlabs.tt.model.SceneryModel;
 import com.oddlabs.tt.model.Selectable;
 import com.oddlabs.tt.model.Supply;
 import com.oddlabs.tt.model.Unit;
-import com.oddlabs.tt.model.behaviour.Controller;
-import com.oddlabs.tt.model.behaviour.GatherController;
+import com.oddlabs.tt.model.behaviour.Order;
+import com.oddlabs.tt.model.behaviour.Task;
 import com.oddlabs.tt.player.Player;
 import com.oddlabs.tt.gui.ToolTip;
 import org.jspecify.annotations.NonNull;
@@ -93,12 +93,12 @@ final class ToolTipAdapter implements ToolTip {
         visitSelectable(tool_tip, unit);
         String name = unit.getName();
         tool_tip.append(Objects.requireNonNullElseGet(name, () -> unit.getTemplate().getName()));
-        Controller c = unit.getPrimaryController();
+        Task c = unit.getPrimaryTask();
         if (unit.getAbilities().hasAbilities(Abilities.MAGIC)) {
             var health = (float) unit.getHitPoints() / unit.getTemplate().getMaxHitPoints();
             tool_tip.append(List.of(GUIIcons.getIcons().getWatch(health)));
-        } else if (unit.getOwner() == local_player && c instanceof GatherController<?> gc) {
-            tool_tip.append(GUIIcons.getIcons().getToolTipIcon(gc.getSupplyType()));
+        } else if (unit.getOwner() == local_player && c instanceof Order.Gather gc) {
+            tool_tip.append(GUIIcons.getIcons().getToolTipIcon(gc.supplyType()));
         }
         /*      if (getCurrentBehaviour() instanceof WalkBehaviour)
         		((WalkBehaviour)getCurrentBehaviour()).appendToolTip(tool_tip);*/

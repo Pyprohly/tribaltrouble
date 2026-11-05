@@ -2,7 +2,7 @@ package com.oddlabs.tt.player;
 
 import com.oddlabs.tt.model.Action;
 import com.oddlabs.tt.model.Selectable;
-import com.oddlabs.tt.model.behaviour.IdleController;
+import com.oddlabs.tt.model.behaviour.Posture;
 import com.oddlabs.tt.util.Target;
 import org.jspecify.annotations.NonNull;
 
@@ -23,7 +23,7 @@ public final class PassiveAI extends AI {
 
             for (Selectable<?>[] list : lists) {
                 Selectable<?> s = list[0];
-                if (s.getPrimaryController() instanceof IdleController) {
+                if (s.getPrimaryTask() instanceof Posture.Idle) {
                     for (Selectable<?> thrower : list) {
                         float r = getOwner().getWorld().getRandom().nextFloat();
                         if (r < .2) {

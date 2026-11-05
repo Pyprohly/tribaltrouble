@@ -4,6 +4,7 @@ import com.oddlabs.tt.gui.ToolTipBox;
 import com.oddlabs.tt.model.AttackScanFilter;
 import com.oddlabs.tt.model.Selectable;
 import com.oddlabs.tt.model.Unit;
+import com.oddlabs.tt.pathfinder.FinderTrackerAlgorithm;
 import com.oddlabs.tt.pathfinder.Movable;
 import com.oddlabs.tt.pathfinder.Occupant;
 import com.oddlabs.tt.pathfinder.PathTracker;
@@ -29,6 +30,7 @@ public final class WalkBehaviour implements Behaviour {
     private float retry_delay;
 
     private PathTracker.State state;
+    private @Nullable Selectable<?> spotted;
 
     public WalkBehaviour(@NonNull Unit unit, @NonNull TrackerAlgorithm tracker_algorithm, boolean scan_attack) {
         this.unit = unit;
@@ -84,7 +86,7 @@ public final class WalkBehaviour implements Behaviour {
                 retry_delay = WAIT_RETRY_DELAY;
                 switchToMoving();
                 scan();
-                yield State.INTERRUPTIBLE;
+                yield spotted != null ? State.DONE : State.INTERRUPTIBLE;
             }
             case DONE -> State.DONE;
             case BLOCKED, SOFTBLOCKED -> {
@@ -101,7 +103,8 @@ public final class WalkBehaviour implements Behaviour {
                 }
                 scan();
                 retry_delay = Math.min(2 * retry_delay, MAX_WAIT_RETRY_DELAY);
-                yield doRetry();
+                State retry = doRetry();
+                yield spotted != null ? State.DONE : retry;
             }
         };
     }
@@ -109,12 +112,17 @@ public final class WalkBehaviour implements Behaviour {
     private void scan() {
         if (scan_attack) {
             unit.scanVicinity(scan_filter);
-            Selectable<?> s = scan_filter.removeTarget();
-            if (s != null) {
-                unit.getCurrentController().resetGiveUpCounters();
-                unit.pushController(new HuntController(unit, s));
-            }
+            spotted = scan_filter.removeTarget();
         }
+    }
+
+    @Override
+    public @NonNull Event outcome() {
+        if (spotted != null)
+            return new Event.Spotted(spotted);
+        if (tracker_algorithm instanceof FinderTrackerAlgorithm<?> finder)
+            return new Event.Found(finder.getOccupant());
+        return Event.COMPLETED;
     }
 
     /*	public final void moveNextAnimate() {

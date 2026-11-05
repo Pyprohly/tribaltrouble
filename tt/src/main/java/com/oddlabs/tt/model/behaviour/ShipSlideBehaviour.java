@@ -63,7 +63,6 @@ public final class ShipSlideBehaviour implements Behaviour {
         ship.occupy();
 
         if (grid.isDeepWater(curr.gridX, curr.gridY)) {
-            ship.endSlide();
             return State.DONE;
         }
 

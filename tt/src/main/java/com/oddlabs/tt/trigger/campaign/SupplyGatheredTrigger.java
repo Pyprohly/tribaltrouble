@@ -4,7 +4,7 @@ import com.oddlabs.tt.model.Abilities;
 import com.oddlabs.tt.model.Building;
 import com.oddlabs.tt.model.Selectable;
 import com.oddlabs.tt.model.Supply;
-import com.oddlabs.tt.model.behaviour.NullController;
+import com.oddlabs.tt.model.behaviour.Task;
 import com.oddlabs.tt.player.Player;
 import com.oddlabs.tt.trigger.IntervalTrigger;
 import org.jspecify.annotations.NonNull;
@@ -31,7 +31,7 @@ public final class SupplyGatheredTrigger extends IntervalTrigger {
 
         for (Selectable<?>[] selectable : selectables) {
             Selectable<?> s = selectable[0];
-            if (s.getPrimaryController() instanceof NullController) {
+            if (s.getPrimaryTask() instanceof Task.Inert) {
                 for (Selectable<?> building : selectable) {
                     if (building.getAbilities().hasAbilities(Abilities.BUILD_ARMIES)) {
                         count += ((Building) building).getSupplyContainer(type).getNumSupplies();

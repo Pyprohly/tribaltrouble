@@ -4,22 +4,11 @@ import com.oddlabs.geometry.AnimationInfo;
 import com.oddlabs.tt.audio.AudioParameters;
 import com.oddlabs.tt.audio.AudioPlayer;
 import com.oddlabs.tt.landscape.LandscapeTarget;
-import com.oddlabs.tt.model.behaviour.DefendController;
 import com.oddlabs.tt.model.behaviour.DieBehaviour;
-import com.oddlabs.tt.model.behaviour.DieController;
-import com.oddlabs.tt.model.behaviour.EnterController;
-import com.oddlabs.tt.model.behaviour.GatherController;
-import com.oddlabs.tt.model.behaviour.HuntController;
-import com.oddlabs.tt.model.behaviour.IdleController;
-import com.oddlabs.tt.model.behaviour.MagicController;
-import com.oddlabs.tt.model.behaviour.PlaceBuildingController;
-import com.oddlabs.tt.model.behaviour.RepairController;
-import com.oddlabs.tt.model.behaviour.ShipAttackController;
-import com.oddlabs.tt.model.behaviour.SittingController;
-import com.oddlabs.tt.model.behaviour.StunBehaviour;
-import com.oddlabs.tt.model.behaviour.StunController;
+import com.oddlabs.tt.model.behaviour.Interruption;
+import com.oddlabs.tt.model.behaviour.Order;
+import com.oddlabs.tt.model.behaviour.UnitController;
 import com.oddlabs.tt.model.behaviour.WalkBehaviour;
-import com.oddlabs.tt.model.behaviour.WalkController;
 import com.oddlabs.tt.model.weapon.IronAxeWeapon;
 import com.oddlabs.tt.model.weapon.IronSpearWeapon;
 import com.oddlabs.tt.model.weapon.RockAxeWeapon;
@@ -79,6 +68,7 @@ public class Unit extends Selectable<UnitTemplate> implements Occupant, Movable 
     private final @NonNull List<SpriteKey> attachments = new ArrayList<>(1); // render-only, never part of the sim
     private final @Nullable String name;
     private final @NonNull PathTracker path_tracker;
+    private final @NonNull UnitController controller = new UnitController(this);
     private final float[] magic_energy = new float[2];
     private int last_magic_index = -1;
 
@@ -139,7 +129,7 @@ public class Unit extends Selectable<UnitTemplate> implements Occupant, Movable 
             findInitialPosition(x, y, grid_targets_only, -1);
         }
 
-        pushController(new IdleController(this, new AttackScanFilter(getOwner(), AttackScanFilter.UNIT_RANGE), true));
+        controller.start();
         if (!getAbilities().hasAbilities(Abilities.MAGIC) && !imaginary) {
             int result = getOwner().getUnitCountContainer().increaseSupply(1);
             assert (result == 1) : "No room for new unit in player unit container.";
@@ -152,8 +142,8 @@ public class Unit extends Selectable<UnitTemplate> implements Occupant, Movable 
                 UnitGrid grid = getUnitGrid();
                 List<Target> temp_occupants = new ArrayList<>();
                 for (var s : getOwner().getUnits().getSet()) {
-                    if (s.getCurrentController() instanceof WalkController) {
-                        Target target = ((WalkController) s.getCurrentController()).getTarget();
+                    if (s instanceof Unit unit && unit.controller.getState().current() instanceof Order.Walk walk) {
+                        Target target = walk.target();
                         if (!grid.isGridOccupied(target.getGridX(), target.getGridY())) {
                             grid.occupyGrid(target.getGridX(), target.getGridY(), this);
                             temp_occupants.add(target);
@@ -170,6 +160,11 @@ public class Unit extends Selectable<UnitTemplate> implements Occupant, Movable 
             boolean aggressive = unit_template.getAbilities().hasAbilities(Abilities.THROW);
             setTarget(unit_target, Action.DEFAULT, aggressive);
         }
+    }
+
+    @Override
+    protected @NonNull UnitController getController() {
+        return controller;
     }
 
     @Override
@@ -293,7 +288,6 @@ public class Unit extends Selectable<UnitTemplate> implements Occupant, Movable 
         if (isDead()) {
             return;
         }
-        clearControllerStack();
         setReference(null);
         mounted = false;
         on_ship = false;
@@ -311,8 +305,7 @@ public class Unit extends Selectable<UnitTemplate> implements Occupant, Movable 
 
     public final void unmount() {
         assert !isDead();
-        clearControllerStack();
-        swapController(new IdleController(this, new AttackScanFilter(getOwner(), AttackScanFilter.UNIT_RANGE), true));
+        controller.unmount();
         mounted = false;
         on_ship = false;
         mount_offset = 0;
@@ -336,8 +329,7 @@ public class Unit extends Selectable<UnitTemplate> implements Occupant, Movable 
         }
         setPosition(building.getPositionX(), building.getPositionY());
         mounted = true;
-        clearControllerStack();
-        swapController(new IdleController(this, new AttackScanFilter(getOwner(), AttackScanFilter.TOWER_RANGE), false));
+        controller.mountTower();
     }
 
     public final void mount(Ship ship, ShipAllocation ship_allocation) {
@@ -350,21 +342,7 @@ public class Unit extends Selectable<UnitTemplate> implements Occupant, Movable 
         mounted = true;
         on_ship = true;
         setReference(ship);
-        clearControllerStack();
-        switch (ship_allocation.getRole()) {
-            case ShipAllocation.FIGHTING:
-                swapController(
-                        new ShipAttackController(
-                                this,
-                                ship,
-                                new AttackScanFilter(
-                                        getOwner(), AttackScanFilter.TOWER_RANGE + 10),
-                                ship_allocation));
-                break;
-            default:
-                swapController(new SittingController(this, ship, ship_allocation));
-                break;
-        }
+        controller.mountShip(ship, ship_allocation);
     }
 
     public final boolean isMounted() {
@@ -564,8 +542,7 @@ public class Unit extends Selectable<UnitTemplate> implements Occupant, Movable 
         on_ship = false;
         mount_offset = 0;
 
-        pushController(new DieController(this));
-        forceDecide();
+        controller.die();
         getOwner().getWorld().getAudio().newAudio(
                 new AudioParameters(
                         getTemplate().getDeathSound(),
@@ -589,8 +566,7 @@ public class Unit extends Selectable<UnitTemplate> implements Occupant, Movable 
             stun_marker.done();
         }
         stun_marker = createStunStar(x, y, z, time, (float) Math.PI / 2);
-        pushController(new StunController(this, time));
-        forceDecide();
+        controller.stun(time);
     }
 
     public final boolean isWarrior() {
@@ -674,18 +650,24 @@ public class Unit extends Selectable<UnitTemplate> implements Occupant, Movable 
 
     @Override
     public final float getDefenseChance() {
-        return getCurrentController() instanceof StunController ? 0 : super.getDefenseChance();
+        return isStunned() ? 0 : super.getDefenseChance();
+    }
+
+    public final boolean isStunned() {
+        return controller.getState().interruption() instanceof Interruption.Stunned;
     }
 
     private void walkToTarget(@NonNull Target target, boolean scan_attack) {
         Target walkable_target = getUnitGrid().findGridTargets(target.getGridX(), target.getGridY(), 1, false)[0];
-        pushController(new WalkController(this, walkable_target, scan_attack));
+        controller.order(new Order.Walk(walkable_target, scan_attack));
     }
 
     @Override
     public void setTarget(@NonNull Target target, @NonNull Action action, boolean aggressive) {
-        if (target == this)
+        if (target == this) {
+            controller.order(null);
             return;
+        }
         assert !target.isDead() : "Setting dead target";
         assert !mounted;
         if (target instanceof Building) {
@@ -694,59 +676,69 @@ public class Unit extends Selectable<UnitTemplate> implements Occupant, Movable 
         switch (action) {
             case DEFAULT:
                 if (canBuild(target)) {
-                    pushController(new PlaceBuildingController(this, (Building) target));
+                    controller.order(new Order.Build((Building) target));
                 } else if (canGather(target)) {
-                    pushController(new GatherController(this, (Supply) target, ((Supply) target).getClass(),
-                            nearestSupplyBuilding((Supply) target)));
+                    controller.order(gatherOrder((Supply) target));
                 } else if (canEnter(target)) {
-                    pushController(new EnterController(this, (Building) target));
+                    controller.order(new Order.Enter((Building) target));
                 } else if (canRepair(target, false)) {
-                    pushController(new RepairController(this, (Building) target));
+                    controller.order(new Order.Repair((Building) target));
                 } else if (canAttack(target, false)) {
-                    pushController(new HuntController(this, (Selectable<?>) target));
+                    controller.order(new Order.Hunt((Selectable<?>) target));
                 } else {
                     walkToTarget(target, aggressive);
                 }
                 break;
             case MOVE:
                 if (canEnter(target)) {
-                    pushController(new EnterController(this, (Building) target));
+                    controller.order(new Order.Enter((Building) target));
                 } else {
                     walkToTarget(target, false);
                 }
                 break;
             case ATTACK:
                 if (canAttack(target, true)) {
-                    pushController(new HuntController(this, (Selectable<?>) target));
+                    controller.order(new Order.Hunt((Selectable<?>) target));
                 } else {
                     walkToTarget(target, true);
                 }
                 break;
             case GATHER_REPAIR:
                 if (canGather(target)) {
-                    pushController(new GatherController(this, (Supply) target, ((Supply) target).getClass(),
-                            nearestSupplyBuilding((Supply) target)));
+                    controller.order(gatherOrder((Supply) target));
                 } else if (canRepair(target, true)) {
-                    pushController(new RepairController(this, (Building) target));
+                    controller.order(new Order.Repair((Building) target));
+                } else {
+                    controller.order(null);
                 }
                 break;
             case DEFEND:
-                pushController(new DefendController(this, target));
+                controller.order(new Order.Defend(target));
                 break;
             default:
                 IO.println("Invalid action: " + action);
+                controller.order(null);
                 break;
         }
     }
 
+    private @NonNull Order gatherOrder(@NonNull Supply supply) {
+        return new Order.Gather(supply.getClass(), supply, nearestSupplyBuilding(supply));
+    }
+
+    /** Gives the unit an order in place of the one it has, or takes its order away when null. */
+    public final void order(@Nullable Order order) {
+        controller.order(order);
+    }
+
     public final void printDebugInfo() {
         IO.println("-----------------------------------");
-        IO.println("Primary Controller = " + getPrimaryController());
+        IO.println("Primary Task = " + getPrimaryTask());
         if (getAbilities().hasAbilities(Abilities.MAGIC)) {
             IO.println("Hit Points = " + hit_points);
             IO.println("Magic Energy 0 = " + magic_energy[0]);
             IO.println("Magic Energy 1 = " + magic_energy[1]);
-            IO.println("Controller = " + getPrimaryController());
+            IO.println("Task = " + getPrimaryTask());
         }
     }
 
@@ -757,15 +749,7 @@ public class Unit extends Selectable<UnitTemplate> implements Occupant, Movable 
 
     public final void doMagic(int magic_index, boolean clear_stack) {
         if (canDoMagic(magic_index)) {
-            if (clear_stack)
-                clearControllerStack();
-            var ctlr = new MagicController(this, getOwner().getRace().getMagicFactory(magic_index));
-            getControllerStack().add(ctlr);
-            if (getCurrentBehaviour() instanceof StunBehaviour) {
-                setShouldDecide(true);
-            } else {
-                forceDecide();
-            }
+            controller.cast(getOwner().getRace().getMagicFactory(magic_index), clear_stack);
             Arrays.fill(magic_energy, 0f);
             last_magic_index = magic_index;
 

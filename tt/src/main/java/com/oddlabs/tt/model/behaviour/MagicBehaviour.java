@@ -15,19 +15,21 @@ public final class MagicBehaviour implements Behaviour {
 
     private final @NonNull Unit unit;
     private final @NonNull MagicFactory magic_factory;
-    private final @NonNull MagicController controller;
     private @Nullable Magic magic;
 
     private float anim_time;
     private @NonNull MagicState state = MagicState.PREPARING;
 
-    public MagicBehaviour(@NonNull Unit unit, @NonNull MagicFactory magic_factory,
-            @NonNull MagicController controller) {
+    public MagicBehaviour(@NonNull Unit unit, @NonNull MagicFactory magic_factory) {
         this.unit = unit;
         this.magic_factory = magic_factory;
-        this.controller = controller;
         anim_time = magic_factory.getSecondsPerInit();
         unit.switchAnimation(1f / magic_factory.getSecondsPerAnim(), Unit.Animation.MAGIC);
+    }
+
+    @Override
+    public @NonNull State initialState() {
+        return State.UNINTERRUPTIBLE;
     }
 
     @Override
@@ -58,10 +60,8 @@ public final class MagicBehaviour implements Behaviour {
             case ENDING -> {
                 if (anim_time > 0)
                     yield State.UNINTERRUPTIBLE;
-                else {
-                    controller.popNextTime();
+                else
                     yield State.DONE;
-                }
             }
         };
     }

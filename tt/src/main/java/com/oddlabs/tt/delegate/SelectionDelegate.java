@@ -29,7 +29,7 @@ import com.oddlabs.tt.model.Selectable;
 import com.oddlabs.tt.model.Ship;
 import com.oddlabs.tt.model.Unit;
 import com.oddlabs.tt.model.UnitTemplate;
-import com.oddlabs.tt.model.behaviour.IdleController;
+import com.oddlabs.tt.model.behaviour.Posture;
 import com.oddlabs.tt.render.CompassRenderer;
 import com.oddlabs.tt.render.GUIRenderer;
 import com.oddlabs.tt.render.Renderer;
@@ -404,7 +404,7 @@ public final class SelectionDelegate extends ControllableCameraDelegate {
             if (s.getOwner() != getViewer().getLocalPlayer())
                 continue;
             Abilities abilities = s.getAbilities();
-            if ((abilities.hasAbilities(Abilities.BUILD)) && (s.getPrimaryController() instanceof IdleController)) {
+            if ((abilities.hasAbilities(Abilities.BUILD)) && (s.getPrimaryTask() instanceof Posture.Idle)) {
                 int name = getViewer().getDistributableTable().getName(s);
                 if (name < lowest_name) {
                     has_idle_peon = true;

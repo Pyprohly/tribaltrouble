@@ -21,7 +21,7 @@ public final class SailBehaviour implements Behaviour {
     private ShipTrajectory trajectory = null;
 
     private boolean blocked = false;
-    private boolean stuck = false;
+    private @NonNull Event outcome = Event.COMPLETED;
 
     public SailBehaviour(Ship ship, Target t) {
         this.ship = ship;
@@ -41,10 +41,6 @@ public final class SailBehaviour implements Behaviour {
 
     public final boolean isBlocking() {
         return blocked;
-    }
-
-    public final boolean isStuck() {
-        return stuck;
     }
 
     public final ShipTrajectory getTrajectory() {
@@ -75,8 +71,8 @@ public final class SailBehaviour implements Behaviour {
         ship.setLayer(UnitGrid.SEA);
 
         if (trajectory == null || !trajectory.exists()) {
-            ship.endTrip();
-            return State.INTERRUPTIBLE;
+            outcome = Event.NO_ROUTE;
+            return State.DONE;
         }
 
         int rowers = ship.getShipHR().countRowers() + 1;
@@ -87,7 +83,6 @@ public final class SailBehaviour implements Behaviour {
         }
 
         if (trajectory.reachedGoal()) {
-            ship.endTrip();
             return State.DONE;
         }
 
@@ -100,15 +95,14 @@ public final class SailBehaviour implements Behaviour {
                 // If it's an enemy ship, stand your ground and fight! Do not escape!
                 // Otherwise if it's one of your own or an ally, let it pass.
                 if (blockingShip.getOwner().getPlayerInfo().getTeam() == ship.getOwner().getPlayerInfo().getTeam()) {
-                    stuck = true;
-                    ship.reportStuck();
+                    outcome = Event.BLOCKED;
+                    return State.DONE;
                 }
                 return State.INTERRUPTIBLE;
             }
             if (ShipTrajectory.checkLandCollision(grid, fromPoint, next_pose)) {
-                stuck = true;
-                ship.reportStuck();
-                return State.INTERRUPTIBLE;
+                outcome = Event.BLOCKED;
+                return State.DONE;
             }
         }
 
@@ -120,6 +114,11 @@ public final class SailBehaviour implements Behaviour {
         ship.occupy();
 
         return State.UNINTERRUPTIBLE;
+    }
+
+    @Override
+    public @NonNull Event outcome() {
+        return outcome;
     }
 
     public final void forceInterrupted() {

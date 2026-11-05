@@ -29,6 +29,11 @@ public final class DieBehaviour implements Behaviour {
     }
 
     @Override
+    public @NonNull State initialState() {
+        return State.UNINTERRUPTIBLE;
+    }
+
+    @Override
     public @NonNull State animate(float t) {
         anim_time -= t;
         offset_z -= dz * t;
