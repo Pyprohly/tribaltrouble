@@ -12,6 +12,17 @@ section when a release is cut.
 
 ## [Unreleased]
 
+### Changed
+
+- Units that are stunned, or that cast a spell while carrying out an order, now carry on with the order afterwards instead of stopping.
+- A tower told to attack a new target switches to it for good instead of returning to its earlier target afterwards.
+- A unit stunned again while it is still stunned stays stunned for the new duration, instead of for both stuns one after the other.
+- Engine: units and ships decide what to do through explicit task states instead of a stack of controllers.
+
+### Fixed
+
+- Gatherers whose building was destroyed now take what they carry to another store instead of giving up.
+
 ## [2.2.207] - 2026-10-31
 
 ### Added
