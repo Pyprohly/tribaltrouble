@@ -18,17 +18,17 @@ public final class ShipAttackBehaviour implements Behaviour {
     private final Unit unit;
     private final Ship ship;
     private final ShipAllocation allocation;
-    private final AttackScanFilter scan_filter;
+    private final AttackScanFilter scanFilter;
     private boolean boarded = false;
     private float boarding_time = 0.0f;
-    private float scan_delay;
+    private float scanDelay;
     private @Nullable Selectable<?> spotted;
 
     public ShipAttackBehaviour(Unit unit, Ship ship, ShipAllocation allocation) {
         this.unit = unit;
         this.ship = ship;
         this.allocation = allocation;
-        this.scan_filter = new AttackScanFilter(unit.getOwner(), SCAN_RANGE);
+        this.scanFilter = new AttackScanFilter(unit.getOwner(), SCAN_RANGE);
     }
 
     @Override
@@ -47,13 +47,13 @@ public final class ShipAttackBehaviour implements Behaviour {
         }
         unit.switchToIdleAnimation();
         allocation.updateFinal(unit, ship);
-        scan_delay -= t;
-        if (scan_delay > 0)
+        scanDelay -= t;
+        if (scanDelay > 0)
             return State.INTERRUPTIBLE;
-        scan_delay = MIN_SCAN_DELAY + unit.getOwner().getWorld().getRandom().nextFloat() * (MAX_SCAN_DELAY - MIN_SCAN_DELAY);
+        scanDelay = MIN_SCAN_DELAY + unit.getOwner().getWorld().getRandom().nextFloat() * (MAX_SCAN_DELAY - MIN_SCAN_DELAY);
         if (unit.getAbilities().hasAbilities(Abilities.ATTACK))
-            unit.scanVicinity(scan_filter);
-        spotted = scan_filter.removeTarget();
+            unit.scanVicinity(scanFilter);
+        spotted = scanFilter.removeTarget();
         return spotted != null ? State.DONE : State.INTERRUPTIBLE;
     }
 

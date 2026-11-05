@@ -12,26 +12,26 @@ public final class IdleBehaviour implements Behaviour {
     private static final float MAX_SCAN_DELAY = 2f;
 
     private final @NonNull Unit unit;
-    private final @NonNull AttackScanFilter scan_filter;
-    private float scan_delay;
+    private final @NonNull AttackScanFilter scanFilter;
+    private float scanDelay;
     private @Nullable Selectable<?> spotted;
 
-    public IdleBehaviour(@NonNull Unit unit, boolean can_move) {
+    public IdleBehaviour(@NonNull Unit unit, boolean canMove) {
         this.unit = unit;
-        this.scan_filter = new AttackScanFilter(unit.getOwner(),
-                can_move ? AttackScanFilter.UNIT_RANGE : AttackScanFilter.TOWER_RANGE);
+        this.scanFilter = new AttackScanFilter(unit.getOwner(),
+                canMove ? AttackScanFilter.UNIT_RANGE : AttackScanFilter.TOWER_RANGE);
     }
 
     @Override
     public @NonNull State animate(float t) {
         unit.switchToIdleAnimation();
-        scan_delay -= t;
-        if (scan_delay > 0)
+        scanDelay -= t;
+        if (scanDelay > 0)
             return State.INTERRUPTIBLE;
-        scan_delay = MIN_SCAN_DELAY + unit.getOwner().getWorld().getRandom().nextFloat() * (MAX_SCAN_DELAY - MIN_SCAN_DELAY);
+        scanDelay = MIN_SCAN_DELAY + unit.getOwner().getWorld().getRandom().nextFloat() * (MAX_SCAN_DELAY - MIN_SCAN_DELAY);
         if (unit.getAbilities().hasAbilities(Abilities.ATTACK))
-            unit.scanVicinity(scan_filter);
-        spotted = scan_filter.removeTarget();
+            unit.scanVicinity(scanFilter);
+        spotted = scanFilter.removeTarget();
         return spotted != null ? State.DONE : State.INTERRUPTIBLE;
     }
 
