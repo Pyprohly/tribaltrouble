@@ -1,4 +1,4 @@
-package com.oddlabs.tt.model.behaviour;
+package com.oddlabs.tt.model.task;
 
 import com.oddlabs.tt.model.Abilities;
 import com.oddlabs.tt.model.Selectable;

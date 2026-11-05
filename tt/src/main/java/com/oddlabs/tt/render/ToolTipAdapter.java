@@ -9,8 +9,8 @@ import com.oddlabs.tt.model.SceneryModel;
 import com.oddlabs.tt.model.Selectable;
 import com.oddlabs.tt.model.Supply;
 import com.oddlabs.tt.model.Unit;
-import com.oddlabs.tt.model.behaviour.Order;
-import com.oddlabs.tt.model.behaviour.Task;
+import com.oddlabs.tt.model.task.Order;
+import com.oddlabs.tt.model.task.Task;
 import com.oddlabs.tt.player.Player;
 import com.oddlabs.tt.gui.ToolTip;
 import org.jspecify.annotations.NonNull;
@@ -46,8 +46,8 @@ final class ToolTipAdapter implements ToolTip {
         assert !selectable.isDead();
         visitPlayer(tool_tip, selectable.getOwner());
         /*      if (Settings.getSettings().developer_mode) {
-        		if (getCurrentBehaviour() instanceof WalkBehaviour)
-        		((WalkBehaviour)getCurrentBehaviour()).appendToolTip(tool_tip);
+        		if (getCurrentActivity() instanceof WalkActivity)
+        		((WalkActivity)getCurrentActivity()).appendToolTip(tool_tip);
         		else*/
         //tool_tip.append(getPrimaryController().getClass().getName());
         //}
@@ -100,8 +100,8 @@ final class ToolTipAdapter implements ToolTip {
         } else if (unit.getOwner() == local_player && c instanceof Order.Gather gc) {
             tool_tip.append(GUIIcons.getIcons().getToolTipIcon(gc.supplyType()));
         }
-        /*      if (getCurrentBehaviour() instanceof WalkBehaviour)
-        		((WalkBehaviour)getCurrentBehaviour()).appendToolTip(tool_tip);*/
+        /*      if (getCurrentActivity() instanceof WalkActivity)
+        		((WalkActivity)getCurrentActivity()).appendToolTip(tool_tip);*/
 
     }
 }

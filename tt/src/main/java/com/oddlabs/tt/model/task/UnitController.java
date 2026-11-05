@@ -1,4 +1,4 @@
-package com.oddlabs.tt.model.behaviour;
+package com.oddlabs.tt.model.task;
 
 import com.oddlabs.tt.model.Abilities;
 import com.oddlabs.tt.model.Building;
@@ -24,11 +24,11 @@ import java.util.List;
 
 /**
  * Runs a unit's tasks. Inputs change the {@link UnitState}; {@link UnitReducer} decides what the
- * current task does; this class turns the answer into a behaviour or a world change.
+ * current task does; this class turns the answer into an activity or a world change.
  *
- * <p>One rule governs when a behaviour is replaced: a decision is taken as soon as the running
- * behaviour is interruptible, and waits for that otherwise. Urgent inputs (stuns, spells, death,
- * mounting) cancel the running behaviour and decide at once. A posture's behaviour is never
+ * <p>One rule governs when an activity is replaced: a decision is taken as soon as the running
+ * activity is interruptible, and waits for that otherwise. Urgent inputs (stuns, spells, death,
+ * mounting) cancel the running activity and decide at once. A posture's activity is never
  * cancelled while the posture lasts: it is parked under the order or interruption above it and
  * resumed afterwards, keeping its timers and boarding progress.
  */
@@ -38,13 +38,13 @@ public final class UnitController implements Controller {
     private final UnitView view;
     private UnitState state = new UnitState(new Posture.Idle(true));
 
-    private @Nullable Behaviour running;
-    /** The task the running behaviour was started for. */
+    private @Nullable Activity running;
+    /** The task the running activity was started for. */
     private @Nullable Task runningTask;
-    private Behaviour.State progress = Behaviour.State.INTERRUPTIBLE;
+    private Activity.State progress = Activity.State.INTERRUPTIBLE;
     private boolean pending;
 
-    private @Nullable Behaviour parked;
+    private @Nullable Activity parked;
     private @Nullable Posture parkedPosture;
 
     /** Counts inputs, so a decision can tell that an operation it performed changed the task under it. */
@@ -70,7 +70,7 @@ public final class UnitController implements Controller {
     }
 
     @Override
-    public @Nullable Behaviour getBehaviour() {
+    public @Nullable Activity getActivity() {
         return running;
     }
 
@@ -134,7 +134,7 @@ public final class UnitController implements Controller {
         if (!currentChanged) {
             return;
         }
-        if (running == null || progress != Behaviour.State.UNINTERRUPTIBLE) {
+        if (running == null || progress != Activity.State.UNINTERRUPTIBLE) {
             decide(Event.BEGIN);
         } else {
             pending = true;
@@ -143,23 +143,23 @@ public final class UnitController implements Controller {
 
     @Override
     public void animate(float t) {
-        Behaviour behaviour = running;
-        if (behaviour == null) {
+        Activity activity = running;
+        if (activity == null) {
             return;
         }
-        Behaviour.State result = behaviour.animate(t);
-        if (running != behaviour) {
+        Activity.State result = activity.animate(t);
+        if (running != activity) {
             return;
         }
         progress = result;
-        if (result == Behaviour.State.DONE) {
-            Event outcome = state.current() == runningTask ? behaviour.outcome() : Event.BEGIN;
+        if (result == Activity.State.DONE) {
+            Event outcome = state.current() == runningTask ? activity.outcome() : Event.BEGIN;
             running = null;
             if (runningTask instanceof Posture posture && posture == state.posture()) {
-                park(behaviour, posture);
+                park(activity, posture);
             }
             decide(outcome);
-        } else if (result == Behaviour.State.INTERRUPTIBLE && pending) {
+        } else if (result == Activity.State.INTERRUPTIBLE && pending) {
             decide(Event.BEGIN);
         }
     }
@@ -170,8 +170,8 @@ public final class UnitController implements Controller {
             UnitReducer.Decision decision = UnitReducer.decide(state, event, view);
             state = decision.state();
             switch (decision.plan()) {
-                case UnitPlan.Activity activity -> {
-                    start(activity);
+                case UnitPlan.Run run -> {
+                    start(run);
                     return;
                 }
                 case UnitPlan.Operation operation -> {
@@ -188,60 +188,60 @@ public final class UnitController implements Controller {
         }
     }
 
-    private void start(UnitPlan.Activity activity) {
+    private void start(UnitPlan.Run run) {
         Task task = state.current();
         stop();
-        Behaviour next = null;
+        Activity next = null;
         if (parkedPosture != state.posture() || task == parkedPosture) {
             next = task == parkedPosture ? parked : null;
             parked = null;
             parkedPosture = null;
         }
         if (next == null) {
-            next = create(activity);
+            next = create(run);
         }
         running = next;
         runningTask = task;
         progress = next.initialState();
     }
 
-    /** Stops the running behaviour, parking it if it belongs to the posture. */
+    /** Stops the running activity, parking it if it belongs to the posture. */
     private void stop() {
-        Behaviour behaviour = running;
-        if (behaviour == null) {
+        Activity activity = running;
+        if (activity == null) {
             return;
         }
         running = null;
         if (runningTask instanceof Posture posture && posture == state.posture()) {
-            park(behaviour, posture);
+            park(activity, posture);
         } else {
-            behaviour.forceInterrupted();
+            activity.cancel();
         }
     }
 
-    private void park(Behaviour behaviour, Posture posture) {
-        parked = behaviour;
+    private void park(Activity activity, Posture posture) {
+        parked = activity;
         parkedPosture = posture;
     }
 
-    private Behaviour create(UnitPlan.Activity activity) {
-        return switch (activity) {
-            case UnitPlan.Watch watch -> new IdleBehaviour(unit, watch.canMove());
-            case UnitPlan.Fight fight -> new ShipAttackBehaviour(unit, fight.ship(), fight.allocation());
-            case UnitPlan.Sit sit -> new SittingBehaviour(unit, sit.ship(), sit.allocation());
-            case UnitPlan.Walk walk -> new WalkBehaviour(unit, walk.target(), walk.range(), walk.aggressive());
-            case UnitPlan.FindSupply find -> new WalkBehaviour(unit, new FinderTrackerAlgorithm<>(unit.getUnitGrid(),
+    private Activity create(UnitPlan.Run run) {
+        return switch (run) {
+            case UnitPlan.Watch watch -> new IdleActivity(unit, watch.canMove());
+            case UnitPlan.Fight fight -> new ShipAttackActivity(unit, fight.ship(), fight.allocation());
+            case UnitPlan.Sit sit -> new SittingActivity(unit, sit.ship(), sit.allocation());
+            case UnitPlan.Walk walk -> new WalkActivity(unit, walk.target(), walk.range(), walk.aggressive());
+            case UnitPlan.FindSupply find -> new WalkActivity(unit, new FinderTrackerAlgorithm<>(unit.getUnitGrid(),
                     supplyFinder(find.supplyType())), false);
-            case UnitPlan.FindStore ignored -> new WalkBehaviour(unit, new FinderTrackerAlgorithm<>(unit.getUnitGrid(),
+            case UnitPlan.FindStore ignored -> new WalkActivity(unit, new FinderTrackerAlgorithm<>(unit.getUnitGrid(),
                     new BuildingFinder(unit.getOwner(), Abilities.SUPPLY_CONTAINER)), false);
-            case UnitPlan.Attack attack -> attack.ship() != null && attack.allocation() != null ? new AttackBehaviour(
-                    unit, attack.target(), attack.allocation(), attack.ship()) : new AttackBehaviour(unit,
+            case UnitPlan.Attack attack -> attack.ship() != null && attack.allocation() != null ? new AttackActivity(
+                    unit, attack.target(), attack.allocation(), attack.ship()) : new AttackActivity(unit,
                             attack.target());
-            case UnitPlan.Harvest harvest -> new HarvestBehaviour(unit, harvest.supply());
-            case UnitPlan.Repair repair -> new RepairBehaviour(unit, repair.building());
-            case UnitPlan.Cast cast -> new MagicBehaviour(unit, cast.factory());
-            case UnitPlan.Stun stun -> new StunBehaviour(unit, stun.seconds());
-            case UnitPlan.Die ignored -> new DieBehaviour(unit);
+            case UnitPlan.Harvest harvest -> new HarvestActivity(unit, harvest.supply());
+            case UnitPlan.Repair repair -> new RepairActivity(unit, repair.building());
+            case UnitPlan.Cast cast -> new MagicActivity(unit, cast.factory());
+            case UnitPlan.Stun stun -> new StunActivity(unit, stun.seconds());
+            case UnitPlan.Die ignored -> new DieActivity(unit);
         };
     }
 

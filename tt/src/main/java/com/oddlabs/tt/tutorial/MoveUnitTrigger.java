@@ -1,7 +1,7 @@
 package com.oddlabs.tt.tutorial;
 
 import com.oddlabs.tt.form.TutorialForm;
-import com.oddlabs.tt.model.behaviour.Order;
+import com.oddlabs.tt.model.task.Order;
 import com.oddlabs.tt.player.Player;
 import org.jspecify.annotations.NonNull;
 

@@ -1,8 +1,8 @@
-package com.oddlabs.tt.model.behaviour;
+package com.oddlabs.tt.model.task;
 
 import org.jspecify.annotations.NonNull;
 
-public final class NullBehaviour implements Behaviour {
+public final class NullActivity implements Activity {
     @Override
     public @NonNull State animate(float t) {
         return State.INTERRUPTIBLE;
@@ -14,6 +14,6 @@ public final class NullBehaviour implements Behaviour {
     }
 
     @Override
-    public void forceInterrupted() {
+    public void cancel() {
     }
 }

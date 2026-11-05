@@ -1,11 +1,11 @@
-package com.oddlabs.tt.model.behaviour;
+package com.oddlabs.tt.model.task;
 
 import com.oddlabs.tt.model.Ship;
 import com.oddlabs.tt.model.ShipAllocation;
 import com.oddlabs.tt.model.Unit;
 import org.jspecify.annotations.NonNull;
 
-public final class SittingBehaviour implements Behaviour {
+public final class SittingActivity implements Activity {
     private final Unit unit;
     private final Ship ship;
     private final ShipAllocation allocation;
@@ -13,7 +13,7 @@ public final class SittingBehaviour implements Behaviour {
     private float boarding_time = 0.0f;
     private final static float TOTAL_BOARDING_TIME = 1.0f;
 
-    public SittingBehaviour(Unit unit, Ship ship, ShipAllocation allocation) {
+    public SittingActivity(Unit unit, Ship ship, ShipAllocation allocation) {
         this.unit = unit;
         this.ship = ship;
         this.allocation = allocation;
@@ -64,6 +64,6 @@ public final class SittingBehaviour implements Behaviour {
         return false;
     }
 
-    public final void forceInterrupted() {
+    public final void cancel() {
     }
 }

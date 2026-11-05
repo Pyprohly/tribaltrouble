@@ -1,4 +1,4 @@
-package com.oddlabs.tt.model.behaviour;
+package com.oddlabs.tt.model.task;
 
 import com.oddlabs.tt.model.Abilities;
 import com.oddlabs.tt.model.AttackScanFilter;
@@ -9,7 +9,7 @@ import com.oddlabs.tt.model.Unit;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
-public final class ShipAttackBehaviour implements Behaviour {
+public final class ShipAttackActivity implements Activity {
     private static final float MIN_SCAN_DELAY = 0.1f;
     private static final float MAX_SCAN_DELAY = 0.2f;
     private static final int SCAN_RANGE = AttackScanFilter.TOWER_RANGE + 10;
@@ -24,7 +24,7 @@ public final class ShipAttackBehaviour implements Behaviour {
     private float scanDelay;
     private @Nullable Selectable<?> spotted;
 
-    public ShipAttackBehaviour(Unit unit, Ship ship, ShipAllocation allocation) {
+    public ShipAttackActivity(Unit unit, Ship ship, ShipAllocation allocation) {
         this.unit = unit;
         this.ship = ship;
         this.allocation = allocation;
@@ -68,6 +68,6 @@ public final class ShipAttackBehaviour implements Behaviour {
         return true;
     }
 
-    public final void forceInterrupted() {
+    public final void cancel() {
     }
 }

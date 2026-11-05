@@ -1,4 +1,4 @@
-package com.oddlabs.tt.model.behaviour;
+package com.oddlabs.tt.model.task;
 
 import com.oddlabs.tt.model.Selectable;
 import com.oddlabs.tt.pathfinder.Occupant;
@@ -18,7 +18,7 @@ public sealed interface Event {
     record Begin() implements Event {
     }
 
-    /** The behaviour the task started has finished. */
+    /** The activity the task started has finished. */
     record Completed() implements Event {
     }
 

@@ -4,7 +4,7 @@ import com.oddlabs.tt.model.Abilities;
 import com.oddlabs.tt.model.Building;
 import com.oddlabs.tt.model.Selectable;
 import com.oddlabs.tt.model.Supply;
-import com.oddlabs.tt.model.behaviour.Task;
+import com.oddlabs.tt.model.task.Task;
 import com.oddlabs.tt.player.Player;
 import com.oddlabs.tt.trigger.IntervalTrigger;
 import org.jspecify.annotations.NonNull;

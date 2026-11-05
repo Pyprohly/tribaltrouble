@@ -1,4 +1,4 @@
-package com.oddlabs.tt.model.behaviour;
+package com.oddlabs.tt.model.task;
 
 import com.oddlabs.tt.model.Abilities;
 import com.oddlabs.tt.model.AttackScanFilter;
@@ -7,7 +7,7 @@ import com.oddlabs.tt.model.Unit;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
-public final class IdleBehaviour implements Behaviour {
+public final class IdleActivity implements Activity {
     private static final float MIN_SCAN_DELAY = 1f;
     private static final float MAX_SCAN_DELAY = 2f;
 
@@ -16,7 +16,7 @@ public final class IdleBehaviour implements Behaviour {
     private float scanDelay;
     private @Nullable Selectable<?> spotted;
 
-    public IdleBehaviour(@NonNull Unit unit, boolean canMove) {
+    public IdleActivity(@NonNull Unit unit, boolean canMove) {
         this.unit = unit;
         this.scanFilter = new AttackScanFilter(unit.getOwner(),
                 canMove ? AttackScanFilter.UNIT_RANGE : AttackScanFilter.TOWER_RANGE);
@@ -48,6 +48,6 @@ public final class IdleBehaviour implements Behaviour {
     }
 
     @Override
-    public void forceInterrupted() {
+    public void cancel() {
     }
 }

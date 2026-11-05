@@ -1,4 +1,4 @@
-package com.oddlabs.tt.model.behaviour;
+package com.oddlabs.tt.model.task;
 
 import com.oddlabs.tt.landscape.LandscapeTarget;
 import com.oddlabs.tt.landscape.TreeSupply;
@@ -32,7 +32,7 @@ public final class UnitReducer {
     }
 
     /** What a nested harvest does next, or that it is done. */
-    private record HarvestStep(Order.@Nullable Harvest harvest, UnitPlan.@Nullable Activity activity) {
+    private record HarvestStep(Order.@Nullable Harvest harvest, UnitPlan.@Nullable Run run) {
         static final HarvestStep DONE = new HarvestStep(null, null);
     }
 
@@ -162,8 +162,8 @@ public final class UnitReducer {
         Order.Harvest harvesting = gather.harvesting();
         if (harvesting != null) {
             HarvestStep step = harvest(harvesting, event, view);
-            if (step.harvest() != null && step.activity() != null) {
-                return run(withHarvesting(gather, step.harvest()), step.activity());
+            if (step.harvest() != null && step.run() != null) {
+                return run(withHarvesting(gather, step.harvest()), step.run());
             }
             gather = withHarvesting(gather, null);
         } else if (event instanceof Event.Found found) {
@@ -265,10 +265,10 @@ public final class UnitReducer {
         Order.Harvest harvesting = repair.harvesting();
         if (harvesting != null) {
             HarvestStep step = harvest(harvesting, event, view);
-            if (step.harvest() != null && step.activity() != null) {
+            if (step.harvest() != null && step.run() != null) {
                 return run(new Order.Repair(building, step.harvest(), repair.harvestAttempts(),
                         repair.repairAttempts()),
-                        step.activity());
+                        step.run());
             }
             repair = new Order.Repair(building, null, repair.harvestAttempts(), repair.repairAttempts());
         }

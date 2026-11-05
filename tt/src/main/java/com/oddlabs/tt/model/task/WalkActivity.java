@@ -1,4 +1,4 @@
-package com.oddlabs.tt.model.behaviour;
+package com.oddlabs.tt.model.task;
 
 import com.oddlabs.tt.gui.ToolTipBox;
 import com.oddlabs.tt.model.AttackScanFilter;
@@ -14,7 +14,7 @@ import com.oddlabs.tt.util.Target;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
-public final class WalkBehaviour implements Behaviour {
+public final class WalkActivity implements Activity {
     private static final float WAIT_RETRY_DELAY = 1f / 2f;
     private static final float MAX_WAIT_RETRY_DELAY = 5f;
 
@@ -32,7 +32,7 @@ public final class WalkBehaviour implements Behaviour {
     private PathTracker.State state;
     private @Nullable Selectable<?> spotted;
 
-    public WalkBehaviour(@NonNull Unit unit, @NonNull TrackerAlgorithm tracker_algorithm, boolean scan_attack) {
+    public WalkActivity(@NonNull Unit unit, @NonNull TrackerAlgorithm tracker_algorithm, boolean scan_attack) {
         this.unit = unit;
         this.tracker_algorithm = tracker_algorithm;
         this.scan_attack = scan_attack;
@@ -41,7 +41,7 @@ public final class WalkBehaviour implements Behaviour {
         unit.getTracker().setTarget(tracker_algorithm);
     }
 
-    public WalkBehaviour(@NonNull Unit unit, @NonNull Target t, float range, boolean scan_attack) {
+    public WalkActivity(@NonNull Unit unit, @NonNull Target t, float range, boolean scan_attack) {
         this(unit, new TargetTrackerAlgorithm(unit.getUnitGrid(), range, t), scan_attack);
     }
 
@@ -51,7 +51,7 @@ public final class WalkBehaviour implements Behaviour {
     }
 
     public void appendToolTip(@NonNull ToolTipBox tool_tip_box) {
-        tool_tip_box.append("WalkBehaviour: state=");
+        tool_tip_box.append("WalkActivity: state=");
         tool_tip_box.append(state.toString());
         tool_tip_box.append(" | retry_delay=");
         tool_tip_box.append((long) retry_delay);
@@ -136,6 +136,6 @@ public final class WalkBehaviour implements Behaviour {
     }
 
     @Override
-    public void forceInterrupted() {
+    public void cancel() {
     }
 }

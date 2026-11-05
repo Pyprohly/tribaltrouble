@@ -1,4 +1,4 @@
-package com.oddlabs.tt.model.behaviour;
+package com.oddlabs.tt.model.task;
 
 import com.oddlabs.tt.gui.ToolTipBox;
 import com.oddlabs.tt.model.Ship;
@@ -8,7 +8,7 @@ import com.oddlabs.tt.pathfinder.UnitGrid;
 import org.jspecify.annotations.NonNull;
 
 
-public final class ShipSlideBehaviour implements Behaviour {
+public final class ShipSlideActivity implements Activity {
     private final Ship ship;
     private boolean blocked = false;
     private ShipTrajectoryPoint curr;
@@ -16,7 +16,7 @@ public final class ShipSlideBehaviour implements Behaviour {
     private final UnitGrid grid;
     private final int grid_size;
 
-    public ShipSlideBehaviour(Ship ship) {
+    public ShipSlideActivity(Ship ship) {
         this.ship = ship;
         grid = ship.getUnitGrid();
         grid_size = grid.getGridSize();
@@ -25,7 +25,7 @@ public final class ShipSlideBehaviour implements Behaviour {
     }
 
     public void appendToolTip(ToolTipBox tool_tip_box) {
-        tool_tip_box.append("ShipSlideBehaviour: ");
+        tool_tip_box.append("ShipSlideActivity: ");
         if (blocked) {
             tool_tip_box.append("BLOCKED");
         } else {
@@ -73,6 +73,6 @@ public final class ShipSlideBehaviour implements Behaviour {
         return blocked;
     }
 
-    public final void forceInterrupted() {
+    public final void cancel() {
     }
 }

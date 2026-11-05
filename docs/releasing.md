@@ -113,7 +113,7 @@ When you bump `MAJOR.MINOR` (say `2.0` → `2.1`), that bump commit becomes the 
 
 ### Bumping SIM_VERSION
 
-No CI guard is practical for sim compatibility; it is a review judgment. Rule of thumb: any change under `model/`, `pathfinder/`, `behaviour/`, or landscape/procedural generation that alters how game state evolves needs a `SIM_VERSION` bump. A bump needs no server deploy and locks nobody out; clients on different sim versions simply stop seeing each other's games. The number is a global claim of compatibility: every build that ships a given sim version promises bit-identical simulation with every other build shipping it, so concurrent feature betas must each take their own value.
+No CI guard is practical for sim compatibility; it is a review judgment. Rule of thumb: any change under `model/`, `pathfinder/`, `model/task/`, or landscape/procedural generation that alters how game state evolves needs a `SIM_VERSION` bump. A bump needs no server deploy and locks nobody out; clients on different sim versions simply stop seeing each other's games. The number is a global claim of compatibility: every build that ships a given sim version promises bit-identical simulation with every other build shipping it, so concurrent feature betas must each take their own value.
 
 Sim versions are client-reported and unauthenticated. This is a coordination fence for honest clients, not a security boundary; a modified client that lies ends up in desynced (invalid) games, which is a moderation problem, not a protocol one.
 

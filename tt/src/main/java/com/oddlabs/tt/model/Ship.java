@@ -5,9 +5,9 @@ import com.oddlabs.tt.audio.AudioPlayer;
 import com.oddlabs.tt.landscape.HeightMap;
 import com.oddlabs.tt.landscape.TreeSupply;
 import com.oddlabs.tt.landscape.World;
-import com.oddlabs.tt.model.behaviour.Order;
-import com.oddlabs.tt.model.behaviour.SailBehaviour;
-import com.oddlabs.tt.model.behaviour.ShipController;
+import com.oddlabs.tt.model.task.Order;
+import com.oddlabs.tt.model.task.SailActivity;
+import com.oddlabs.tt.model.task.ShipController;
 import com.oddlabs.tt.model.weapon.IronAxeWeapon;
 import com.oddlabs.tt.model.weapon.IronSpearWeapon;
 import com.oddlabs.tt.model.weapon.RockAxeWeapon;
@@ -1038,7 +1038,7 @@ public class Ship extends Building implements Movable {
     }
 
     public final void debugRender() {
-        if (getCurrentBehaviour() instanceof SailBehaviour sail) {
+        if (getCurrentActivity() instanceof SailActivity sail) {
             var traj = sail.getTrajectory();
             if (traj != null) {
                 traj.debugRender(getUnitGrid().getHeightMap());

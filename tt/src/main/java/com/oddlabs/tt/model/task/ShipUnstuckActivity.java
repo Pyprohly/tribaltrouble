@@ -1,4 +1,4 @@
-package com.oddlabs.tt.model.behaviour;
+package com.oddlabs.tt.model.task;
 
 import com.oddlabs.tt.gui.ToolTipBox;
 import com.oddlabs.tt.model.Ship;
@@ -8,7 +8,7 @@ import com.oddlabs.tt.pathfinder.UnitGrid;
 import com.oddlabs.tt.landscape.LandscapeTarget;
 import org.jspecify.annotations.NonNull;
 
-public final class ShipUnstuckBehaviour implements Behaviour {
+public final class ShipUnstuckActivity implements Activity {
     private static final float SHIP_SPEED = 0.45f;
     private ShipTrajectoryPoint next_pose = null;
 
@@ -18,7 +18,7 @@ public final class ShipUnstuckBehaviour implements Behaviour {
 
     private @NonNull Event outcome = Event.COMPLETED;
 
-    public ShipUnstuckBehaviour(Ship ship) {
+    public ShipUnstuckActivity(Ship ship) {
         this.ship = ship;
         var grid = ship.getUnitGrid();
         ShipTrajectoryPoint p0 = new ShipTrajectoryPoint(ship);
@@ -50,7 +50,7 @@ public final class ShipUnstuckBehaviour implements Behaviour {
     }
 
     public void appendToolTip(ToolTipBox tool_tip_box) {
-        tool_tip_box.append("ShipUnstuckBehaviour");
+        tool_tip_box.append("ShipUnstuckActivity");
     }
 
     @Override
@@ -106,6 +106,6 @@ public final class ShipUnstuckBehaviour implements Behaviour {
         return outcome;
     }
 
-    public final void forceInterrupted() {
+    public final void cancel() {
     }
 }

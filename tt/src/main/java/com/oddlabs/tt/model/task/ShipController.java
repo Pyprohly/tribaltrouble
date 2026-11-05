@@ -1,4 +1,4 @@
-package com.oddlabs.tt.model.behaviour;
+package com.oddlabs.tt.model.task;
 
 import com.oddlabs.tt.model.Ship;
 import com.oddlabs.tt.util.Target;
@@ -13,7 +13,7 @@ import org.jspecify.annotations.Nullable;
 public final class ShipController implements Controller {
     private final Ship ship;
     private Task state = new Task.Inert();
-    private @Nullable Behaviour running;
+    private @Nullable Activity running;
 
     public ShipController(Ship ship) {
         this.ship = ship;
@@ -42,29 +42,29 @@ public final class ShipController implements Controller {
     }
 
     @Override
-    public @Nullable Behaviour getBehaviour() {
+    public @Nullable Activity getActivity() {
         return running;
     }
 
     private void change(Task next) {
         state = next;
-        Behaviour behaviour = running;
+        Activity activity = running;
         running = null;
-        if (behaviour != null) {
-            behaviour.forceInterrupted();
+        if (activity != null) {
+            activity.cancel();
         }
         decide(Event.BEGIN);
     }
 
     @Override
     public void animate(float t) {
-        Behaviour behaviour = running;
-        if (behaviour == null) {
+        Activity activity = running;
+        if (activity == null) {
             return;
         }
-        if (behaviour.animate(t) == Behaviour.State.DONE && running == behaviour) {
+        if (activity.animate(t) == Activity.State.DONE && running == activity) {
             running = null;
-            decide(behaviour.outcome());
+            decide(activity.outcome());
         }
     }
 
@@ -73,8 +73,8 @@ public final class ShipController implements Controller {
             ShipReducer.Decision decision = ShipReducer.decide(state, event, ship.slid());
             state = decision.state();
             switch (decision.plan()) {
-                case ShipReducer.Activity activity -> {
-                    running = create(activity);
+                case ShipReducer.Run run -> {
+                    running = create(run);
                     return;
                 }
                 case ShipReducer.Operation operation -> {
@@ -88,12 +88,12 @@ public final class ShipController implements Controller {
         }
     }
 
-    private Behaviour create(ShipReducer.Activity activity) {
-        return switch (activity) {
-            case ShipReducer.Moor ignored -> new NullBehaviour();
-            case ShipReducer.Slide ignored -> new ShipSlideBehaviour(ship);
-            case ShipReducer.Sail sail -> new SailBehaviour(ship, sail.target());
-            case ShipReducer.Unstuck ignored -> new ShipUnstuckBehaviour(ship);
+    private Activity create(ShipReducer.Run run) {
+        return switch (run) {
+            case ShipReducer.Moor ignored -> new NullActivity();
+            case ShipReducer.Slide ignored -> new ShipSlideActivity(ship);
+            case ShipReducer.Sail sail -> new SailActivity(ship, sail.target());
+            case ShipReducer.Unstuck ignored -> new ShipUnstuckActivity(ship);
         };
     }
 }

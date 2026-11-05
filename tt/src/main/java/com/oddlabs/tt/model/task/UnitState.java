@@ -1,4 +1,4 @@
-package com.oddlabs.tt.model.behaviour;
+package com.oddlabs.tt.model.task;
 
 import org.jspecify.annotations.NullMarked;
 import org.jspecify.annotations.Nullable;
@@ -25,7 +25,7 @@ public record UnitState(Posture posture, @Nullable Order order, List<Interruptio
         return interruptions.isEmpty() ? null : interruptions.getFirst();
     }
 
-    /** The task whose behaviour runs. */
+    /** The task whose activity runs. */
     public Task current() {
         Interruption interruption = interruption();
         if (interruption != null) {

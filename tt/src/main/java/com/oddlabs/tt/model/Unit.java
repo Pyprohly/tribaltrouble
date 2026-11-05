@@ -4,11 +4,11 @@ import com.oddlabs.geometry.AnimationInfo;
 import com.oddlabs.tt.audio.AudioParameters;
 import com.oddlabs.tt.audio.AudioPlayer;
 import com.oddlabs.tt.landscape.LandscapeTarget;
-import com.oddlabs.tt.model.behaviour.DieBehaviour;
-import com.oddlabs.tt.model.behaviour.Interruption;
-import com.oddlabs.tt.model.behaviour.Order;
-import com.oddlabs.tt.model.behaviour.UnitController;
-import com.oddlabs.tt.model.behaviour.WalkBehaviour;
+import com.oddlabs.tt.model.task.DieActivity;
+import com.oddlabs.tt.model.task.Interruption;
+import com.oddlabs.tt.model.task.Order;
+import com.oddlabs.tt.model.task.UnitController;
+import com.oddlabs.tt.model.task.WalkActivity;
 import com.oddlabs.tt.model.weapon.IronAxeWeapon;
 import com.oddlabs.tt.model.weapon.IronSpearWeapon;
 import com.oddlabs.tt.model.weapon.RockAxeWeapon;
@@ -507,12 +507,12 @@ public class Unit extends Selectable<UnitTemplate> implements Occupant, Movable 
 
     @Override
     public final boolean isMoving() {
-        return getCurrentBehaviour() instanceof WalkBehaviour;
+        return getCurrentActivity() instanceof WalkActivity;
     }
 
     /*	public final void moveNextAnimate() {
-    	WalkBehaviour behaviour = (WalkBehaviour)getCurrentBehaviour();
-    	behaviour.moveNextAnimate();
+    	WalkActivity activity = (WalkActivity)getCurrentActivity();
+    	activity.moveNextAnimate();
     }
      */
     @Override
@@ -808,8 +808,8 @@ public class Unit extends Selectable<UnitTemplate> implements Occupant, Movable 
             return mounted_building.getOffsetZ() + mount_offset;
         else {
             if (isDead()) {
-                DieBehaviour die_behaviour = (DieBehaviour) getCurrentBehaviour();
-                return die_behaviour.getOffsetZ();
+                DieActivity die_activity = (DieActivity) getCurrentActivity();
+                return die_activity.getOffsetZ();
             } else
                 return calculateSlopeOffset();
         }

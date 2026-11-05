@@ -1,4 +1,4 @@
-package com.oddlabs.tt.model.behaviour;
+package com.oddlabs.tt.model.task;
 
 import com.oddlabs.tt.model.Selectable;
 import com.oddlabs.tt.model.Building;
@@ -8,7 +8,7 @@ import com.oddlabs.tt.model.Unit;
 
 import org.jspecify.annotations.NonNull;
 
-public final class AttackBehaviour implements Behaviour {
+public final class AttackActivity implements Activity {
     private static final float SECONDS_PER_ATTACK = 2f;
 
     enum AttackState {
@@ -23,7 +23,7 @@ public final class AttackBehaviour implements Behaviour {
     private float anim_time;
     private @NonNull AttackState state = AttackState.THROWING;
 
-    public AttackBehaviour(@NonNull Unit unit, @NonNull Selectable<?> target) {
+    public AttackActivity(@NonNull Unit unit, @NonNull Selectable<?> target) {
         this.unit = unit;
         if (target instanceof Building t) {
             this.target = t.getBase();
@@ -36,7 +36,7 @@ public final class AttackBehaviour implements Behaviour {
         unit.switchAnimation(1f / SECONDS_PER_ATTACK, Unit.Animation.THROWING);
     }
 
-    public AttackBehaviour(@NonNull Unit unit, @NonNull Selectable target, ShipAllocation allocation, Ship ship) {
+    public AttackActivity(@NonNull Unit unit, @NonNull Selectable target, ShipAllocation allocation, Ship ship) {
         this.unit = unit;
         if (target instanceof Building t) {
             this.target = t.getBase();
@@ -94,6 +94,6 @@ public final class AttackBehaviour implements Behaviour {
     }
 
     @Override
-    public void forceInterrupted() {
+    public void cancel() {
     }
 }

@@ -1,12 +1,12 @@
-package com.oddlabs.tt.model.behaviour;
+package com.oddlabs.tt.model.task;
 
 import org.jspecify.annotations.NonNull;
 
 /**
- * The imperative half of a task: animation, movement and timing. A behaviour reports how far it got
+ * The imperative half of a task: animation, movement and timing. An activity reports how far it got
  * and, once done, what it found; what the selectable does next is decided elsewhere.
  */
-public interface Behaviour {
+public interface Activity {
     enum State {
         UNINTERRUPTIBLE,
         INTERRUPTIBLE,
@@ -17,19 +17,19 @@ public interface Behaviour {
     State animate(float t);
 
     /**
-     * The state the behaviour is in before its first frame, so a decision taken right after it
+     * The state the activity is in before its first frame, so a decision taken right after it
      * starts sees the same boundary as one taken a frame later.
      */
     default @NonNull State initialState() {
         return State.INTERRUPTIBLE;
     }
 
-    /** What the behaviour has to report, read once after {@link #animate} returned DONE. */
+    /** What the activity has to report, read once after {@link #animate} returned DONE. */
     default @NonNull Event outcome() {
         return Event.COMPLETED;
     }
 
     boolean isBlocking();
 
-    void forceInterrupted();
+    void cancel();
 }

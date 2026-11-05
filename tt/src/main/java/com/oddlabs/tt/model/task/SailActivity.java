@@ -1,4 +1,4 @@
-package com.oddlabs.tt.model.behaviour;
+package com.oddlabs.tt.model.task;
 
 import com.oddlabs.tt.gui.ToolTipBox;
 import com.oddlabs.tt.model.Ship;
@@ -8,7 +8,7 @@ import com.oddlabs.tt.pathfinder.UnitGrid;
 import com.oddlabs.tt.util.Target;
 import org.jspecify.annotations.NonNull;
 
-public final class SailBehaviour implements Behaviour {
+public final class SailActivity implements Activity {
     private static final float SHIP_SPEED = 0.45f;
     private ShipTrajectoryPoint next_pose = null;
 
@@ -23,7 +23,7 @@ public final class SailBehaviour implements Behaviour {
     private boolean blocked = false;
     private @NonNull Event outcome = Event.COMPLETED;
 
-    public SailBehaviour(Ship ship, Target t) {
+    public SailActivity(Ship ship, Target t) {
         this.ship = ship;
         this.target = t;
     }
@@ -48,7 +48,7 @@ public final class SailBehaviour implements Behaviour {
     }
 
     public void appendToolTip(ToolTipBox tool_tip_box) {
-        tool_tip_box.append("SailBehaviour: ");
+        tool_tip_box.append("SailActivity: ");
         if (blocked) {
             tool_tip_box.append("BLOCKED");
         } else {
@@ -121,6 +121,6 @@ public final class SailBehaviour implements Behaviour {
         return outcome;
     }
 
-    public final void forceInterrupted() {
+    public final void cancel() {
     }
 }

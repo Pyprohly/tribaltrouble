@@ -7,7 +7,7 @@ Read the root [AGENTS.md](../AGENTS.md) first. This is the game client. Entry po
 
 Everything here falls on one side of the determinism boundary described in the root file.
 
-**Simulation** (`model/`, `model/behaviour/`, `pathfinder/`, `landscape/`, `player/`,
+**Simulation** (`model/`, `model/task/`, `pathfinder/`, `landscape/`, `player/`,
 `trigger/`, `gamemode/`): runs identically on every client in a lockstep match and during
 `--eventload` replay. No wall-clock time, no unseeded randomness, no hash-order iteration,
 no branching on local settings or hardware. Time comes from `LocalEventQueue` and

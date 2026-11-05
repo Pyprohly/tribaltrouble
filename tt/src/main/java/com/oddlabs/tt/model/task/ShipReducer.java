@@ -1,4 +1,4 @@
-package com.oddlabs.tt.model.behaviour;
+package com.oddlabs.tt.model.task;
 
 import com.oddlabs.tt.util.Target;
 import org.jspecify.annotations.NullMarked;
@@ -12,8 +12,8 @@ public final class ShipReducer {
     public sealed interface ShipPlan {
     }
 
-    /** A behaviour to run until it finishes or the ship gets a new task. */
-    public sealed interface Activity extends ShipPlan {
+    /** An activity to run until it finishes or the ship gets a new task. */
+    public sealed interface Run extends ShipPlan {
     }
 
     /** A change to the world, after which the ship decides again with {@link Event#PERFORMED}. */
@@ -24,16 +24,16 @@ public final class ShipReducer {
         END_TRIP
     }
 
-    public record Moor() implements Activity {
+    public record Moor() implements Run {
     }
 
-    public record Slide() implements Activity {
+    public record Slide() implements Run {
     }
 
-    public record Sail(Target target) implements Activity {
+    public record Sail(Target target) implements Run {
     }
 
-    public record Unstuck() implements Activity {
+    public record Unstuck() implements Run {
     }
 
     public record Decision(Task state, ShipPlan plan) {

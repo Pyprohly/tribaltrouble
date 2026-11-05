@@ -1,7 +1,7 @@
 package com.oddlabs.tt.model;
 
-import com.oddlabs.tt.model.behaviour.Controller;
-import com.oddlabs.tt.model.behaviour.InertController;
+import com.oddlabs.tt.model.task.Controller;
+import com.oddlabs.tt.model.task.InertController;
 import com.oddlabs.tt.pathfinder.Occupant;
 import com.oddlabs.tt.pathfinder.Region;
 import com.oddlabs.tt.pathfinder.UnitGrid;

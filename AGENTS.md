@@ -164,7 +164,7 @@ only commands travel over the network. The same property makes `event.log` repla
 [docs/event-logs.md](docs/event-logs.md)). Any divergence between clients is a desync that
 ends the game for everyone in it.
 
-Simulation code is `tt/src/main/java/com/oddlabs/tt/` under `model/`, `model/behaviour/`,
+Simulation code is `tt/src/main/java/com/oddlabs/tt/` under `model/`, `model/task/`,
 `pathfinder/`, `landscape/`, `player/`, `trigger/`, and anything they call. In that code:
 
 - Never read wall-clock time, `System.currentTimeMillis`, or frame rate. Simulation time
@@ -270,7 +270,7 @@ database is migrated by hand, so a merged migration is not a deployed migration.
 
 - Did anything under `common/.../matchmaking`, `router`, or `registration` change? Check the
   wire rules.
-- Did anything under `tt/.../model`, `behaviour`, `pathfinder`, `landscape`, or `player`
+- Did anything under `tt/.../model`, `task`, `pathfinder`, `landscape`, or `player`
   change? Check the determinism rules.
 - Did a user-visible string change? English base file only, and no translations from you.
 - Does the change want art, sound, or narrative text? A person makes that, not you.

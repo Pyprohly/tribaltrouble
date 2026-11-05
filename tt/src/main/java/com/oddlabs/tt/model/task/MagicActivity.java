@@ -1,4 +1,4 @@
-package com.oddlabs.tt.model.behaviour;
+package com.oddlabs.tt.model.task;
 
 import com.oddlabs.tt.model.Unit;
 import com.oddlabs.tt.model.weapon.Magic;
@@ -6,7 +6,7 @@ import com.oddlabs.tt.model.weapon.MagicFactory;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
-public final class MagicBehaviour implements Behaviour {
+public final class MagicActivity implements Activity {
     private enum MagicState {
         PREPARING,
         CASTING,
@@ -20,7 +20,7 @@ public final class MagicBehaviour implements Behaviour {
     private float anim_time;
     private @NonNull MagicState state = MagicState.PREPARING;
 
-    public MagicBehaviour(@NonNull Unit unit, @NonNull MagicFactory magic_factory) {
+    public MagicActivity(@NonNull Unit unit, @NonNull MagicFactory magic_factory) {
         this.unit = unit;
         this.magic_factory = magic_factory;
         anim_time = magic_factory.getSecondsPerInit();
@@ -67,7 +67,7 @@ public final class MagicBehaviour implements Behaviour {
     }
 
     @Override
-    public void forceInterrupted() {
+    public void cancel() {
         if (magic != null)
             magic.interrupt();
     }

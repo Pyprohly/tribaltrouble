@@ -1,9 +1,9 @@
 package com.oddlabs.tt.model;
 
 import com.oddlabs.tt.animation.Animated;
-import com.oddlabs.tt.model.behaviour.Behaviour;
-import com.oddlabs.tt.model.behaviour.Controller;
-import com.oddlabs.tt.model.behaviour.Task;
+import com.oddlabs.tt.model.task.Activity;
+import com.oddlabs.tt.model.task.Controller;
+import com.oddlabs.tt.model.task.Task;
 import com.oddlabs.tt.pathfinder.Occupant;
 import com.oddlabs.tt.pathfinder.ScanFilter;
 import com.oddlabs.tt.pathfinder.UnitGrid;
@@ -86,12 +86,12 @@ public abstract class Selectable<T extends Template> extends Model implements Ta
     }
 
     protected final boolean isBlocking() {
-        Behaviour behaviour = getController().getBehaviour();
-        return behaviour != null && behaviour.isBlocking();
+        Activity activity = getController().getActivity();
+        return activity != null && activity.isBlocking();
     }
 
-    public final @Nullable Behaviour getCurrentBehaviour() {
-        return getController().getBehaviour();
+    public final @Nullable Activity getCurrentActivity() {
+        return getController().getActivity();
     }
 
     public final @NonNull UnitGrid getUnitGrid() {

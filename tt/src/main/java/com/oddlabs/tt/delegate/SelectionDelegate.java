@@ -29,7 +29,7 @@ import com.oddlabs.tt.model.Selectable;
 import com.oddlabs.tt.model.Ship;
 import com.oddlabs.tt.model.Unit;
 import com.oddlabs.tt.model.UnitTemplate;
-import com.oddlabs.tt.model.behaviour.Posture;
+import com.oddlabs.tt.model.task.Posture;
 import com.oddlabs.tt.render.CompassRenderer;
 import com.oddlabs.tt.render.GUIRenderer;
 import com.oddlabs.tt.render.Renderer;

@@ -1,4 +1,4 @@
-package com.oddlabs.tt.model.behaviour;
+package com.oddlabs.tt.model.task;
 
 import com.oddlabs.tt.model.Abilities;
 import com.oddlabs.tt.model.Selectable;
@@ -7,7 +7,7 @@ import com.oddlabs.tt.model.ShipAllocation;
 import org.jspecify.annotations.NullMarked;
 
 /**
- * What a unit does when it has no order. Only mounting and unmounting change it, and its behaviour
+ * What a unit does when it has no order. Only mounting and unmounting change it, and its activity
  * is kept, not restarted, while an order or an interruption runs above it.
  */
 @NullMarked
