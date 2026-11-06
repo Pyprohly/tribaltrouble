@@ -29,13 +29,26 @@ public final class UnitReducer {
     public record Decision(UnitState state, UnitPlan plan) {
     }
 
-    /**
-     * The state an event leaves. An urgent one cancels the running activity and decides at once for
-     * its reason; any other decides for {@link Reason#BEGIN} once the running activity allows it.
-     */
-    public record Transition(UnitState state, boolean urgent, Reason reason) {
-        Transition(UnitState state, boolean urgent) {
-            this(state, urgent, Reason.BEGIN);
+    /** The state an event leaves, and what the controller does about it. */
+    public record Transition(UnitState state, Next next) {
+    }
+
+    /** When the unit decides after an event, if at all. */
+    public sealed interface Next {
+        Next DECIDE_NOW = new DecideNow(Reason.BEGIN);
+        Next DECIDE_WHEN_INTERRUPTIBLE = new DecideWhenInterruptible();
+        Next IGNORE = new Ignore();
+
+        /** Cancels the running activity and decides at once for the reason. */
+        record DecideNow(Reason reason) implements Next {
+        }
+
+        /** Decides for {@link Reason#BEGIN} once the running activity allows it. */
+        record DecideWhenInterruptible() implements Next {
+        }
+
+        /** Leaves the unit as it was. */
+        record Ignore() implements Next {
         }
     }
 
@@ -57,38 +70,40 @@ public final class UnitReducer {
     private UnitReducer() {
     }
 
-    /** Applies an event to the state, or returns null when the unit ignores it. */
-    public static @Nullable Transition reduce(UnitState state, Event event) {
+    /** Applies an event to the state. */
+    public static Transition reduce(UnitState state, Event event) {
         Interruption current = state.interruption();
         return switch (event) {
-            case Event.Ordered ordered -> new Transition(state.withOrder(ordered.order()), false);
+            case Event.Ordered ordered -> new Transition(state.withOrder(ordered.order()),
+                    Next.DECIDE_WHEN_INTERRUPTIBLE);
             case Event.Stunned stunned -> {
                 if (current instanceof Interruption.Dying) {
-                    yield null;
+                    yield new Transition(state, Next.IGNORE);
                 }
                 Interruption stun = new Interruption.Stunned(stunned.seconds());
                 yield new Transition(current instanceof Interruption.Stunned ? state.replacingInterruption(
-                        stun) : state.interruptedBy(stun), true);
+                        stun) : state.interruptedBy(stun), Next.DECIDE_NOW);
             }
             case Event.Cast cast -> {
                 if (current instanceof Interruption.Dying) {
-                    yield null;
+                    yield new Transition(state, Next.IGNORE);
                 }
                 UnitState next = cast.clearOrder() ? state.withOrder(null) : state;
                 Interruption casting = new Interruption.Casting(cast.factory());
                 if (current instanceof Interruption.Stunned) {
-                    yield new Transition(next.followedBy(casting), false);
+                    yield new Transition(next.followedBy(casting), Next.DECIDE_WHEN_INTERRUPTIBLE);
                 }
-                yield new Transition(next.interruptedBy(casting), true);
+                yield new Transition(next.interruptedBy(casting), Next.DECIDE_NOW);
             }
             case Event.Died ignored -> new Transition(new UnitState(state.posture(), null, List.of(
-                    new Interruption.Dying())), true);
-            case Event.MountedTower ignored -> new Transition(new UnitState(new Posture.Idle(false)), true);
+                    new Interruption.Dying())), Next.DECIDE_NOW);
+            case Event.MountedTower ignored -> new Transition(new UnitState(new Posture.Idle(false)), Next.DECIDE_NOW);
             case Event.MountedShip mounted -> new Transition(new UnitState(
                     mounted.allocation().getRole() == ShipAllocation.FIGHTING ? new Posture.Fighting(mounted.ship(),
-                            mounted.allocation()) : new Posture.Sitting(mounted.ship(), mounted.allocation())), true);
-            case Event.Unmounted ignored -> new Transition(new UnitState(new Posture.Idle(true)), true);
-            case Event.Finished finished -> new Transition(state, true, finished.reason());
+                            mounted.allocation()) : new Posture.Sitting(mounted.ship(), mounted.allocation())),
+                    Next.DECIDE_NOW);
+            case Event.Unmounted ignored -> new Transition(new UnitState(new Posture.Idle(true)), Next.DECIDE_NOW);
+            case Event.Finished finished -> new Transition(state, new Next.DecideNow(finished.reason()));
         };
     }
 

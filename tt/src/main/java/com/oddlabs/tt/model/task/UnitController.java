@@ -104,25 +104,30 @@ public final class UnitController implements Controller {
 
     private void dispatch(Event event) {
         UnitReducer.Transition transition = UnitReducer.reduce(state, event);
-        if (transition == null) {
+        if (transition.next() instanceof UnitReducer.Next.Ignore) {
             return;
         }
         state = transition.state();
         events++;
-        if (transition.urgent()) {
-            stop();
-            decide(transition.reason());
-            return;
-        }
-        // When only a task beneath the running one changed, it takes effect once it becomes current.
-        boolean currentChanged = running == null || state.current() != runningTask;
-        if (!currentChanged) {
-            return;
-        }
-        if (running == null || progress != Activity.State.UNINTERRUPTIBLE) {
-            decide(Reason.BEGIN);
-        } else {
-            pending = true;
+        switch (transition.next()) {
+            case UnitReducer.Next.DecideNow now -> {
+                stop();
+                decide(now.reason());
+            }
+            case UnitReducer.Next.DecideWhenInterruptible ignored -> {
+                // When only a task beneath the running one changed, it takes effect once it becomes current.
+                boolean currentChanged = running == null || state.current() != runningTask;
+                if (!currentChanged) {
+                    return;
+                }
+                if (running == null || progress != Activity.State.UNINTERRUPTIBLE) {
+                    decide(Reason.BEGIN);
+                } else {
+                    pending = true;
+                }
+            }
+            case UnitReducer.Next.Ignore ignored -> {
+            }
         }
     }
 

@@ -31,8 +31,10 @@ off the shore, sailing, working loose). Buildings and ship proxies are always `T
 Everything a unit's tasks react to is an `Event`: an order, a stun, a spell, death, mounting and
 unmounting, and `Finished` when the running activity ends. `UnitController`'s public methods
 (`order`, `stun`, `cast`, …) each build one and pass it to the private `dispatch`, the gist's
-`handleEvent`. `UnitReducer.reduce(state, event)` is pure: it returns the next state and whether
-the event is urgent, or null when the unit ignores it, as a dying unit ignores stuns and spells.
+`handleEvent`. `UnitReducer.reduce(state, event)` is pure: it returns the next state and a `Next`
+saying what the controller does: `DecideNow` cancels the running activity and decides at once,
+`DecideWhenInterruptible` waits for the running activity to allow it, and `Ignore` leaves the unit
+as it was, as a dying unit ignores stuns and spells.
 
 ## Decisions
 
