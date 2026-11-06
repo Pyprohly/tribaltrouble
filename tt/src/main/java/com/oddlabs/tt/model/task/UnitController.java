@@ -20,14 +20,13 @@ import com.oddlabs.tt.util.Target;
 import org.jspecify.annotations.NullMarked;
 import org.jspecify.annotations.Nullable;
 
-import java.util.List;
-
 /**
- * Runs a unit's tasks. Inputs change the {@link UnitState}; {@link UnitReducer} decides what the
- * current task does; this class turns the answer into an activity or a world change.
+ * Runs a unit's tasks. Every {@link Event} is dispatched to {@link UnitReducer}, which applies it to
+ * the {@link UnitState} and decides what the current task does; this class turns the answer into an
+ * activity or a world change.
  *
  * <p>One rule governs when an activity is replaced: a decision is taken as soon as the running
- * activity is interruptible, and waits for that otherwise. Urgent inputs (stuns, spells, death,
+ * activity is interruptible, and waits for that otherwise. Urgent events (stuns, spells, death,
  * mounting) cancel the running activity and decide at once. A posture's activity is never
  * cancelled while the posture lasts: it is parked under the order or interruption above it and
  * resumed afterwards, keeping its timers and boarding progress.
@@ -47,8 +46,8 @@ public final class UnitController implements Controller {
     private @Nullable Activity parked;
     private @Nullable Posture parkedPosture;
 
-    /** Counts inputs, so a decision can tell that an operation it performed changed the task under it. */
-    private int inputs;
+    /** Counts events, so a decision can tell that an operation it performed changed the task under it. */
+    private int events;
 
     public UnitController(Unit unit) {
         this.unit = unit;
@@ -57,7 +56,7 @@ public final class UnitController implements Controller {
 
     /** Takes the first decision; called once the unit is far enough constructed to act. */
     public void start() {
-        decide(Event.BEGIN);
+        decide(Reason.BEGIN);
     }
 
     public UnitState getState() {
@@ -75,58 +74,44 @@ public final class UnitController implements Controller {
     }
 
     public void order(@Nullable Order order) {
-        change(state.withOrder(order), false);
+        dispatch(new Event.Ordered(order));
     }
 
     public void stun(float seconds) {
-        Interruption current = state.interruption();
-        if (current instanceof Interruption.Dying) {
-            return;
-        }
-        Interruption stun = new Interruption.Stunned(seconds);
-        change(current instanceof Interruption.Stunned ? state.replacingInterruption(stun) : state.interruptedBy(stun),
-                true);
+        dispatch(new Event.Stunned(seconds));
     }
 
     /** Casts a spell; a stunned unit casts it once the stun wears off. */
     public void cast(MagicFactory factory, boolean clearOrder) {
-        Interruption current = state.interruption();
-        if (current instanceof Interruption.Dying) {
-            return;
-        }
-        UnitState next = clearOrder ? state.withOrder(null) : state;
-        Interruption casting = new Interruption.Casting(factory);
-        if (current instanceof Interruption.Stunned) {
-            change(next.followedBy(casting), false);
-        } else {
-            change(next.interruptedBy(casting), true);
-        }
+        dispatch(new Event.Cast(factory, clearOrder));
     }
 
     public void die() {
-        change(new UnitState(state.posture(), null, List.of(new Interruption.Dying())), true);
+        dispatch(new Event.Died());
     }
 
     public void mountTower() {
-        change(new UnitState(new Posture.Idle(false)), true);
+        dispatch(new Event.MountedTower());
     }
 
     public void mountShip(Ship ship, ShipAllocation allocation) {
-        Posture posture = allocation.getRole() == ShipAllocation.FIGHTING ? new Posture.Fighting(ship,
-                allocation) : new Posture.Sitting(ship, allocation);
-        change(new UnitState(posture), true);
+        dispatch(new Event.MountedShip(ship, allocation));
     }
 
     public void unmount() {
-        change(new UnitState(new Posture.Idle(true)), true);
+        dispatch(new Event.Unmounted());
     }
 
-    private void change(UnitState next, boolean urgent) {
-        state = next;
-        inputs++;
-        if (urgent) {
+    private void dispatch(Event event) {
+        UnitReducer.Transition transition = UnitReducer.reduce(state, event);
+        if (transition == null) {
+            return;
+        }
+        state = transition.state();
+        events++;
+        if (transition.urgent()) {
             stop();
-            decide(Event.BEGIN);
+            decide(transition.reason());
             return;
         }
         // When only a task beneath the running one changed, it takes effect once it becomes current.
@@ -135,7 +120,7 @@ public final class UnitController implements Controller {
             return;
         }
         if (running == null || progress != Activity.State.UNINTERRUPTIBLE) {
-            decide(Event.BEGIN);
+            decide(Reason.BEGIN);
         } else {
             pending = true;
         }
@@ -153,21 +138,21 @@ public final class UnitController implements Controller {
         }
         progress = result;
         if (result == Activity.State.DONE) {
-            Event outcome = state.current() == runningTask ? activity.outcome() : Event.BEGIN;
+            Reason outcome = state.current() == runningTask ? activity.outcome() : Reason.BEGIN;
             running = null;
             if (runningTask instanceof Posture posture && posture == state.posture()) {
                 park(activity, posture);
             }
-            decide(outcome);
+            dispatch(new Event.Finished(outcome));
         } else if (result == Activity.State.INTERRUPTIBLE && pending) {
-            decide(Event.BEGIN);
+            decide(Reason.BEGIN);
         }
     }
 
-    private void decide(Event event) {
+    private void decide(Reason reason) {
         pending = false;
         while (true) {
-            UnitReducer.Decision decision = UnitReducer.decide(state, event, view);
+            UnitReducer.Decision decision = UnitReducer.decide(state, reason, view);
             state = decision.state();
             switch (decision.plan()) {
                 case UnitPlan.Run run -> {
@@ -176,13 +161,13 @@ public final class UnitController implements Controller {
                 }
                 case UnitPlan.Operation operation -> {
                     stop();
-                    int before = inputs;
+                    int before = events;
                     perform(operation);
-                    if (inputs != before || unit.isDead()) {
-                        // The operation mounted or removed the unit, and that input has already decided.
+                    if (events != before || unit.isDead()) {
+                        // The operation mounted or removed the unit, and that event has already decided.
                         return;
                     }
-                    event = Event.PERFORMED;
+                    reason = Reason.PERFORMED;
                 }
             }
         }

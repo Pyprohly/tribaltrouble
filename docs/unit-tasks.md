@@ -26,14 +26,22 @@ fetches supplies. A task finishing hands control to its parent in the same decis
 A ship's state is a `Task`: `Task.Inert` when docked, or a `Voyage` with its current leg (sliding
 off the shore, sailing, working loose). Buildings and ship proxies are always `Task.Inert`.
 
+## Events
+
+Everything a unit's tasks react to is an `Event`: an order, a stun, a spell, death, mounting and
+unmounting, and `Finished` when the running activity ends. `UnitController`'s public methods
+(`order`, `stun`, `cast`, …) each build one and pass it to the private `dispatch`, the gist's
+`handleEvent`. `UnitReducer.reduce(state, event)` is pure: it returns the next state and whether
+the event is urgent, or null when the unit ignores it, as a dying unit ignores stuns and spells.
+
 ## Decisions
 
-`UnitReducer.decide(state, event, view)` and `ShipReducer.decide(state, event, slid)` are pure.
+`UnitReducer.decide(state, reason, view)` and `ShipReducer.decide(state, reason, slid)` are pure.
 They read the world through `UnitView` and change nothing. Each returns the next state and a plan:
 either an activity to run (`UnitPlan.Run`) or a one-off change to the world
-(`UnitPlan.Operation`), after which the unit decides again with `Event.PERFORMED`.
+(`UnitPlan.Operation`), after which the unit decides again with `Reason.PERFORMED`.
 
-Events say why the task is deciding: `Begin` when it became current, `Completed` when its activity
+Reasons say why the task is deciding: `Begin` when it became current, `Completed` when its activity
 finished, `Found` and `Spotted` from walks and watches, and `Blocked` and `NoRoute` from ships.
 `Begin` restores an order's retry budget, so a task interrupted by a stun or a spell starts over
 rather than giving up.

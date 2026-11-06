@@ -58,10 +58,10 @@ public final class ShipAttackActivity implements Activity {
     }
 
     @Override
-    public @NonNull Event outcome() {
+    public @NonNull Reason outcome() {
         Selectable<?> target = spotted;
         spotted = null;
-        return target != null ? new Event.Spotted(target) : Event.COMPLETED;
+        return target != null ? new Reason.Spotted(target) : Reason.COMPLETED;
     }
 
     public final boolean isBlocking() {

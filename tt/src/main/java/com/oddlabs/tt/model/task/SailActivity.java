@@ -21,7 +21,7 @@ public final class SailActivity implements Activity {
     private ShipTrajectory trajectory = null;
 
     private boolean blocked = false;
-    private @NonNull Event outcome = Event.COMPLETED;
+    private @NonNull Reason outcome = Reason.COMPLETED;
 
     public SailActivity(Ship ship, Target t) {
         this.ship = ship;
@@ -71,7 +71,7 @@ public final class SailActivity implements Activity {
         ship.setLayer(UnitGrid.SEA);
 
         if (trajectory == null || !trajectory.exists()) {
-            outcome = Event.NO_ROUTE;
+            outcome = Reason.NO_ROUTE;
             return State.DONE;
         }
 
@@ -95,13 +95,13 @@ public final class SailActivity implements Activity {
                 // If it's an enemy ship, stand your ground and fight! Do not escape!
                 // Otherwise if it's one of your own or an ally, let it pass.
                 if (blockingShip.getOwner().getPlayerInfo().getTeam() == ship.getOwner().getPlayerInfo().getTeam()) {
-                    outcome = Event.BLOCKED;
+                    outcome = Reason.BLOCKED;
                     return State.DONE;
                 }
                 return State.INTERRUPTIBLE;
             }
             if (ShipTrajectory.checkLandCollision(grid, fromPoint, next_pose)) {
-                outcome = Event.BLOCKED;
+                outcome = Reason.BLOCKED;
                 return State.DONE;
             }
         }
@@ -117,7 +117,7 @@ public final class SailActivity implements Activity {
     }
 
     @Override
-    public @NonNull Event outcome() {
+    public @NonNull Reason outcome() {
         return outcome;
     }
 

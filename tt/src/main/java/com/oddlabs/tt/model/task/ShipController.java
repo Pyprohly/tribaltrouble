@@ -21,7 +21,7 @@ public final class ShipController implements Controller {
 
     /** Takes the first decision; called once the ship is far enough constructed to act. */
     public void start() {
-        decide(Event.BEGIN);
+        decide(Reason.BEGIN);
     }
 
     public void sail(Target target) {
@@ -53,7 +53,7 @@ public final class ShipController implements Controller {
         if (activity != null) {
             activity.cancel();
         }
-        decide(Event.BEGIN);
+        decide(Reason.BEGIN);
     }
 
     @Override
@@ -68,9 +68,9 @@ public final class ShipController implements Controller {
         }
     }
 
-    private void decide(Event event) {
+    private void decide(Reason reason) {
         while (true) {
-            ShipReducer.Decision decision = ShipReducer.decide(state, event, ship.slid());
+            ShipReducer.Decision decision = ShipReducer.decide(state, reason, ship.slid());
             state = decision.state();
             switch (decision.plan()) {
                 case ShipReducer.Run run -> {
@@ -82,7 +82,7 @@ public final class ShipController implements Controller {
                         case FINISH_SLIDE -> ship.endSlide();
                         case END_TRIP -> ship.endTrip();
                     }
-                    event = Event.PERFORMED;
+                    reason = Reason.PERFORMED;
                 }
             }
         }

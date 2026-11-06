@@ -1,44 +1,38 @@
 package com.oddlabs.tt.model.task;
 
-import com.oddlabs.tt.model.Selectable;
-import com.oddlabs.tt.pathfinder.Occupant;
+import com.oddlabs.tt.model.Ship;
+import com.oddlabs.tt.model.ShipAllocation;
+import com.oddlabs.tt.model.weapon.MagicFactory;
 import org.jspecify.annotations.NullMarked;
 import org.jspecify.annotations.Nullable;
 
-/** Why a task is asked to decide. */
+/** Something from outside a unit's tasks that they react to. */
 @NullMarked
 public sealed interface Event {
-    Event BEGIN = new Begin();
-    Event COMPLETED = new Completed();
-    Event PERFORMED = new Performed();
-    Event BLOCKED = new Blocked();
-    Event NO_ROUTE = new NoRoute();
-
-    /** The task became current: it was just given, or what suspended it has ended. */
-    record Begin() implements Event {
+    /** The unit was given an order in place of the one it had, or had its order taken away when null. */
+    record Ordered(@Nullable Order order) implements Event {
     }
 
-    /** The activity the task started has finished. */
-    record Completed() implements Event {
+    record Stunned(float seconds) implements Event {
     }
 
-    /** The world operation the task asked for has been carried out. */
-    record Performed() implements Event {
+    /** The unit casts a spell; a stunned unit casts it once the stun wears off. */
+    record Cast(MagicFactory factory, boolean clearOrder) implements Event {
     }
 
-    /** A finder walk ended; the occupant is what it found, if anything. */
-    record Found(@Nullable Occupant occupant) implements Event {
+    record Died() implements Event {
     }
 
-    /** A watch or an aggressive walk saw an enemy. */
-    record Spotted(Selectable<?> target) implements Event {
+    record MountedTower() implements Event {
     }
 
-    /** A ship could not advance. */
-    record Blocked() implements Event {
+    record MountedShip(Ship ship, ShipAllocation allocation) implements Event {
     }
 
-    /** A ship had no route to follow. */
-    record NoRoute() implements Event {
+    record Unmounted() implements Event {
+    }
+
+    /** The running activity finished, and the current task decides for the reason it gave. */
+    record Finished(Reason reason) implements Event {
     }
 }

@@ -16,7 +16,7 @@ public final class ShipReducer {
     public sealed interface Run extends ShipPlan {
     }
 
-    /** A change to the world, after which the ship decides again with {@link Event#PERFORMED}. */
+    /** A change to the world, after which the ship decides again with {@link Reason#PERFORMED}. */
     public enum Operation implements ShipPlan {
         /** The ship reached deep water. */
         FINISH_SLIDE,
@@ -45,21 +45,21 @@ public final class ShipReducer {
     /**
      * @param slid whether the ship has already left the shore it was built on
      */
-    public static Decision decide(Task state, Event event, boolean slid) {
+    public static Decision decide(Task state, Reason reason, boolean slid) {
         if (!(state instanceof Voyage voyage)) {
             return new Decision(new Task.Inert(), new Moor());
         }
-        if (event instanceof Event.Begin) {
+        if (reason instanceof Reason.Begin) {
             return leg(new Voyage(voyage.target(), slid ? Voyage.Phase.SAILING : Voyage.Phase.SLIDING,
                     voyage.failedUnstucks()));
         }
         return switch (voyage.phase()) {
-            case SLIDING -> event instanceof Event.Performed ? leg(with(voyage, Voyage.Phase.SAILING,
+            case SLIDING -> reason instanceof Reason.Performed ? leg(with(voyage, Voyage.Phase.SAILING,
                     voyage.failedUnstucks())) : new Decision(voyage, Operation.FINISH_SLIDE);
-            case SAILING -> event instanceof Event.Blocked ? leg(with(voyage, Voyage.Phase.UNSTICKING,
+            case SAILING -> reason instanceof Reason.Blocked ? leg(with(voyage, Voyage.Phase.UNSTICKING,
                     voyage.failedUnstucks())) : new Decision(new Task.Inert(), Operation.END_TRIP);
             case UNSTICKING -> {
-                if (event instanceof Event.Completed) {
+                if (reason instanceof Reason.Completed) {
                     yield leg(with(voyage, Voyage.Phase.SAILING, 0));
                 }
                 int failed = voyage.failedUnstucks() + 1;

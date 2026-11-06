@@ -117,12 +117,12 @@ public final class WalkActivity implements Activity {
     }
 
     @Override
-    public @NonNull Event outcome() {
+    public @NonNull Reason outcome() {
         if (spotted != null)
-            return new Event.Spotted(spotted);
+            return new Reason.Spotted(spotted);
         if (tracker_algorithm instanceof FinderTrackerAlgorithm<?> finder)
-            return new Event.Found(finder.getOccupant());
-        return Event.COMPLETED;
+            return new Reason.Found(finder.getOccupant());
+        return Reason.COMPLETED;
     }
 
     /*	public final void moveNextAnimate() {

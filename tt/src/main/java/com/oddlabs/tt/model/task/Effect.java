@@ -20,7 +20,7 @@ public sealed interface UnitPlan {
     sealed interface Run extends UnitPlan {
     }
 
-    /** A change to the world, after which the unit decides again with {@link Event#PERFORMED}. */
+    /** A change to the world, after which the unit decides again with {@link Reason#PERFORMED}. */
     sealed interface Operation extends UnitPlan {
     }
 

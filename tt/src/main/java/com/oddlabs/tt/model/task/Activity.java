@@ -25,8 +25,8 @@ public interface Activity {
     }
 
     /** What the activity has to report, read once after {@link #animate} returned DONE. */
-    default @NonNull Event outcome() {
-        return Event.COMPLETED;
+    default @NonNull Reason outcome() {
+        return Reason.COMPLETED;
     }
 
     boolean isBlocking();
