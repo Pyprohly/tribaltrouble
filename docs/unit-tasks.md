@@ -30,11 +30,14 @@ off the shore, sailing, working loose). Buildings and ship proxies are always `T
 
 Everything a unit's tasks react to is an `Event`: an order, a stun, a spell, death, mounting and
 unmounting, and `Finished` when the running activity ends. `UnitController`'s public methods
-(`order`, `stun`, `cast`, …) each build one and pass it to the private `dispatch`, the gist's
-`handleEvent`. `UnitReducer.reduce(state, event)` is pure: it returns the next state and a `Next`
-saying what the controller does: `DecideNow` cancels the running activity and decides at once,
-`DecideWhenInterruptible` waits for the running activity to allow it, and `Ignore` leaves the unit
-as it was, as a dying unit ignores stuns and spells.
+(`order`, `stun`, `cast`, …) each build one and pass it to `dispatch`, the gist's `handleEvent`,
+which both controllers implement from `StateController<S, E>` alongside `getState`. `UnitReducer.reduce(state, event)` is
+pure: it returns the next state and a `Next` saying what the controller does: `DecideNow` cancels
+the running activity and decides at once, `DecideWhenInterruptible` waits for the running activity
+to allow it, and `Ignore` leaves the unit as it was, as a dying unit ignores stuns and spells.
+
+A ship's events are `ShipEvent`s: `Sailed` with a new destination and `Docked`. Either replaces the
+ship's state, cancels the running activity and decides at once.
 
 ## Decisions
 
@@ -50,9 +53,11 @@ rather than giving up.
 
 ## Execution
 
-`UnitController` and `ShipController` are the imperative shell. They hold the state, turn plans into
-`Activity` instances, and perform operations. Activities keep animation, movement and timing, and
-report what they found through `Activity.outcome()` instead of calling back into the controller.
+`UnitController` and `ShipController` are the imperative shell, and `Selectable` animates and
+inspects them, along with the `InertTaskRunner` of buildings and ship proxies, as a `TaskRunner`.
+They hold the state, turn plans into `Activity` instances, and perform operations. Activities keep
+animation, movement and timing, and report what they found through `Activity.outcome()` instead of
+calling back into the controller.
 
 One rule decides when the running activity is replaced. A decision is taken as soon as the running
 activity is interruptible and waits otherwise. Urgent inputs (stun, spell, death, mounting)

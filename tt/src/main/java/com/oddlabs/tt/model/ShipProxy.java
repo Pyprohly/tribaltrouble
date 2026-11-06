@@ -1,7 +1,7 @@
 package com.oddlabs.tt.model;
 
-import com.oddlabs.tt.model.task.Controller;
-import com.oddlabs.tt.model.task.InertController;
+import com.oddlabs.tt.model.task.TaskRunner;
+import com.oddlabs.tt.model.task.InertTaskRunner;
 import com.oddlabs.tt.pathfinder.Occupant;
 import com.oddlabs.tt.pathfinder.Region;
 import com.oddlabs.tt.pathfinder.UnitGrid;
@@ -13,7 +13,7 @@ import org.jspecify.annotations.NonNull;
 
 public final class ShipProxy extends Building {
     private final Ship ship;
-    private final InertController controller = new InertController();
+    private final InertTaskRunner taskRunner = new InertTaskRunner();
     private Region last_region = null;
 
     public ShipProxy(int grid_x, int grid_y, Ship ship) {
@@ -36,8 +36,8 @@ public final class ShipProxy extends Building {
     }
 
     @Override
-    protected Controller getController() {
-        return controller;
+    protected TaskRunner getTaskRunner() {
+        return taskRunner;
     }
 
     @Override

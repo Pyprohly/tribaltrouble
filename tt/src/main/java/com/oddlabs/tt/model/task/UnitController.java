@@ -32,7 +32,7 @@ import org.jspecify.annotations.Nullable;
  * resumed afterwards, keeping its timers and boarding progress.
  */
 @NullMarked
-public final class UnitController implements Controller {
+public final class UnitController implements TaskRunner, StateController<UnitState, Event> {
     private final Unit unit;
     private final UnitView view;
     private UnitState state = new UnitState(new Posture.Idle(true));
@@ -59,6 +59,7 @@ public final class UnitController implements Controller {
         decide(Reason.BEGIN);
     }
 
+    @Override
     public UnitState getState() {
         return state;
     }
@@ -102,7 +103,8 @@ public final class UnitController implements Controller {
         dispatch(new Event.Unmounted());
     }
 
-    private void dispatch(Event event) {
+    @Override
+    public void dispatch(Event event) {
         UnitReducer.Transition transition = UnitReducer.reduce(state, event);
         if (transition.next() instanceof UnitReducer.Next.Ignore) {
             return;

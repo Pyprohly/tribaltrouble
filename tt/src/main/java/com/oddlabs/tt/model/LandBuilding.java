@@ -5,8 +5,8 @@ import com.oddlabs.tt.audio.AudioPlayer;
 import com.oddlabs.tt.gui.BuildSpinner;
 import com.oddlabs.tt.landscape.TreeSupply;
 import com.oddlabs.tt.landscape.World;
-import com.oddlabs.tt.model.task.Controller;
-import com.oddlabs.tt.model.task.InertController;
+import com.oddlabs.tt.model.task.TaskRunner;
+import com.oddlabs.tt.model.task.InertTaskRunner;
 import com.oddlabs.tt.model.task.Order;
 import com.oddlabs.tt.model.weapon.IronAxeWeapon;
 import com.oddlabs.tt.model.weapon.IronSpearWeapon;
@@ -55,7 +55,7 @@ public final class LandBuilding extends Building {
     private static final float DAMAGED_PARTICLE_ALPHA = 3f;
 
     private final Map<@NonNull Class<?>, @NonNull SupplyContainer> supply_containers = new HashMap<>();
-    private final @NonNull InertController controller = new InertController();
+    private final @NonNull InertTaskRunner taskRunner = new InertTaskRunner();
     private final Map<@NonNull Class<?>, @NonNull BuildProductionContainer> build_containers = new HashMap<>();
     private final Map<@NonNull DeployType, @NonNull DeployContainer> deploy_containers = new EnumMap<>(
             DeployType.class);
@@ -526,8 +526,8 @@ public final class LandBuilding extends Building {
     }
 
     @Override
-    protected @NonNull Controller getController() {
-        return controller;
+    protected @NonNull TaskRunner getTaskRunner() {
+        return taskRunner;
     }
 
     @Override

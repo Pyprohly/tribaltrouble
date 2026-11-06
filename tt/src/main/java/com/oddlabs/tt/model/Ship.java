@@ -6,6 +6,7 @@ import com.oddlabs.tt.landscape.HeightMap;
 import com.oddlabs.tt.landscape.TreeSupply;
 import com.oddlabs.tt.landscape.World;
 import com.oddlabs.tt.model.task.Order;
+import com.oddlabs.tt.model.task.TaskRunner;
 import com.oddlabs.tt.model.task.SailActivity;
 import com.oddlabs.tt.model.task.ShipController;
 import com.oddlabs.tt.model.weapon.IronAxeWeapon;
@@ -1029,7 +1030,7 @@ public class Ship extends Building implements Movable {
     }
 
     @Override
-    protected final ShipController getController() {
+    protected final TaskRunner getTaskRunner() {
         return controller;
     }
 

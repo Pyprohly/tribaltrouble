@@ -10,7 +10,7 @@ import org.jspecify.annotations.Nullable;
  * the ship decides again whenever a leg of its voyage ends.
  */
 @NullMarked
-public final class ShipController implements Controller {
+public final class ShipController implements TaskRunner, StateController<Task, ShipEvent> {
     private final Ship ship;
     private Task state = new Task.Inert();
     private @Nullable Activity running;
@@ -25,15 +25,20 @@ public final class ShipController implements Controller {
     }
 
     public void sail(Target target) {
-        change(new Voyage(target));
+        dispatch(new ShipEvent.Sailed(target));
     }
 
     public void dock() {
-        change(new Task.Inert());
+        dispatch(new ShipEvent.Docked());
     }
 
     public boolean isSailing() {
         return state instanceof Voyage;
+    }
+
+    @Override
+    public Task getState() {
+        return state;
     }
 
     @Override
@@ -46,8 +51,12 @@ public final class ShipController implements Controller {
         return running;
     }
 
-    private void change(Task next) {
-        state = next;
+    @Override
+    public void dispatch(ShipEvent event) {
+        state = switch (event) {
+            case ShipEvent.Sailed sailed -> new Voyage(sailed.target());
+            case ShipEvent.Docked ignored -> new Task.Inert();
+        };
         Activity activity = running;
         running = null;
         if (activity != null) {

@@ -2,7 +2,7 @@ package com.oddlabs.tt.model;
 
 import com.oddlabs.tt.animation.Animated;
 import com.oddlabs.tt.model.task.Activity;
-import com.oddlabs.tt.model.task.Controller;
+import com.oddlabs.tt.model.task.TaskRunner;
 import com.oddlabs.tt.model.task.Task;
 import com.oddlabs.tt.pathfinder.Occupant;
 import com.oddlabs.tt.pathfinder.ScanFilter;
@@ -63,11 +63,11 @@ public abstract class Selectable<T extends Template> extends Model implements Ta
         return template.getHitOffsetZ(0);
     }
 
-    protected abstract @NonNull Controller getController();
+    protected abstract @NonNull TaskRunner getTaskRunner();
 
     /** What the selectable is doing, for the AI, the GUI and triggers to inspect. */
     public final @NonNull Task getPrimaryTask() {
-        return getController().getPrimaryTask();
+        return getTaskRunner().getPrimaryTask();
     }
 
     /** Groups selectables doing the same job. */
@@ -77,7 +77,7 @@ public abstract class Selectable<T extends Template> extends Model implements Ta
 
     @Override
     public final void animate(float t) {
-        getController().animate(t);
+        getTaskRunner().animate(t);
         doAnimate(t);
         owner.getWorld().updateGlobalChecksum(grid_x + grid_y);
     }
@@ -86,12 +86,12 @@ public abstract class Selectable<T extends Template> extends Model implements Ta
     }
 
     protected final boolean isBlocking() {
-        Activity activity = getController().getActivity();
+        Activity activity = getTaskRunner().getActivity();
         return activity != null && activity.isBlocking();
     }
 
     public final @Nullable Activity getCurrentActivity() {
-        return getController().getActivity();
+        return getTaskRunner().getActivity();
     }
 
     public final @NonNull UnitGrid getUnitGrid() {

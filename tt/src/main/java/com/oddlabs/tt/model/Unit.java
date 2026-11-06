@@ -7,6 +7,7 @@ import com.oddlabs.tt.landscape.LandscapeTarget;
 import com.oddlabs.tt.model.task.DieActivity;
 import com.oddlabs.tt.model.task.Interruption;
 import com.oddlabs.tt.model.task.Order;
+import com.oddlabs.tt.model.task.TaskRunner;
 import com.oddlabs.tt.model.task.UnitController;
 import com.oddlabs.tt.model.task.WalkActivity;
 import com.oddlabs.tt.model.weapon.IronAxeWeapon;
@@ -163,7 +164,7 @@ public class Unit extends Selectable<UnitTemplate> implements Occupant, Movable 
     }
 
     @Override
-    protected @NonNull UnitController getController() {
+    protected @NonNull TaskRunner getTaskRunner() {
         return controller;
     }
 
