@@ -30,11 +30,11 @@ final class ReducerLoop<S, E, F> {
         this.trace = trace;
     }
 
-    S state() {
+    public S state() {
         return state;
     }
 
-    void dispatch(E event) {
+    public void dispatch(E event) {
         queue.addLast(event);
         drain();
     }
@@ -44,7 +44,7 @@ final class ReducerLoop<S, E, F> {
      * held back. The result, if any, is reduced before the events the effect caused, because it
      * happened first; so a report always describes the state the reducer last saw.
      */
-    void report(Supplier<? extends @Nullable E> action) {
+    public void report(Supplier<? extends @Nullable E> action) {
         assert !busy : "an effect reported from inside a reduction";
         busy = true;
         E event;

@@ -7,23 +7,24 @@ are pure, and a thin controller carries them out.
 
 ## State
 
-A unit's whole state is one `UnitState` value: its `TaskStack` and the `Execution` saying what its
+A unit's whole state is one `UnitState` value: its `TaskSlots` and the `Execution` saying what its
 controller is doing for those tasks.
 
-The `TaskStack` has three named slots. Despite the name there is no unbounded stack, just a fixed
-priority order.
+`TaskSlots` holds one task per named slot, in a fixed priority order.
 
 | Slot | Type | Holds | Changed by |
 |---|---|---|---|
 | Posture | `Posture` | What the unit does with nothing else to do: `Idle` (on land or in a tower), `Fighting` or `Sitting` on a ship | Mounting and unmounting only |
 | Order | `Order` | The job it was given: `Walk`, `Defend`, `Hunt`, `Attack`, `Gather`, `Repair`, `Enter`, `Build`, `Transfer` | Players, AIs and buildings; a new order replaces the old one |
-| Interruptions | `List<Interruption>` | `Stunned`, `Casting`, `Dying`, first to last | Stuns, spells, death |
+| Casting | `Interruption.Casting` | The spell being cast, or waiting for a stun to wear off | Spells; a new spell replaces one not yet cast |
+| Stun | `Interruption.Stunned` | A stun, which suspends a spell and restarts it when it wears off | Stuns; a new stun replaces the old one |
+| Dying | `Interruption.Dying` | Death, which clears the order, stun and spell | Death only |
 
-The first interruption runs, else the order, else the posture. `TaskStack.primary()` is what the
+Dying runs, else the stun, else the spell, else the order, else the posture. `TaskSlots.primary()` is what the
 AI, GUI and triggers see through `Selectable.getPrimaryTask()`: the order, else the interruption,
 else the posture.
 
-Tasks that run inside other tasks are fields of their parent, not separate stack entries: a `Walk`
+Tasks that run inside other tasks are fields of their parent, not separate slots: a `Walk`
 or `Defend` holds the `Hunt` it broke off for, and the `Harvesting` phase of a `Gather` and the
 `Fetching` phase of a `Repair` hold the `Harvest` that fetches supplies. A task finishing hands
 control to its parent in the same decision.

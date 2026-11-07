@@ -4,13 +4,13 @@ import org.jspecify.annotations.NullMarked;
 
 /** A unit's whole state: its tasks, and what its controller is doing for them. */
 @NullMarked
-public record UnitState(TaskStack tasks, Execution execution) {
-    public UnitState(TaskStack tasks) {
+public record UnitState(TaskSlots tasks, Execution execution) {
+    public UnitState(TaskSlots tasks) {
         this(tasks, Execution.UNSTARTED);
     }
 
-    public UnitState withTasks(TaskStack tasks) {
-        return new UnitState(tasks, execution);
+    public UnitState withTasks(TaskSlots next) {
+        return new UnitState(next, execution);
     }
 
     /**

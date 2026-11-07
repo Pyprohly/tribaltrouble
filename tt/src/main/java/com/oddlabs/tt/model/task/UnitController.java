@@ -46,7 +46,7 @@ public final class UnitController implements TaskRunner {
                 commands) -> !(event instanceof Event.Report.Progressed) || !commands.isEmpty()) : null;
         this.loop = new ReducerLoop<UnitState, Event, List<UnitCommand>>(
                 new UnitReducer(new LiveUnitView(unit)),
-                new UnitState(new TaskStack(new Posture.Idle(true))),
+                new UnitState(new TaskSlots(new Posture.Idle(true))),
                 this::executeAll,
                 trace
         );

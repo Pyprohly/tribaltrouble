@@ -67,44 +67,37 @@ public final class UnitReducer implements StateReducer<UnitState, Event, List<Un
         if (state.execution() instanceof UnitState.Execution.Gone) {
             return unchanged(state);
         }
-        TaskStack tasks = state.tasks();
-        Interruption current = tasks.interruption();
+        TaskSlots tasks = state.tasks();
         return switch (event) {
             case Event.Started ignored -> state.execution() instanceof UnitState.Execution.Unstarted ? replanNow(state,
                     Reason.BEGIN) : unchanged(state);
             case Event.Ordered ordered -> replanWhenInterruptible(state.withTasks(tasks.withOrder(ordered.order())));
             case Event.Stunned stunned -> {
-                if (current instanceof Interruption.Dying) {
+                if (tasks.dying() != null) {
                     yield unchanged(state);
                 }
-                Interruption stun = new Interruption.Stunned(stunned.seconds());
-                yield replanNow(
-                        state.withTasks(
-                                current instanceof Interruption.Stunned ? tasks.replacingInterruption(
-                                        stun) : tasks.interruptedBy(stun)),
-                        Reason.BEGIN
-                );
+                yield replanNow(state.withTasks(tasks.withStun(new Interruption.Stunned(stunned.seconds()))),
+                        Reason.BEGIN);
             }
             case Event.Cast cast -> {
-                if (current instanceof Interruption.Dying) {
+                if (tasks.dying() != null) {
                     yield unchanged(state);
                 }
-                TaskStack next = cast.clearOrder() ? tasks.withOrder(null) : tasks;
-                Interruption casting = new Interruption.Casting(cast.factory());
-                if (current instanceof Interruption.Stunned) {
-                    yield replanWhenInterruptible(state.withTasks(next.followedBy(casting)));
+                TaskSlots next = (cast.clearOrder() ? tasks.withOrder(null) : tasks).withCasting(
+                        new Interruption.Casting(cast.factory()));
+                if (tasks.stun() != null) {
+                    yield replanWhenInterruptible(state.withTasks(next));
                 }
-                yield replanNow(state.withTasks(next.interruptedBy(casting)), Reason.BEGIN);
+                yield replanNow(state.withTasks(next), Reason.BEGIN);
             }
-            case Event.Died ignored -> replanNow(state.withTasks(new TaskStack(tasks.posture(), null, List.of(
-                    new Interruption.Dying()))), Reason.BEGIN);
-            case Event.MountedTower ignored -> replanNow(state.withTasks(new TaskStack(new Posture.Idle(false))),
+            case Event.Died ignored -> replanNow(state.withTasks(tasks.dead()), Reason.BEGIN);
+            case Event.MountedTower ignored -> replanNow(state.withTasks(new TaskSlots(new Posture.Idle(false))),
                     Reason.BEGIN);
-            case Event.MountedShip mounted -> replanNow(state.withTasks(new TaskStack(
+            case Event.MountedShip mounted -> replanNow(state.withTasks(new TaskSlots(
                     mounted.allocation().getRole() == ShipAllocation.FIGHTING ? new Posture.Fighting(mounted.ship(),
                             mounted.allocation()) : new Posture.Sitting(mounted.ship(), mounted.allocation()))),
                     Reason.BEGIN);
-            case Event.Unmounted ignored -> replanNow(state.withTasks(new TaskStack(new Posture.Idle(true))),
+            case Event.Unmounted ignored -> replanNow(state.withTasks(new TaskSlots(new Posture.Idle(true))),
                     Reason.BEGIN);
             case Event.Report.Progressed progressed -> {
                 if (!(state.execution() instanceof UnitState.Execution.Running running)) {
@@ -158,15 +151,19 @@ public final class UnitReducer implements StateReducer<UnitState, Event, List<Un
         if (state.execution() instanceof UnitState.Execution.Running) {
             commands.add(stop);
         }
-        Decision<TaskStack, UnitPlan> decision = decide(state.tasks(), reason);
-        TaskStack tasks = decision.state();
+        Decision<TaskSlots, UnitPlan> decision = decide(state.tasks(), reason);
+        TaskSlots tasks = decision.state();
         return switch (decision.plan()) {
             case UnitPlan.Run run -> {
                 Task task = tasks.current();
                 commands.add(new UnitCommand.Start(task, run));
-                yield new Transition<>(new UnitState(tasks, new UnitState.Execution.Running(task,
-                        run.initialProgress())),
-                        commands);
+                yield new Transition<>(
+                    new UnitState(
+                        tasks,
+                        new UnitState.Execution.Running(task, run.initialProgress())
+                    ),
+                    commands
+                );
             }
             case UnitPlan.Operation operation -> {
                 commands.add(new UnitCommand.Perform(operation));
@@ -175,32 +172,32 @@ public final class UnitReducer implements StateReducer<UnitState, Event, List<Un
         };
     }
 
-    private Decision<TaskStack, UnitPlan> decide(TaskStack state, Reason reason) {
+    private Decision<TaskSlots, UnitPlan> decide(TaskSlots tasks, Reason reason) {
         for (int handovers = 0;; handovers++) {
             assert handovers <= MAX_HANDOVERS : "a decision that never ends in something to do";
-            Interruption interruption = state.interruption();
-            Order order = state.order();
+            Interruption interruption = tasks.interruption();
+            Order order = tasks.order();
             if (interruption != null) {
                 UnitPlan plan = interruption(interruption, reason);
                 if (plan != null) {
-                    return new Decision<>(state, plan);
+                    return new Decision<>(tasks, plan);
                 }
-                state = state.withoutInterruption();
+                tasks = tasks.withoutInterruption();
             } else if (order != null) {
                 switch (order(reason instanceof Reason.Begin ? order.withAttemptsReset() : order, reason)) {
                     case Step.Continue(Order next, UnitPlan plan) -> {
-                        return new Decision<>(state.withOrder(next), plan);
+                        return new Decision<>(tasks.withOrder(next), plan);
                     }
-                    case Step.Become(Order next) -> state = state.withOrder(next);
-                    case Step.Done ignored -> state = state.withOrder(null);
+                    case Step.Become(Order next) -> tasks = tasks.withOrder(next);
+                    case Step.Done ignored -> tasks = tasks.withOrder(null);
                 }
             } else {
                 Selectable<?> spotted = reason instanceof Reason.Spotted s ? s.target() : null;
-                Order engage = spotted != null ? engage(state.posture(), spotted) : null;
+                Order engage = spotted != null ? engage(tasks.posture(), spotted) : null;
                 if (engage == null) {
-                    return new Decision<>(state, watch(state.posture()));
+                    return new Decision<>(tasks, watch(tasks.posture()));
                 }
-                state = state.withOrder(engage);
+                tasks = tasks.withOrder(engage);
             }
             reason = Reason.BEGIN;
         }
