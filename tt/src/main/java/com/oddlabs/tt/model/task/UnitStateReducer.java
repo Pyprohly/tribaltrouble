@@ -30,7 +30,7 @@ import java.util.List;
  * something to do.
  */
 @NullMarked
-public final class UnitReducer implements StateReducer<UnitState, Event, List<UnitCommand>> {
+public final class UnitStateReducer implements StateReducer<UnitState, Event, List<UnitCommand>> {
     /** How many walks a task makes towards something before it gives up on reaching it. */
     private static final int MAX_ATTEMPTS = 1;
 
@@ -58,7 +58,7 @@ public final class UnitReducer implements StateReducer<UnitState, Event, List<Un
 
     private final UnitView view;
 
-    public UnitReducer(UnitView view) {
+    public UnitStateReducer(UnitView view) {
         this.view = view;
     }
 
@@ -158,11 +158,11 @@ public final class UnitReducer implements StateReducer<UnitState, Event, List<Un
                 Task task = tasks.current();
                 commands.add(new UnitCommand.Start(task, run));
                 yield new Transition<>(
-                    new UnitState(
-                        tasks,
-                        new UnitState.Execution.Running(task, run.initialProgress())
-                    ),
-                    commands
+                        new UnitState(
+                                tasks,
+                                new UnitState.Execution.Running(task, run.initialProgress())
+                        ),
+                        commands
                 );
             }
             case UnitPlan.Operation operation -> {

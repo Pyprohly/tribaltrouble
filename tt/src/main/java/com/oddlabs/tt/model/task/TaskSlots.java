@@ -19,16 +19,25 @@ public record TaskSlots(Posture posture, @Nullable Order order, Interruption.@Nu
         if (dying != null) {
             return dying;
         }
-        return stun != null ? stun : casting;
+        if (stun != null) {
+            return stun;
+        }
+        if (casting != null) {
+            return casting;
+        }
+        return null;
     }
 
-    /** The task whose activity runs. */
+    /** The task whose activity runs: its interruption, else its order, else its posture. */
     public Task current() {
-        Interruption interruption = interruption();
+        var interruption = interruption();
         if (interruption != null) {
             return interruption;
         }
-        return order != null ? order : posture;
+        if (order != null) {
+            return order;
+        }
+        return posture;
     }
 
     /** What the unit is doing, as other systems see it: its order, else its interruption, else its posture. */
@@ -36,8 +45,11 @@ public record TaskSlots(Posture posture, @Nullable Order order, Interruption.@Nu
         if (order != null) {
             return order;
         }
-        Interruption interruption = interruption();
-        return interruption != null ? interruption : posture;
+        var interruption = interruption();
+        if (interruption != null) {
+            return interruption;
+        }
+        return posture;
     }
 
     public TaskSlots withOrder(@Nullable Order next) {

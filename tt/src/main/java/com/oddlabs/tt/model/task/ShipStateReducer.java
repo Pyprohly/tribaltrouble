@@ -12,14 +12,14 @@ import java.util.function.BooleanSupplier;
  * whenever a leg of its voyage ends.
  */
 @NullMarked
-public final class ShipReducer implements StateReducer<ShipState, ShipEvent, List<ShipCommand>> {
+public final class ShipStateReducer implements StateReducer<ShipState, ShipEvent, List<ShipCommand>> {
     /** How many times a ship fails to work itself loose before it gives up the voyage. */
     private static final int MAX_FAILED_UNSTUCKS = 3;
 
     /** Whether the ship has already left the shore it was built on. */
     private final BooleanSupplier slid;
 
-    public ShipReducer(BooleanSupplier slid) {
+    public ShipStateReducer(BooleanSupplier slid) {
         this.slid = slid;
     }
 

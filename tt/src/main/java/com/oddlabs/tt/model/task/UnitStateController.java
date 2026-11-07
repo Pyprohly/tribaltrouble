@@ -23,29 +23,30 @@ import org.jspecify.annotations.Nullable;
 import java.util.List;
 
 /**
- * Runs a unit's tasks: the imperative shell around {@link UnitReducer}. Every {@link Event} is
+ * Runs a unit's tasks: the imperative shell around {@link UnitStateReducer}. Every {@link Event} is
  * reduced into the unit's state, and the {@link UnitCommand}s that come back are carried out on the
  * running activity and the posture's, or on the world.
  */
 @NullMarked
-public final class UnitController implements TaskRunner {
+public final class UnitStateController implements TaskRunner {
     private final Unit unit;
     private final ReducerLoop<UnitState, Event, List<UnitCommand>> loop;
     private final @Nullable TransitionTrace<UnitState, Event, List<UnitCommand>> trace;
 
-    private @Nullable UnitActivity running;
-    /** The posture whose activity is kept, running or set aside, for as long as the posture lasts. */
+    private @Nullable UnitActivity runningActivity;
+    /** The posture that {@link #postureActivity} belongs to. */
     private @Nullable Posture posture;
+    /** Kept, running or set aside, for as long as {@link #posture} lasts. */
     private @Nullable UnitActivity postureActivity;
     /** An activity just started for a plan that begins uninterruptible, until its first frame. */
     private @Nullable UnitActivity startedUninterruptible;
 
-    public UnitController(Unit unit) {
+    public UnitStateController(Unit unit) {
         this.unit = unit;
         this.trace = TransitionTrace.ENABLED ? new TransitionTrace<>((event,
                 commands) -> !(event instanceof Event.Report.Progressed) || !commands.isEmpty()) : null;
         this.loop = new ReducerLoop<UnitState, Event, List<UnitCommand>>(
-                new UnitReducer(new LiveUnitView(unit)),
+                new UnitStateReducer(new LiveUnitView(unit)),
                 new UnitState(new TaskSlots(new Posture.Idle(true))),
                 this::executeAll,
                 trace
@@ -67,8 +68,8 @@ public final class UnitController implements TaskRunner {
     }
 
     @Override
-    public @Nullable Activity getActivity() {
-        return running;
+    public @Nullable Activity getRunningActivity() {
+        return runningActivity;
     }
 
     @Override
@@ -107,7 +108,7 @@ public final class UnitController implements TaskRunner {
 
     @Override
     public void animate(float t) {
-        UnitActivity activity = running;
+        UnitActivity activity = runningActivity;
         if (activity == null) {
             return;
         }
@@ -130,21 +131,21 @@ public final class UnitController implements TaskRunner {
             execute(command);
         }
         UnitState state = loop.state();
-        assert (running != null) == (state.execution() instanceof UnitState.Execution.Running) : "the running activity and the unit's execution disagree";
+        assert (runningActivity != null) == (state.execution() instanceof UnitState.Execution.Running) : "the running activity and the unit's execution disagree";
         assert posture == null || posture == state.tasks().posture() : "a posture's activity outlived the posture";
     }
 
     private void execute(UnitCommand command) {
         switch (command) {
             case UnitCommand.Cancel ignored -> {
-                UnitActivity activity = running;
+                UnitActivity activity = runningActivity;
                 assert activity != null : "cancelling with nothing running";
                 if (activity != postureActivity) {
                     activity.cancel();
                 }
-                running = null;
+                runningActivity = null;
             }
-            case UnitCommand.Release ignored -> running = null;
+            case UnitCommand.Release ignored -> runningActivity = null;
             case UnitCommand.Start start -> startActivity(start.task(), start.run());
             case UnitCommand.Perform perform -> {
                 perform(perform.operation());
@@ -152,10 +153,10 @@ public final class UnitController implements TaskRunner {
             }
             case UnitCommand.Leave ignored -> {
                 UnitActivity kept = postureActivity;
-                if (kept != null && kept != running) {
+                if (kept != null && kept != runningActivity) {
                     kept.cancel();
                 }
-                running = null;
+                runningActivity = null;
                 posture = null;
                 postureActivity = null;
             }
@@ -165,7 +166,7 @@ public final class UnitController implements TaskRunner {
     private void startActivity(Task task, UnitPlan.Run run) {
         // Postures are compared by identity; see UnitState.Execution.Running.
         if (task == posture) {
-            running = postureActivity;
+            runningActivity = postureActivity;
             return;
         }
         UnitActivity old = postureActivity;
@@ -173,7 +174,7 @@ public final class UnitController implements TaskRunner {
             old.cancel();
         }
         UnitActivity activity = create(run);
-        running = activity;
+        runningActivity = activity;
         startedUninterruptible = run.initialProgress() == Activity.State.UNINTERRUPTIBLE ? activity : null;
         if (task instanceof Posture next) {
             posture = next;

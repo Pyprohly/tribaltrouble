@@ -15,7 +15,7 @@ public final class InertTaskRunner implements TaskRunner {
     }
 
     @Override
-    public Activity getActivity() {
+    public Activity getRunningActivity() {
         return activity;
     }
 

@@ -10,7 +10,7 @@ public interface TaskRunner {
 
     /** The running activity, or null when there is none, as for a unit that has just been removed. */
     @Nullable
-    Activity getActivity();
+    Activity getRunningActivity();
 
     Task getPrimaryTask();
 

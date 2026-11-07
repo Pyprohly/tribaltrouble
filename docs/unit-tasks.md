@@ -49,7 +49,7 @@ spell, death, mounting and unmounting. Others are the controller reporting back,
 `Event.Report`: `Progressed` (sent when the activity becomes interruptible or stops being so) and
 `Finished` from the running activity, and `Performed` or `Removed`
 after an operation.
-`UnitController`'s public methods (`order`, `stun`, `cast`, …) each build one and dispatch it to
+`UnitStateController`'s public methods (`order`, `stun`, `cast`, …) each build one and dispatch it to
 the controller's `ReducerLoop`.
 
 Both reducers implement `StateReducer<S, E, F>`, whose `reduce(state, event)` is the gist's
@@ -57,14 +57,14 @@ Both reducers implement `StateReducer<S, E, F>`, whose `reduce(state, event)` is
 with, a `UnitView` or, for a ship, whether it has slid off the shore, which its controller supplies, as the gist's parent machines pass
 outside data down to their children.
 
-`UnitReducer.reduce` is pure and returns a `Transition` of the next state and a list of
+`UnitStateReducer.reduce` is pure and returns a `Transition` of the next state and a list of
 `UnitCommand`s for the controller: `Cancel` or `Release` the running activity, `Start` an activity
 for a task's plan, `Perform` an operation, or `Leave` once the unit is out of the world. An event the unit does not react to, such as a stun
 while dying or an activity report from a unit that has moved on, returns no commands.
 
 A ship's events are `ShipEvent`s: `Started`, `Sailed` with a new destination and `Docked`, and
 the controller's reports under `ShipEvent.Report`, `Finished` and `Performed`. `Sailed` and
-`Docked` replace the ship's task, cancel the running activity and decide at once. `ShipReducer.reduce` returns a list of
+`Docked` replace the ship's task, cancel the running activity and decide at once. `ShipStateReducer.reduce` returns a list of
 `ShipCommand`s: `Cancel` or `Release` the running activity, `Start` an activity, or `Perform` an
 operation.
 
@@ -85,9 +85,9 @@ rather than giving up.
 
 ## Execution
 
-`UnitController` and `ShipController` are the imperative shell, and `Selectable` animates and
+`UnitStateController` and `ShipStateController` are the imperative shell, and `Selectable` animates and
 inspects them, along with the `InertTaskRunner` of buildings and ship proxies, as a `TaskRunner`.
-`UnitController` holds the running activity and the posture's, `ShipController` the running
+`UnitStateController` holds the running activity and the posture's, `ShipStateController` the running
 activity, and each a `ReducerLoop` that holds the state and reduces events into it. They carry out
 the commands and turn plans into `Activity` instances. Activities keep animation, movement and timing, and report what they found through
 `Activity.outcome()` instead of calling back into the controller.
@@ -100,9 +100,9 @@ because it happened first, so a report always describes the activity the reducer
 reducer still ignores a report that no longer applies, such as `Performed` after an event already
 moved the unit on.
 
-One rule, in `UnitReducer`, decides when the running activity is replaced. A decision is taken as
+One rule, in `UnitStateReducer`, decides when the running activity is replaced. A decision is taken as
 soon as the running activity is interruptible and waits otherwise. Urgent inputs (stun, spell,
-death, mounting) cancel it at once. `UnitController` keeps a posture's activity, rather than
+death, mounting) cancel it at once. `UnitStateController` keeps a posture's activity, rather than
 cancelling it, while something runs above it, and resumes it when the reducer starts the same
 posture again, so idle scan timers and ship boarding progress survive orders and interruptions. How
 interruptible a new activity is before its first frame is a property of its plan

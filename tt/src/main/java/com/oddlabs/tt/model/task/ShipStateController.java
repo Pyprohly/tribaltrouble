@@ -8,21 +8,21 @@ import org.jspecify.annotations.Nullable;
 import java.util.List;
 
 /**
- * Runs a ship's voyages: the imperative shell around {@link ShipReducer}. Every {@link ShipEvent} is
+ * Runs a ship's voyages: the imperative shell around {@link ShipStateReducer}. Every {@link ShipEvent} is
  * reduced into the ship's state, and the {@link ShipCommand}s that come back are carried out on the
  * running activity or on the ship.
  */
 @NullMarked
-public final class ShipController implements TaskRunner {
+public final class ShipStateController implements TaskRunner {
     private final Ship ship;
     private final ReducerLoop<ShipState, ShipEvent, List<ShipCommand>> loop;
     private final @Nullable TransitionTrace<ShipState, ShipEvent, List<ShipCommand>> trace;
-    private @Nullable ShipActivity running;
+    private @Nullable ShipActivity runningActivity;
 
-    public ShipController(Ship ship) {
+    public ShipStateController(Ship ship) {
         this.ship = ship;
         this.trace = TransitionTrace.ENABLED ? new TransitionTrace<>() : null;
-        this.loop = new ReducerLoop<>(new ShipReducer(ship::slid), new ShipState(new Task.Inert()),
+        this.loop = new ReducerLoop<>(new ShipStateReducer(ship::slid), new ShipState(new Task.Inert()),
                 this::executeAll, trace);
     }
 
@@ -53,8 +53,8 @@ public final class ShipController implements TaskRunner {
     }
 
     @Override
-    public @Nullable Activity getActivity() {
-        return running;
+    public @Nullable Activity getRunningActivity() {
+        return runningActivity;
     }
 
     @Override
@@ -64,7 +64,7 @@ public final class ShipController implements TaskRunner {
 
     @Override
     public void animate(float t) {
-        ShipActivity activity = running;
+        ShipActivity activity = runningActivity;
         if (activity == null) {
             return;
         }
@@ -81,13 +81,13 @@ public final class ShipController implements TaskRunner {
     private void execute(ShipCommand command) {
         switch (command) {
             case ShipCommand.Cancel ignored -> {
-                ShipActivity activity = running;
+                ShipActivity activity = runningActivity;
                 assert activity != null : "cancelling with nothing running";
                 activity.cancel();
-                running = null;
+                runningActivity = null;
             }
-            case ShipCommand.Release ignored -> running = null;
-            case ShipCommand.Start start -> running = create(start.run());
+            case ShipCommand.Release ignored -> runningActivity = null;
+            case ShipCommand.Start start -> runningActivity = create(start.run());
             case ShipCommand.Perform perform -> {
                 switch (perform.operation()) {
                     case FINISH_SLIDE -> ship.endSlide();

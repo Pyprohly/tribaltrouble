@@ -8,7 +8,7 @@ import com.oddlabs.tt.model.task.DieActivity;
 import com.oddlabs.tt.model.task.Interruption;
 import com.oddlabs.tt.model.task.Order;
 import com.oddlabs.tt.model.task.TaskRunner;
-import com.oddlabs.tt.model.task.UnitController;
+import com.oddlabs.tt.model.task.UnitStateController;
 import com.oddlabs.tt.model.task.WalkActivity;
 import com.oddlabs.tt.model.weapon.IronAxeWeapon;
 import com.oddlabs.tt.model.weapon.IronSpearWeapon;
@@ -69,7 +69,7 @@ public class Unit extends Selectable<UnitTemplate> implements Occupant, Movable 
     private final @NonNull List<SpriteKey> attachments = new ArrayList<>(1); // render-only, never part of the sim
     private final @Nullable String name;
     private final @NonNull PathTracker path_tracker;
-    private final @NonNull UnitController controller = new UnitController(this);
+    private final @NonNull UnitStateController controller = new UnitStateController(this);
     private final float[] magic_energy = new float[2];
     private int last_magic_index = -1;
 

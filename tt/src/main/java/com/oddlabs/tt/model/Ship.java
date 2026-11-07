@@ -8,7 +8,7 @@ import com.oddlabs.tt.landscape.World;
 import com.oddlabs.tt.model.task.Order;
 import com.oddlabs.tt.model.task.TaskRunner;
 import com.oddlabs.tt.model.task.SailActivity;
-import com.oddlabs.tt.model.task.ShipController;
+import com.oddlabs.tt.model.task.ShipStateController;
 import com.oddlabs.tt.model.weapon.IronAxeWeapon;
 import com.oddlabs.tt.model.weapon.IronSpearWeapon;
 import com.oddlabs.tt.model.weapon.RockAxeWeapon;
@@ -98,7 +98,7 @@ public class Ship extends Building implements Movable {
 
     private boolean slid = false;
 
-    private final ShipController controller = new ShipController(this);
+    private final ShipStateController controller = new ShipStateController(this);
     private boolean flattened = false;
 
     private Target rally_point = this;

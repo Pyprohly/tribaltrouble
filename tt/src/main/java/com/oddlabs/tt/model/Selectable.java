@@ -87,12 +87,12 @@ public abstract class Selectable<T extends Template> extends Model implements Ta
     }
 
     protected final boolean isBlocking() {
-        Activity activity = getTaskRunner().getActivity();
+        Activity activity = getTaskRunner().getRunningActivity();
         return activity != null && activity.isBlocking();
     }
 
     public final @Nullable Activity getCurrentActivity() {
-        return getTaskRunner().getActivity();
+        return getTaskRunner().getRunningActivity();
     }
 
     public final @Nullable TransitionTrace<?, ?, ?> getTransitionTrace() {
