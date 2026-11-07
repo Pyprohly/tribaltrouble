@@ -20,14 +20,14 @@ public sealed interface Event {
     record Ordered(@Nullable Order order) implements Event {
     }
 
+    record Died() implements Event {
+    }
+
     record Stunned(float seconds) implements Event {
     }
 
     /** The unit casts a spell; a stunned unit casts it once the stun wears off. */
     record Cast(MagicFactory factory, boolean clearOrder) implements Event {
-    }
-
-    record Died() implements Event {
     }
 
     record MountedTower() implements Event {

@@ -73,24 +73,24 @@ public final class ShipStateReducer implements StateReducer<ShipState, ShipEvent
                     voyage.failedUnstucks()));
         }
         return switch (voyage.phase()) {
-            case SLIDING -> reason instanceof Reason.Performed ? leg(with(voyage, Voyage.Phase.SAILING,
+            case SLIDING -> reason instanceof Reason.Performed ? leg(withPhase(voyage, Voyage.Phase.SAILING,
                     voyage.failedUnstucks())) : new Decision<>(voyage, ShipPlan.Operation.FINISH_SLIDE);
-            case SAILING -> reason instanceof Reason.Blocked ? leg(with(voyage, Voyage.Phase.UNSTICKING,
+            case SAILING -> reason instanceof Reason.Blocked ? leg(withPhase(voyage, Voyage.Phase.UNSTICKING,
                     voyage.failedUnstucks())) : new Decision<>(new Task.Inert(), ShipPlan.Operation.END_TRIP);
             case UNSTICKING -> {
                 if (reason instanceof Reason.Completed) {
-                    yield leg(with(voyage, Voyage.Phase.SAILING, 0));
+                    yield leg(withPhase(voyage, Voyage.Phase.SAILING, 0));
                 }
                 int failed = voyage.failedUnstucks() + 1;
                 if (failed >= MAX_FAILED_UNSTUCKS) {
                     yield new Decision<>(new Task.Inert(), new ShipPlan.Moor());
                 }
-                yield leg(with(voyage, Voyage.Phase.SAILING, failed));
+                yield leg(withPhase(voyage, Voyage.Phase.SAILING, failed));
             }
         };
     }
 
-    private static Voyage with(Voyage voyage, Voyage.Phase phase, int failedUnstucks) {
+    private static Voyage withPhase(Voyage voyage, Voyage.Phase phase, int failedUnstucks) {
         return new Voyage(voyage.target(), phase, failedUnstucks);
     }
 

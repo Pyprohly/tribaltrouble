@@ -5,7 +5,9 @@ import org.jspecify.annotations.NullMarked;
 
 /**
  * Something that takes over a unit whatever it was doing. The order beneath it is suspended, not
- * lost, and resumes when the interruption ends; only dying ends everything.
+ * lost, and resumes when the interruption ends; only dying ends everything. Each interruption must
+ * be a new instance, never a shared constant, because a unit's tasks are told apart by identity
+ * (see {@link UnitState.Execution.Running}).
  */
 @NullMarked
 public sealed interface Interruption extends Task {

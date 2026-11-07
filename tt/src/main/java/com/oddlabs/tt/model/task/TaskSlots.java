@@ -9,8 +9,13 @@ import org.jspecify.annotations.Nullable;
  * spell; the first one that is there runs, else the order, else the posture.
  */
 @NullMarked
-public record TaskSlots(Posture posture, @Nullable Order order, Interruption.@Nullable Casting casting,
-                        Interruption.@Nullable Stunned stun, Interruption.@Nullable Dying dying) {
+public record TaskSlots(
+                        Posture posture,
+                        @Nullable Order order,
+                        Interruption.@Nullable Dying dying,
+                        Interruption.@Nullable Stunned stun,
+                        Interruption.@Nullable Casting casting
+) {
     public TaskSlots(Posture posture) {
         this(posture, null, null, null, null);
     }
@@ -53,28 +58,28 @@ public record TaskSlots(Posture posture, @Nullable Order order, Interruption.@Nu
     }
 
     public TaskSlots withOrder(@Nullable Order next) {
-        return new TaskSlots(posture, next, casting, stun, dying);
+        return new TaskSlots(posture, next, dying, stun, casting);
+    }
+
+    /** Ends everything; nothing follows. */
+    public TaskSlots withOnlyDying() {
+        return new TaskSlots(posture, null, new Interruption.Dying(), null, null);
     }
 
     /** Stuns the unit, replacing any stun already there. */
     public TaskSlots withStun(Interruption.Stunned next) {
-        return new TaskSlots(posture, order, casting, next, dying);
+        return new TaskSlots(posture, order, dying, next, casting);
     }
 
     /** Has the unit cast a spell, replacing any spell not yet cast. */
     public TaskSlots withCasting(Interruption.Casting next) {
-        return new TaskSlots(posture, order, next, stun, dying);
-    }
-
-    /** Ends everything; nothing follows. */
-    public TaskSlots dead() {
-        return new TaskSlots(posture, null, null, null, new Interruption.Dying());
+        return new TaskSlots(posture, order, dying, stun, next);
     }
 
     /** Ends the running interruption. */
     public TaskSlots withoutInterruption() {
         assert dying == null : "dying never ends";
-        return stun != null ? new TaskSlots(posture, order, casting, null, null) : new TaskSlots(posture, order, null,
+        return stun != null ? new TaskSlots(posture, order, null, null, casting) : new TaskSlots(posture, order, null,
                 null, null);
     }
 }

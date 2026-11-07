@@ -13,7 +13,7 @@ public sealed interface UnitCommand {
     UnitCommand RELEASE = new Release();
     UnitCommand LEAVE = new Leave();
 
-    /** Cancels the running activity, unless it is a posture's. */
+    /** Cancels the running activity, unless it is the posture's. */
     record Cancel() implements UnitCommand {
     }
 
@@ -35,7 +35,7 @@ public sealed interface UnitCommand {
     record Perform(UnitPlan.Operation operation) implements UnitCommand {
     }
 
-    /** Drops every activity of a unit that has left the world, cancelling a posture's that was set aside. */
+    /** Drops every activity of a unit that has left the world, cancelling the posture's that was set aside. */
     record Leave() implements UnitCommand {
     }
 }
