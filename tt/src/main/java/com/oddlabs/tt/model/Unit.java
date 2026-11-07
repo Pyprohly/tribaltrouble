@@ -75,7 +75,7 @@ public class Unit extends Selectable<UnitTemplate> implements Occupant, Movable 
 
     private @Nullable BalancedParametricEmitter stun_marker;
     private int hit_points;
-    private @NonNull int animation = Animation.IDLING;
+    private int animation = Animation.IDLING;
     private float anim_speed;
     private float anim_time;
     private int path_penalty;
@@ -768,7 +768,7 @@ public class Unit extends Selectable<UnitTemplate> implements Occupant, Movable 
         return magic_energy[magic_index] / MAX_MAGIC_ENERGY[magic_index];
     }
 
-    public final void switchAnimation(float anim_speed, @NonNull int animation) {
+    public final void switchAnimation(float anim_speed, int animation) {
         assert !isDead();
         if (supply_container != null) {
             supply_container.resetSupply(LeftPaddle.class);

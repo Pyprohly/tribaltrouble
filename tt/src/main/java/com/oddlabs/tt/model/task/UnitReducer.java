@@ -62,16 +62,21 @@ public final class UnitReducer implements StateReducer<UnitState, Event, List<Un
         TaskStack tasks = state.tasks();
         Interruption current = tasks.interruption();
         return switch (event) {
-            case Event.Started ignored -> state.slot() instanceof UnitState.Slot.Vacant ? decideNow(state,
+            case Event.Started ignored -> state.slot() instanceof UnitState.Slot.Vacant ? replanNow(state,
                     Reason.BEGIN) : unchanged(state);
-            case Event.Ordered ordered -> decideWhenInterruptible(state.withTasks(tasks.withOrder(ordered.order())));
+            case Event.Ordered ordered -> replanWhenInterruptible(state.withTasks(tasks.withOrder(ordered.order())));
             case Event.Stunned stunned -> {
                 if (current instanceof Interruption.Dying) {
                     yield unchanged(state);
                 }
                 Interruption stun = new Interruption.Stunned(stunned.seconds());
-                yield decideNow(state.withTasks(current instanceof Interruption.Stunned ? tasks.replacingInterruption(
-                        stun) : tasks.interruptedBy(stun)), Reason.BEGIN);
+                yield replanNow(
+                    state.withTasks(
+                            current instanceof Interruption.Stunned
+                                    ? tasks.replacingInterruption(stun)
+                                    : tasks.interruptedBy(stun)),
+                    Reason.BEGIN
+                );
             }
             case Event.Cast cast -> {
                 if (current instanceof Interruption.Dying) {
@@ -80,34 +85,35 @@ public final class UnitReducer implements StateReducer<UnitState, Event, List<Un
                 TaskStack next = cast.clearOrder() ? tasks.withOrder(null) : tasks;
                 Interruption casting = new Interruption.Casting(cast.factory());
                 if (current instanceof Interruption.Stunned) {
-                    yield decideWhenInterruptible(state.withTasks(next.followedBy(casting)));
+                    yield replanWhenInterruptible(state.withTasks(next.followedBy(casting)));
                 }
-                yield decideNow(state.withTasks(next.interruptedBy(casting)), Reason.BEGIN);
+                yield replanNow(state.withTasks(next.interruptedBy(casting)), Reason.BEGIN);
             }
-            case Event.Died ignored -> decideNow(state.withTasks(new TaskStack(tasks.posture(), null, List.of(
+            case Event.Died ignored -> replanNow(state.withTasks(new TaskStack(tasks.posture(), null, List.of(
                     new Interruption.Dying()))), Reason.BEGIN);
-            case Event.MountedTower ignored -> decideNow(state.withTasks(new TaskStack(new Posture.Idle(false))),
+            case Event.MountedTower ignored -> replanNow(state.withTasks(new TaskStack(new Posture.Idle(false))),
                     Reason.BEGIN);
-            case Event.MountedShip mounted -> decideNow(state.withTasks(new TaskStack(
+            case Event.MountedShip mounted -> replanNow(state.withTasks(new TaskStack(
                     mounted.allocation().getRole() == ShipAllocation.FIGHTING ? new Posture.Fighting(mounted.ship(),
                             mounted.allocation()) : new Posture.Sitting(mounted.ship(), mounted.allocation()))),
                     Reason.BEGIN);
-            case Event.Unmounted ignored -> decideNow(state.withTasks(new TaskStack(new Posture.Idle(true))),
+            case Event.Unmounted ignored -> replanNow(state.withTasks(new TaskStack(new Posture.Idle(true))),
                     Reason.BEGIN);
-            case Event.Progressed progressed -> {
+            case Event.Report.Progressed progressed -> {
                 if (!(state.slot() instanceof UnitState.Slot.Running running)) {
                     yield unchanged(state);
                 }
                 // Reported every frame, so the state is only rebuilt when the progress changed.
-                yield decideWhenInterruptible(running.progress() == progressed.progress() ? state : new UnitState(
+                yield replanWhenInterruptible(running.progress() == progressed.progress() ? state : new UnitState(
                         tasks, new UnitState.Slot.Running(running.task(), progressed.progress()), state.parked()));
             }
-            case Event.Finished finished -> state.slot() instanceof UnitState.Slot.Running running ? finish(state,
+            case Event.Report.Finished finished -> state.slot() instanceof UnitState.Slot.Running running ? finish(
+                    state,
                     running, finished.outcome()) : unchanged(state);
             // An event that decided while the operation was carried out has already moved the unit on.
-            case Event.Performed ignored -> state.slot() instanceof UnitState.Slot.Performing ? decideNow(state,
+            case Event.Report.Performed ignored -> state.slot() instanceof UnitState.Slot.Performing ? replanNow(state,
                     Reason.PERFORMED) : unchanged(state);
-            case Event.Removed ignored -> {
+            case Event.Report.Removed ignored -> {
                 List<UnitCommand> commands = new ArrayList<>(2);
                 if (state.slot() instanceof UnitState.Slot.Running) {
                     commands.add(UnitCommand.RELEASE);
@@ -125,29 +131,29 @@ public final class UnitReducer implements StateReducer<UnitState, Event, List<Un
     }
 
     /** Decides if the current task is not the one running and the running activity can be interrupted. */
-    private Transition<UnitState, List<UnitCommand>> decideWhenInterruptible(UnitState state) {
+    private Transition<UnitState, List<UnitCommand>> replanWhenInterruptible(UnitState state) {
         if (state.slot() instanceof UnitState.Slot.Running running && (running.task() == state.tasks().current()
                 || running.progress() == Activity.State.UNINTERRUPTIBLE)) {
             return unchanged(state);
         }
-        return decideNow(state, Reason.BEGIN);
+        return replanNow(state, Reason.BEGIN);
     }
 
     private Transition<UnitState, List<UnitCommand>> finish(UnitState state, UnitState.Slot.Running running,
             Reason outcome) {
         Reason reason = state.tasks().current() == running.task() ? outcome : Reason.BEGIN;
-        return decide(state, UnitCommand.RELEASE, reason);
+        return replan(state, UnitCommand.RELEASE, reason);
     }
 
-    private Transition<UnitState, List<UnitCommand>> decideNow(UnitState state, Reason reason) {
-        return decide(state, UnitCommand.CANCEL, reason);
+    private Transition<UnitState, List<UnitCommand>> replanNow(UnitState state, Reason reason) {
+        return replan(state, UnitCommand.CANCEL, reason);
     }
 
     /**
-     * Stops what runs, parking a posture's activity and otherwise giving the stop command, decides,
-     * and starts or resumes what the decision asks for.
+     * Stops what runs, parking a posture's activity and otherwise giving the stop command, plans,
+     * and starts or resumes what the plan asks for.
      */
-    private Transition<UnitState, List<UnitCommand>> decide(UnitState state, UnitCommand stop, Reason reason) {
+    private Transition<UnitState, List<UnitCommand>> replan(UnitState state, UnitCommand stop, Reason reason) {
         List<UnitCommand> commands = new ArrayList<>(3);
         Posture parked = state.parked();
         if (state.slot() instanceof UnitState.Slot.Running running) {
@@ -158,13 +164,13 @@ public final class UnitReducer implements StateReducer<UnitState, Event, List<Un
                 commands.add(stop);
             }
         }
-        Transition<TaskStack, UnitPlan> decision = decide(state.tasks(), reason);
-        TaskStack tasks = decision.nextState();
+        Decision<TaskStack, UnitPlan> decision = plan(state.tasks(), reason);
+        TaskStack tasks = decision.state();
         if (parked != null && parked != tasks.posture()) {
             commands.add(UnitCommand.DISCARD);
             parked = null;
         }
-        return switch (decision.effect()) {
+        return switch (decision.plan()) {
             case UnitPlan.Run run -> {
                 Task task = tasks.current();
                 if (task == parked) {
@@ -183,20 +189,20 @@ public final class UnitReducer implements StateReducer<UnitState, Event, List<Un
         };
     }
 
-    private Transition<TaskStack, UnitPlan> decide(TaskStack state, Reason reason) {
+    private Decision<TaskStack, UnitPlan> plan(TaskStack state, Reason reason) {
         Interruption interruption = state.interruption();
         if (interruption != null) {
             UnitPlan plan = interruption(interruption, reason);
             if (plan != null) {
-                return new Transition<>(state, plan);
+                return new Decision<>(state, plan);
             }
-            return decide(state.withoutInterruption(), Reason.BEGIN);
+            return plan(state.withoutInterruption(), Reason.BEGIN);
         }
         Order order = state.order();
         if (order != null) {
             if (order(reason instanceof Reason.Begin ? order.resetAttempts() : order,
                     reason) instanceof Step.Continue<Order>(Order next, UnitPlan plan)) {
-                return new Transition<>(state.withOrder(next), plan);
+                return new Decision<>(state.withOrder(next), plan);
             }
             return posture(state.withOrder(null), Reason.BEGIN);
         }
@@ -213,26 +219,26 @@ public final class UnitReducer implements StateReducer<UnitState, Event, List<Un
         };
     }
 
-    private Transition<TaskStack, UnitPlan> posture(TaskStack state, Reason reason) {
+    private Decision<TaskStack, UnitPlan> posture(TaskStack state, Reason reason) {
         Selectable<?> spotted = reason instanceof Reason.Spotted s ? s.target() : null;
         return switch (state.posture()) {
             case Posture.Idle idle -> {
                 if (spotted == null) {
-                    yield new Transition<>(state, new UnitPlan.Watch(idle.canMove()));
+                    yield new Decision<>(state, new UnitPlan.Watch(idle.canMove()));
                 }
                 // A unit that can move chases the enemy and then walks back to where it stood.
                 Order engage = idle.canMove() ? new Order.Walk(new LandscapeTarget(view.gridX(), view.gridY()), true, 0,
                         new Order.Hunt(spotted)) : new Order.Attack(spotted);
-                yield decide(state.withOrder(engage), Reason.BEGIN);
+                yield plan(state.withOrder(engage), Reason.BEGIN);
             }
             case Posture.Fighting fighting -> {
                 if (spotted == null) {
-                    yield new Transition<>(state, new UnitPlan.Fight(fighting.ship(), fighting.allocation()));
+                    yield new Decision<>(state, new UnitPlan.Fight(fighting.ship(), fighting.allocation()));
                 }
-                yield decide(state.withOrder(new Order.Attack(spotted, new Seat(fighting.ship(),
+                yield plan(state.withOrder(new Order.Attack(spotted, new Seat(fighting.ship(),
                         fighting.allocation()))), Reason.BEGIN);
             }
-            case Posture.Sitting sitting -> new Transition<>(state, new UnitPlan.Sit(sitting.ship(),
+            case Posture.Sitting sitting -> new Decision<>(state, new UnitPlan.Sit(sitting.ship(),
                     sitting.allocation()));
         };
     }

@@ -20,7 +20,7 @@ public sealed interface ShipCommand {
     record Start(ShipPlan.Run run) implements ShipCommand {
     }
 
-    /** Carries out the operation, then reports {@link ShipEvent.Performed}. */
+    /** Carries out the operation, then reports {@link ShipEvent.Report.Performed}. */
     record Perform(ShipPlan.Operation operation) implements ShipCommand {
     }
 }

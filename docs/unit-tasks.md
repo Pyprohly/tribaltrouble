@@ -44,8 +44,9 @@ ship proxies are always `Task.Inert`.
 ## Events
 
 Everything a unit reacts to is an `Event`. Some come from the world: `Started`, an order, a stun, a
-spell, death, mounting and unmounting. Others are the controller reporting back: `Progressed` and
-`Finished` from the running activity, and `Performed` or `Removed` after an operation.
+spell, death, mounting and unmounting. Others are the controller reporting back, grouped under
+`Event.Report`: `Progressed` and `Finished` from the running activity, and `Performed` or `Removed`
+after an operation.
 `UnitController`'s public methods (`order`, `stun`, `cast`, …) each build one and pass it to
 `dispatch`, which both controllers implement from `StateController<S, E>` alongside `getState`.
 
@@ -60,8 +61,8 @@ outside data down to their children.
 while dying or an activity report from a unit that has moved on, returns no commands.
 
 A ship's events are `ShipEvent`s: `Started`, `Sailed` with a new destination and `Docked`, and
-the controller's reports `Finished` and `Performed`. `Sailed` and `Docked` replace the ship's task,
-cancel the running activity and decide at once. `ShipReducer.reduce` returns a list of
+the controller's reports under `ShipEvent.Report`, `Finished` and `Performed`. `Sailed` and
+`Docked` replace the ship's task, cancel the running activity and decide at once. `ShipReducer.reduce` returns a list of
 `ShipCommand`s: `Cancel` or `Release` the running activity, `Start` an activity, or `Perform` an
 operation.
 
@@ -71,8 +72,9 @@ Inside `reduce`, the current task decides for a `Reason`, the task-level event: 
 `UnitState` handles lifecycle events itself and turns the rest into a reason for the current task,
 as the gist's hierarchical machines do. A ship's voyage decides the same way. Each decision
 yields the next task and a plan: an activity to run (`UnitPlan.Run`, `ShipPlan.Run`) or a one-off
-change to the world (`UnitPlan.Operation`, `ShipPlan.Operation`). After an operation the
-controller reports back and the task decides again with `Reason.PERFORMED`.
+change to the world (`UnitPlan.Operation`, `ShipPlan.Operation`). The reducers' `plan` methods
+return these as a `Decision` of the task state and its plan, which `replan` turns into commands.
+After an operation the controller reports back and the task decides again with `Reason.PERFORMED`.
 
 Reasons say why the task is deciding: `Begin` when it became current, `Completed` when its activity
 finished, `Found` and `Spotted` from walks and watches, and `Blocked` and `NoRoute` from ships.

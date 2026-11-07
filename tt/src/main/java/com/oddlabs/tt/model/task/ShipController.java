@@ -67,7 +67,7 @@ public final class ShipController implements TaskRunner, StateController<ShipSta
         if (activity == null) {
             return;
         }
-        loop.report(() -> activity.animate(t) == Activity.State.DONE ? new ShipEvent.Finished(
+        loop.report(() -> activity.animate(t) == Activity.State.DONE ? new ShipEvent.Report.Finished(
                 activity.outcome()) : null);
     }
 
@@ -92,7 +92,7 @@ public final class ShipController implements TaskRunner, StateController<ShipSta
                     case FINISH_SLIDE -> ship.endSlide();
                     case END_TRIP -> ship.endTrip();
                 }
-                loop.dispatch(new ShipEvent.Performed());
+                loop.dispatch(new ShipEvent.Report.Performed());
             }
         }
     }

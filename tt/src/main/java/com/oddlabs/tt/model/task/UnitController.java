@@ -37,8 +37,11 @@ public final class UnitController implements TaskRunner, StateController<UnitSta
 
     public UnitController(Unit unit) {
         this.unit = unit;
-        this.loop = new ReducerLoop<>(new UnitReducer(new LiveView(unit)), new UnitState(new TaskStack(
-                new Posture.Idle(true))), this::executeAll);
+        this.loop = new ReducerLoop<>(
+                new UnitReducer(new LiveUnitView(unit)),
+                new UnitState(new TaskStack(new Posture.Idle(true))),
+                this::executeAll
+        );
     }
 
     /** Takes the first decision; called once the unit is far enough constructed to act. */
@@ -102,9 +105,9 @@ public final class UnitController implements TaskRunner, StateController<UnitSta
             return;
         }
         loop.report(() -> switch (activity.animate(t)) {
-            case DONE -> new Event.Finished(activity.outcome());
-            case INTERRUPTIBLE -> Event.Progressed.INTERRUPTIBLE;
-            case UNINTERRUPTIBLE -> Event.Progressed.UNINTERRUPTIBLE;
+            case DONE -> new Event.Report.Finished(activity.outcome());
+            case INTERRUPTIBLE -> Event.Report.Progressed.INTERRUPTIBLE;
+            case UNINTERRUPTIBLE -> Event.Report.Progressed.UNINTERRUPTIBLE;
         });
     }
 
@@ -142,7 +145,7 @@ public final class UnitController implements TaskRunner, StateController<UnitSta
             case UnitCommand.Start start -> running = create(start.run());
             case UnitCommand.Perform perform -> {
                 perform(perform.operation());
-                loop.dispatch(unit.isDead() ? new Event.Removed() : new Event.Performed());
+                loop.dispatch(unit.isDead() ? new Event.Report.Removed() : new Event.Report.Performed());
             }
         }
     }
@@ -208,7 +211,7 @@ public final class UnitController implements TaskRunner, StateController<UnitSta
         container.enter(unit);
     }
 
-    private record LiveView(Unit unit) implements UnitView {
+    private record LiveUnitView(Unit unit) implements UnitView {
         @Override
         public int gridX() {
             return unit.getGridX();

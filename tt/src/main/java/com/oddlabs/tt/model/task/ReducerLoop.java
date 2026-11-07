@@ -8,23 +8,23 @@ import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 /**
- * Holds a state and reduces events into it one at a time, handing each effect to the shell. Events
- * raised while an effect is carried out, or while {@link #report} runs its action, wait in a queue
- * for their turn, so a reduction never starts inside another.
+ * Holds a state and reduces events into it one at a time, handing each effect to the executor.
+ * Events raised while an effect is carried out, or while {@link #report} runs its action, wait in a
+ * queue for their turn, so a reduction never starts inside another.
  */
 @NullMarked
 final class ReducerLoop<S, E, F> {
     private final StateReducer<S, E, F> reducer;
-    private final Consumer<F> shell;
+    private final Consumer<F> executor;
     private S state;
 
     private final ArrayDeque<E> queue = new ArrayDeque<>();
     private boolean busy;
 
-    ReducerLoop(StateReducer<S, E, F> reducer, S initial, Consumer<F> shell) {
+    ReducerLoop(StateReducer<S, E, F> reducer, S initial, Consumer<F> executor) {
         this.reducer = reducer;
         this.state = initial;
-        this.shell = shell;
+        this.executor = executor;
     }
 
     S state() {
@@ -66,7 +66,7 @@ final class ReducerLoop<S, E, F> {
             while ((event = queue.pollFirst()) != null) {
                 Transition<S, F> transition = reducer.reduce(state, event);
                 state = transition.nextState();
-                shell.accept(transition.effect());
+                executor.accept(transition.effect());
             }
         } finally {
             busy = false;
