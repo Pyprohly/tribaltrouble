@@ -5,7 +5,7 @@ import com.oddlabs.tt.model.ShipAllocation;
 import com.oddlabs.tt.model.Unit;
 import org.jspecify.annotations.NonNull;
 
-public final class SittingActivity implements Activity {
+public final class SittingActivity implements UnitActivity {
     private final Unit unit;
     private final Ship ship;
     private final ShipAllocation allocation;

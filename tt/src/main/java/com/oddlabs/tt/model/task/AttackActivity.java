@@ -8,7 +8,7 @@ import com.oddlabs.tt.model.Unit;
 
 import org.jspecify.annotations.NonNull;
 
-public final class AttackActivity implements Activity {
+public final class AttackActivity implements UnitActivity {
     private static final float SECONDS_PER_ATTACK = 2f;
 
     enum AttackState {

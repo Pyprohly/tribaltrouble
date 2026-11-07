@@ -8,7 +8,7 @@ import com.oddlabs.tt.pathfinder.UnitGrid;
 import com.oddlabs.tt.landscape.LandscapeTarget;
 import org.jspecify.annotations.NonNull;
 
-public final class ShipUnstuckActivity implements Activity {
+public final class ShipUnstuckActivity implements ShipActivity {
     private static final float SHIP_SPEED = 0.45f;
     private ShipTrajectoryPoint next_pose = null;
 
@@ -16,7 +16,7 @@ public final class ShipUnstuckActivity implements Activity {
 
     private ShipTrajectory trajectory = null;
 
-    private @NonNull Reason outcome = Reason.COMPLETED;
+    private @NonNull ShipReason outcome = Reason.COMPLETED;
 
     public ShipUnstuckActivity(Ship ship) {
         this.ship = ship;
@@ -66,7 +66,7 @@ public final class ShipUnstuckActivity implements Activity {
         ship.setLayer(UnitGrid.SEA);
 
         if (trajectory == null || !trajectory.exists()) {
-            outcome = Reason.NO_ROUTE;
+            outcome = ShipReason.NO_ROUTE;
             return State.DONE;
         }
 
@@ -87,7 +87,7 @@ public final class ShipUnstuckActivity implements Activity {
 
         if (fromPoint.distanceTo(next_pose) > 0.0001f && ShipTrajectory.checkShipsCollision(grid, ship, fromPoint,
                 next_pose.moved(8)) != null) {
-            outcome = Reason.BLOCKED;
+            outcome = ShipReason.BLOCKED;
             return State.DONE;
         }
 
@@ -102,7 +102,7 @@ public final class ShipUnstuckActivity implements Activity {
     }
 
     @Override
-    public @NonNull Reason outcome() {
+    public @NonNull ShipReason outcome() {
         return outcome;
     }
 

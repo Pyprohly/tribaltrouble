@@ -14,7 +14,10 @@ import com.oddlabs.tt.util.Target;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
-public final class WalkActivity implements Activity {
+import java.util.function.Function;
+import java.util.function.Supplier;
+
+public final class WalkActivity implements UnitActivity {
     private static final float WAIT_RETRY_DELAY = 1f / 2f;
     private static final float MAX_WAIT_RETRY_DELAY = 5f;
 
@@ -22,6 +25,7 @@ public final class WalkActivity implements Activity {
     private final @NonNull TrackerAlgorithm tracker_algorithm;
     private final @NonNull AttackScanFilter scan_filter;
     private final boolean scan_attack;
+    private final @Nullable Supplier<@NonNull UnitReason> found;
 
     private @Nullable Movable blocking_movable;
     private int blocker_x;
@@ -32,17 +36,25 @@ public final class WalkActivity implements Activity {
     private PathTracker.State state;
     private @Nullable Selectable<?> spotted;
 
-    public WalkActivity(@NonNull Unit unit, @NonNull TrackerAlgorithm tracker_algorithm, boolean scan_attack) {
+    private WalkActivity(@NonNull Unit unit, @NonNull TrackerAlgorithm tracker_algorithm, boolean scan_attack,
+            @Nullable Supplier<@NonNull UnitReason> found) {
         this.unit = unit;
         this.tracker_algorithm = tracker_algorithm;
         this.scan_attack = scan_attack;
+        this.found = found;
         scan_filter = new AttackScanFilter(unit.getOwner(), AttackScanFilter.UNIT_RANGE);
         retry_delay = WAIT_RETRY_DELAY;
         unit.getTracker().setTarget(tracker_algorithm);
     }
 
     public WalkActivity(@NonNull Unit unit, @NonNull Target t, float range, boolean scan_attack) {
-        this(unit, new TargetTrackerAlgorithm(unit.getUnitGrid(), range, t), scan_attack);
+        this(unit, new TargetTrackerAlgorithm(unit.getUnitGrid(), range, t), scan_attack, null);
+    }
+
+    /** Walks to what the finder finds, and reports it through the given reason. */
+    public <O extends Occupant> WalkActivity(@NonNull Unit unit, @NonNull FinderTrackerAlgorithm<O> finder,
+            @NonNull Function<@Nullable O, @NonNull UnitReason> found) {
+        this(unit, finder, false, () -> found.apply(finder.getOccupant()));
     }
 
     @Override
@@ -117,11 +129,11 @@ public final class WalkActivity implements Activity {
     }
 
     @Override
-    public @NonNull Reason outcome() {
+    public @NonNull UnitReason outcome() {
         if (spotted != null)
-            return new Reason.Spotted(spotted);
-        if (tracker_algorithm instanceof FinderTrackerAlgorithm<?> finder)
-            return new Reason.Found(finder.getOccupant());
+            return new UnitReason.Spotted(spotted);
+        if (found != null)
+            return found.get();
         return Reason.COMPLETED;
     }
 

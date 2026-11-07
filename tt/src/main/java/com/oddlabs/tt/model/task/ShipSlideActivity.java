@@ -8,7 +8,7 @@ import com.oddlabs.tt.pathfinder.UnitGrid;
 import org.jspecify.annotations.NonNull;
 
 
-public final class ShipSlideActivity implements Activity {
+public final class ShipSlideActivity implements ShipActivity {
     private final Ship ship;
     private boolean blocked = false;
     private ShipTrajectoryPoint curr;

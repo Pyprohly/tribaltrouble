@@ -6,7 +6,6 @@ import com.oddlabs.tt.model.Building;
 import com.oddlabs.tt.model.Selectable;
 import com.oddlabs.tt.model.ShipAllocation;
 import com.oddlabs.tt.model.Supply;
-import com.oddlabs.tt.util.Target;
 import org.jspecify.annotations.NullMarked;
 import org.jspecify.annotations.Nullable;
 
@@ -24,28 +23,35 @@ import java.util.List;
  * cancelled while the posture lasts: it is parked under the order or interruption above it and
  * resumed afterwards, keeping its timers and boarding progress.
  *
- * <p>A decision is made by the current task, for a {@link Reason}. A task that finishes hands over
- * to the slot beneath it: a nested task to its parent, an order to the posture, an interruption to
- * whatever it interrupted. Each of those decides again in the same call, so a decision always ends
- * in something to do.
+ * <p>A decision is made by the current task, for a {@link UnitReason}. A task that finishes hands
+ * over to the slot beneath it: a nested task to its parent, an order to the posture, an interruption
+ * to whatever it interrupted. An order can also become another order, and a posture that spots an
+ * enemy gives itself one. {@link #plan} follows these handovers in one call until a task has
+ * something to do.
  */
 @NullMarked
 public final class UnitReducer implements StateReducer<UnitState, Event, List<UnitCommand>> {
     /** How many walks a task makes towards something before it gives up on reaching it. */
     private static final int MAX_ATTEMPTS = 1;
 
-    /** What a task does next, or that it is done. */
+    /**
+     * How many times one decision may hand over between tasks before it is taken to be looping. Orders
+     * only hand over forwards, build to repair to enter and gather to enter or transfer, so a decision
+     * needs a handful at most.
+     */
+    private static final int MAX_HANDOVERS = 8;
+
+    /** What a task does next, that it hands over to another order, or that it is done. */
     private sealed interface Step<O> {
         record Continue<O>(O next, UnitPlan plan) implements Step<O> {
         }
 
+        /** The order is replaced by the next one, which decides at once. */
+        record Become(Order next) implements Step<Order> {
+        }
+
         record Done<O>() implements Step<O> {
         }
-    }
-
-    @FunctionalInterface
-    private interface Marching {
-        Order rebuild(int attempts, Order.@Nullable Hunt engaged);
     }
 
     private final UnitView view;
@@ -71,11 +77,10 @@ public final class UnitReducer implements StateReducer<UnitState, Event, List<Un
                 }
                 Interruption stun = new Interruption.Stunned(stunned.seconds());
                 yield replanNow(
-                    state.withTasks(
-                            current instanceof Interruption.Stunned
-                                    ? tasks.replacingInterruption(stun)
-                                    : tasks.interruptedBy(stun)),
-                    Reason.BEGIN
+                        state.withTasks(
+                                current instanceof Interruption.Stunned ? tasks.replacingInterruption(
+                                        stun) : tasks.interruptedBy(stun)),
+                        Reason.BEGIN
                 );
             }
             case Event.Cast cast -> {
@@ -140,12 +145,12 @@ public final class UnitReducer implements StateReducer<UnitState, Event, List<Un
     }
 
     private Transition<UnitState, List<UnitCommand>> finish(UnitState state, UnitState.Slot.Running running,
-            Reason outcome) {
-        Reason reason = state.tasks().current() == running.task() ? outcome : Reason.BEGIN;
+            UnitReason outcome) {
+        UnitReason reason = state.tasks().current() == running.task() ? outcome : Reason.BEGIN;
         return replan(state, UnitCommand.RELEASE, reason);
     }
 
-    private Transition<UnitState, List<UnitCommand>> replanNow(UnitState state, Reason reason) {
+    private Transition<UnitState, List<UnitCommand>> replanNow(UnitState state, UnitReason reason) {
         return replan(state, UnitCommand.CANCEL, reason);
     }
 
@@ -153,10 +158,11 @@ public final class UnitReducer implements StateReducer<UnitState, Event, List<Un
      * Stops what runs, parking a posture's activity and otherwise giving the stop command, plans,
      * and starts or resumes what the plan asks for.
      */
-    private Transition<UnitState, List<UnitCommand>> replan(UnitState state, UnitCommand stop, Reason reason) {
+    private Transition<UnitState, List<UnitCommand>> replan(UnitState state, UnitCommand stop, UnitReason reason) {
         List<UnitCommand> commands = new ArrayList<>(3);
         Posture parked = state.parked();
         if (state.slot() instanceof UnitState.Slot.Running running) {
+            // Tasks are compared by identity here and below; see UnitState.Slot.Running.
             if (running.task() == state.tasks().posture()) {
                 commands.add(UnitCommand.PARK);
                 parked = state.tasks().posture();
@@ -189,27 +195,38 @@ public final class UnitReducer implements StateReducer<UnitState, Event, List<Un
         };
     }
 
-    private Decision<TaskStack, UnitPlan> plan(TaskStack state, Reason reason) {
-        Interruption interruption = state.interruption();
-        if (interruption != null) {
-            UnitPlan plan = interruption(interruption, reason);
-            if (plan != null) {
-                return new Decision<>(state, plan);
+    private Decision<TaskStack, UnitPlan> plan(TaskStack state, UnitReason reason) {
+        for (int handovers = 0;; handovers++) {
+            assert handovers <= MAX_HANDOVERS : "a decision that never ends in something to do";
+            Interruption interruption = state.interruption();
+            Order order = state.order();
+            if (interruption != null) {
+                UnitPlan plan = interruption(interruption, reason);
+                if (plan != null) {
+                    return new Decision<>(state, plan);
+                }
+                state = state.withoutInterruption();
+            } else if (order != null) {
+                switch (order(reason instanceof Reason.Begin ? order.withAttemptsReset() : order, reason)) {
+                    case Step.Continue<Order>(Order next, UnitPlan plan) -> {
+                        return new Decision<>(state.withOrder(next), plan);
+                    }
+                    case Step.Become(Order next) -> state = state.withOrder(next);
+                    case Step.Done<Order> ignored -> state = state.withOrder(null);
+                }
+            } else {
+                Selectable<?> spotted = reason instanceof UnitReason.Spotted s ? s.target() : null;
+                Order engage = spotted != null ? engage(state.posture(), spotted) : null;
+                if (engage == null) {
+                    return new Decision<>(state, watch(state.posture()));
+                }
+                state = state.withOrder(engage);
             }
-            return plan(state.withoutInterruption(), Reason.BEGIN);
+            reason = Reason.BEGIN;
         }
-        Order order = state.order();
-        if (order != null) {
-            if (order(reason instanceof Reason.Begin ? order.resetAttempts() : order,
-                    reason) instanceof Step.Continue<Order>(Order next, UnitPlan plan)) {
-                return new Decision<>(state.withOrder(next), plan);
-            }
-            return posture(state.withOrder(null), Reason.BEGIN);
-        }
-        return posture(state, reason);
     }
 
-    private @Nullable UnitPlan interruption(Interruption interruption, Reason reason) {
+    private @Nullable UnitPlan interruption(Interruption interruption, UnitReason reason) {
         return switch (interruption) {
             case Interruption.Dying ignored -> new UnitPlan.Die();
             case Interruption.Stunned stunned -> reason instanceof Reason.Begin ? new UnitPlan.Stun(
@@ -219,36 +236,30 @@ public final class UnitReducer implements StateReducer<UnitState, Event, List<Un
         };
     }
 
-    private Decision<TaskStack, UnitPlan> posture(TaskStack state, Reason reason) {
-        Selectable<?> spotted = reason instanceof Reason.Spotted s ? s.target() : null;
-        return switch (state.posture()) {
-            case Posture.Idle idle -> {
-                if (spotted == null) {
-                    yield new Decision<>(state, new UnitPlan.Watch(idle.canMove()));
-                }
-                // A unit that can move chases the enemy and then walks back to where it stood.
-                Order engage = idle.canMove() ? new Order.Walk(new LandscapeTarget(view.gridX(), view.gridY()), true, 0,
-                        new Order.Hunt(spotted)) : new Order.Attack(spotted);
-                yield plan(state.withOrder(engage), Reason.BEGIN);
-            }
-            case Posture.Fighting fighting -> {
-                if (spotted == null) {
-                    yield new Decision<>(state, new UnitPlan.Fight(fighting.ship(), fighting.allocation()));
-                }
-                yield plan(state.withOrder(new Order.Attack(spotted, new Seat(fighting.ship(),
-                        fighting.allocation()))), Reason.BEGIN);
-            }
-            case Posture.Sitting sitting -> new Decision<>(state, new UnitPlan.Sit(sitting.ship(),
-                    sitting.allocation()));
+    /** What the posture does while nothing is above it. */
+    private static UnitPlan watch(Posture posture) {
+        return switch (posture) {
+            case Posture.Idle idle -> new UnitPlan.Watch(idle.canMove());
+            case Posture.Fighting fighting -> new UnitPlan.Fight(fighting.ship(), fighting.allocation());
+            case Posture.Sitting sitting -> new UnitPlan.Sit(sitting.ship(), sitting.allocation());
         };
     }
 
-    private Step<Order> order(Order order, Reason reason) {
+    /** The order the posture gives itself when its watch spots an enemy, or null when it ignores it. */
+    private @Nullable Order engage(Posture posture, Selectable<?> spotted) {
+        return switch (posture) {
+            // A unit that can move chases the enemy and then walks back to where it stood.
+            case Posture.Idle idle -> idle.canMove() ? new Order.Walk(new LandscapeTarget(view.gridX(), view.gridY()),
+                    true, 0, new Order.Hunt(spotted)) : new Order.Attack(spotted);
+            case Posture.Fighting fighting -> new Order.Attack(spotted, new Seat(fighting.ship(),
+                    fighting.allocation()));
+            case Posture.Sitting ignored -> null;
+        };
+    }
+
+    private Step<Order> order(Order order, UnitReason reason) {
         return switch (order) {
-            case Order.Walk walk -> march(walk.target(), walk.aggressive(), walk.attempts(), walk.engaged(), reason,
-                    (attempts, engaged) -> new Order.Walk(walk.target(), walk.aggressive(), attempts, engaged));
-            case Order.Defend defend -> march(defend.target(), true, defend.attempts(), defend.engaged(), reason,
-                    (attempts, engaged) -> new Order.Defend(defend.target(), attempts, engaged));
+            case Order.March march -> march(march, reason);
             case Order.Hunt hunt -> hunt(hunt);
             case Order.Attack attack -> attack(attack);
             case Order.Gather gather -> gather(gather, reason);
@@ -263,23 +274,28 @@ public final class UnitReducer implements StateReducer<UnitState, Event, List<Un
         return new Step.Continue<>(next, plan);
     }
 
+    private static Step<Order> become(Order next) {
+        return new Step.Become(next);
+    }
+
     private static <O> Step<O> done() {
         return new Step.Done<>();
     }
 
-    private Step<Order> march(Target target, boolean aggressive, int attempts, Order.@Nullable Hunt engaged,
-            Reason reason, Marching marching) {
-        if (reason instanceof Reason.Spotted spotted) {
+    private Step<Order> march(Order.March march, UnitReason reason) {
+        if (reason instanceof UnitReason.Spotted spotted) {
             // Breaking off to hunt restores the walk's budget, so it carries on once the hunt ends.
-            return march(target, aggressive, 0, new Order.Hunt(spotted.target()), Reason.BEGIN, marching);
+            return march(march.withProgress(0, new Order.Hunt(spotted.target())), Reason.BEGIN);
         }
+        Order.Hunt engaged = march.engaged();
         if (engaged != null && hunt(engaged) instanceof Step.Continue<Order>(Order.Hunt hunt, UnitPlan plan)) {
-            return run(marching.rebuild(attempts, hunt), plan);
+            return run(march.withProgress(march.attempts(), hunt), plan);
         }
-        if (attempts >= MAX_ATTEMPTS) {
+        if (march.attempts() >= MAX_ATTEMPTS) {
             return done();
         }
-        return run(marching.rebuild(attempts + 1, null), new UnitPlan.Walk(target, 0f, aggressive));
+        return run(march.withProgress(march.attempts() + 1, null), new UnitPlan.Walk(march.target(), 0f,
+                march.aggressive()));
     }
 
     private Step<Order> hunt(Order.Hunt hunt) {
@@ -304,27 +320,25 @@ public final class UnitReducer implements StateReducer<UnitState, Event, List<Un
         return run(attack, new UnitPlan.Attack(attack.target(), attack.seat()));
     }
 
-    private Step<Order> gather(Order.Gather gather, Reason reason) {
+    private Step<Order> gather(Order.Gather gather, UnitReason reason) {
         switch (gather.phase()) {
             case Order.Gather.Harvesting harvesting -> {
                 if (harvest(harvesting.harvest(),
                         reason) instanceof Step.Continue<Order.Harvest>(Order.Harvest harvest, UnitPlan plan)) {
-                    return run(in(gather, new Order.Gather.Harvesting(harvest, harvesting.attempts())), plan);
+                    return run(gather.withPhase(new Order.Gather.Harvesting(harvest, harvesting.attempts())), plan);
                 }
-                gather = in(gather, new Order.Gather.Approaching(harvesting.attempts()));
+                gather = gather.withPhase(new Order.Gather.Approaching(harvesting.attempts()));
             }
             case Order.Gather.Depositing depositing -> {
-                gather = in(gather, new Order.Gather.Delivering(depositing.attempts()));
+                gather = gather.withPhase(new Order.Gather.Delivering(depositing.attempts()));
                 if (reason instanceof Reason.Performed && view.carriesAnything()) {
                     // The store is full: move into it rather than carry the rest around.
-                    return enter(new Order.Enter(depositing.store()), Reason.BEGIN);
+                    return become(new Order.Enter(depositing.store()));
                 }
             }
             case Order.Gather.Delivering ignored -> {
-                if (reason instanceof Reason.Found found) {
-                    Building building = found.occupant() instanceof Building b ? b : null;
-                    gather = new Order.Gather(gather.supplyType(), gather.supply(), gather.assignedBuilding(),
-                            building, gather.phase());
+                if (reason instanceof UnitReason.FoundStore found) {
+                    gather = gather.withFoundBuilding(found.store());
                 }
             }
             case Order.Gather.Approaching ignored -> {
@@ -343,18 +357,18 @@ public final class UnitReducer implements StateReducer<UnitState, Event, List<Un
             attempts = 0;
         }
         if (supply != null && view.isCloseEnough(view.range(supply), supply)) {
-            return gather(collecting(gather, supply, new Order.Gather.Harvesting(new Order.Harvest(supply,
+            return gather(gather.withSupply(supply).withPhase(new Order.Gather.Harvesting(new Order.Harvest(supply,
                     gather.supplyType(), 0), attempts)), Reason.BEGIN);
         }
         if (attempts >= MAX_ATTEMPTS) {
-            return transfer(new Order.Transfer(), Reason.BEGIN);
+            return become(new Order.Transfer());
         }
         if (supply == null) {
-            return gather(collecting(gather, null, new Order.Gather.Harvesting(new Order.Harvest(null,
+            return gather(gather.withSupply(null).withPhase(new Order.Gather.Harvesting(new Order.Harvest(null,
                     gather.supplyType(), 0), attempts + 1)), Reason.BEGIN);
         }
-        return run(collecting(gather, supply, new Order.Gather.Approaching(attempts + 1)), new UnitPlan.Walk(supply,
-                0f, false));
+        return run(gather.withSupply(supply).withPhase(new Order.Gather.Approaching(attempts + 1)),
+                new UnitPlan.Walk(supply, 0f, false));
     }
 
     private Step<Order> dropoff(Order.Gather gather, int attempts) {
@@ -363,34 +377,25 @@ public final class UnitReducer implements StateReducer<UnitState, Event, List<Un
         Building found = gather.foundBuilding();
         Building store = assignedStanding ? assigned.getEntrance() : found != null ? found.getEntrance() : null;
         if (store != null && view.isCloseEnough(0f, store)) {
-            return run(in(gather, new Order.Gather.Depositing(store, attempts)), new UnitPlan.Deposit(store));
+            return run(gather.withPhase(new Order.Gather.Depositing(store, attempts)), new UnitPlan.Deposit(store));
         }
         if (attempts >= MAX_ATTEMPTS) {
             return done();
         }
-        Order.Gather next = in(gather, new Order.Gather.Delivering(attempts + 1));
+        Order.Gather next = gather.withPhase(new Order.Gather.Delivering(attempts + 1));
         if (assignedStanding) {
             return run(next, new UnitPlan.Walk(assigned.getEntrance(), 0f, false));
         }
         return run(next, new UnitPlan.FindStore());
     }
 
-    private Order.Gather collecting(Order.Gather gather, @Nullable Supply supply, Order.Gather.Phase phase) {
-        return new Order.Gather(gather.supplyType(), supply, gather.assignedBuilding(), gather.foundBuilding(),
-                phase);
-    }
-
-    private Order.Gather in(Order.Gather gather, Order.Gather.Phase phase) {
-        return collecting(gather, gather.supply(), phase);
-    }
-
-    private Step<Order.Harvest> harvest(Order.Harvest harvest, Reason reason) {
+    private Step<Order.Harvest> harvest(Order.Harvest harvest, UnitReason reason) {
         if (view.isFull(harvest.supplyType())) {
             return done();
         }
         Supply supply = harvest.supply();
-        if (reason instanceof Reason.Found found) {
-            supply = found.occupant() instanceof Supply s ? s : null;
+        if (reason instanceof UnitReason.FoundSupply found) {
+            supply = found.supply();
         }
         if (supply != null && !view.isEmpty(supply) && view.isCloseEnough(0f, supply)) {
             return run(new Order.Harvest(supply, harvest.supplyType(), 0), new UnitPlan.Harvest(supply));
@@ -402,7 +407,7 @@ public final class UnitReducer implements StateReducer<UnitState, Event, List<Un
                 harvest.supplyType()));
     }
 
-    private Step<Order> repair(Order.Repair repair, Reason reason) {
+    private Step<Order> repair(Order.Repair repair, UnitReason reason) {
         Building building = repair.building();
         int fetchAttempts = 0;
         int mendAttempts = 0;
@@ -427,7 +432,7 @@ public final class UnitReducer implements StateReducer<UnitState, Event, List<Un
                             new UnitPlan.Repair(building));
                 }
                 if (view.storesSupplies(building) && view.sharesOwner(building)) {
-                    return enter(new Order.Enter(building), Reason.BEGIN);
+                    return become(new Order.Enter(building));
                 }
                 return done();
             }
@@ -444,7 +449,7 @@ public final class UnitReducer implements StateReducer<UnitState, Event, List<Un
                 0), fetchAttempts + 1)), Reason.BEGIN);
     }
 
-    private Step<Order> enter(Order.Enter enter, Reason reason) {
+    private Step<Order> enter(Order.Enter enter, UnitReason reason) {
         Building building = enter.building();
         if (reason instanceof Reason.Performed || view.isDead(building)) {
             return done();
@@ -464,7 +469,7 @@ public final class UnitReducer implements StateReducer<UnitState, Event, List<Un
             return done();
         }
         if (view.isPlaced(building)) {
-            return view.isDamaged(building) ? repair(new Order.Repair(building), Reason.BEGIN) : done();
+            return view.isDamaged(building) ? become(new Order.Repair(building)) : done();
         }
         float distance = view.placingDistance(building);
         if (view.isCloseEnough(distance, building)) {
@@ -478,13 +483,13 @@ public final class UnitReducer implements StateReducer<UnitState, Event, List<Un
         return run(new Order.Build(building, build.attempts() + 1), new UnitPlan.Walk(building, distance, false));
     }
 
-    private Step<Order> transfer(Order.Transfer transfer, Reason reason) {
+    private Step<Order> transfer(Order.Transfer transfer, UnitReason reason) {
         if (reason instanceof Reason.Performed) {
             return done();
         }
         Building found = transfer.found();
-        if (reason instanceof Reason.Found f) {
-            found = f.occupant() instanceof Building b ? b : null;
+        if (reason instanceof UnitReason.FoundStore f) {
+            found = f.store();
         }
         if (found != null && view.isCloseEnough(0f, found)) {
             return view.canEnter(found) ? run(new Order.Transfer(found, transfer.attempts()), new UnitPlan.Enter(found,

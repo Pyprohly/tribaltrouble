@@ -3,6 +3,7 @@ package com.oddlabs.tt.model;
 import com.oddlabs.tt.animation.Animated;
 import com.oddlabs.tt.model.task.Activity;
 import com.oddlabs.tt.model.task.TaskRunner;
+import com.oddlabs.tt.model.task.TransitionTrace;
 import com.oddlabs.tt.model.task.Task;
 import com.oddlabs.tt.pathfinder.Occupant;
 import com.oddlabs.tt.pathfinder.ScanFilter;
@@ -92,6 +93,10 @@ public abstract class Selectable<T extends Template> extends Model implements Ta
 
     public final @Nullable Activity getCurrentActivity() {
         return getTaskRunner().getActivity();
+    }
+
+    public final @Nullable TransitionTrace<?, ?, ?> getTransitionTrace() {
+        return getTaskRunner().getTrace();
     }
 
     public final @NonNull UnitGrid getUnitGrid() {

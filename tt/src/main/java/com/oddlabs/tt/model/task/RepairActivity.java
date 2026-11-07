@@ -7,7 +7,7 @@ import com.oddlabs.tt.model.Building;
 import com.oddlabs.tt.model.Unit;
 import org.jspecify.annotations.NonNull;
 
-public final class RepairActivity implements Activity {
+public final class RepairActivity implements UnitActivity {
     private static final int REPAIRS_PER_SUPPLY = 5;
     private static final float SECONDS_PER_ANIMATION_CYCLE = 1f;
     private final @NonNull Building building;

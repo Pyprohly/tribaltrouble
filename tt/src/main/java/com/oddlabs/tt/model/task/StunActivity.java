@@ -3,7 +3,7 @@ package com.oddlabs.tt.model.task;
 import com.oddlabs.tt.model.Unit;
 import org.jspecify.annotations.NonNull;
 
-public final class StunActivity implements Activity {
+public final class StunActivity implements UnitActivity {
     private final @NonNull Unit unit;
     private float time;
 

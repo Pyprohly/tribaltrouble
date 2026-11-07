@@ -3,7 +3,7 @@ package com.oddlabs.tt.model.task;
 import com.oddlabs.tt.model.Unit;
 import org.jspecify.annotations.NonNull;
 
-public final class DieActivity implements Activity {
+public final class DieActivity implements UnitActivity {
     private static final float SECONDS_PER_DEATH = 3f;
     private static final float LYING_SECONDS = 1f;
     private static final float MOVING_SECONDS = 60f;

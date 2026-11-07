@@ -48,7 +48,7 @@ public sealed interface Event {
         }
 
         /** The running activity is done, and reports what it found. */
-        record Finished(Reason outcome) implements Report {
+        record Finished(UnitReason outcome) implements Report {
         }
 
         /** The operation the controller was asked for has been carried out. */

@@ -8,7 +8,7 @@ import com.oddlabs.tt.pathfinder.UnitGrid;
 import com.oddlabs.tt.util.Target;
 import org.jspecify.annotations.NonNull;
 
-public final class SailActivity implements Activity {
+public final class SailActivity implements ShipActivity {
     private static final float SHIP_SPEED = 0.45f;
     private ShipTrajectoryPoint next_pose = null;
 
@@ -21,7 +21,7 @@ public final class SailActivity implements Activity {
     private ShipTrajectory trajectory = null;
 
     private boolean blocked = false;
-    private @NonNull Reason outcome = Reason.COMPLETED;
+    private @NonNull ShipReason outcome = Reason.COMPLETED;
 
     public SailActivity(Ship ship, Target t) {
         this.ship = ship;
@@ -71,7 +71,7 @@ public final class SailActivity implements Activity {
         ship.setLayer(UnitGrid.SEA);
 
         if (trajectory == null || !trajectory.exists()) {
-            outcome = Reason.NO_ROUTE;
+            outcome = ShipReason.NO_ROUTE;
             return State.DONE;
         }
 
@@ -95,13 +95,13 @@ public final class SailActivity implements Activity {
                 // If it's an enemy ship, stand your ground and fight! Do not escape!
                 // Otherwise if it's one of your own or an ally, let it pass.
                 if (blockingShip.getOwner().getPlayerInfo().getTeam() == ship.getOwner().getPlayerInfo().getTeam()) {
-                    outcome = Reason.BLOCKED;
+                    outcome = ShipReason.BLOCKED;
                     return State.DONE;
                 }
                 return State.INTERRUPTIBLE;
             }
             if (ShipTrajectory.checkLandCollision(grid, fromPoint, next_pose)) {
-                outcome = Reason.BLOCKED;
+                outcome = ShipReason.BLOCKED;
                 return State.DONE;
             }
         }
@@ -117,7 +117,7 @@ public final class SailActivity implements Activity {
     }
 
     @Override
-    public @NonNull Reason outcome() {
+    public @NonNull ShipReason outcome() {
         return outcome;
     }
 

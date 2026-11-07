@@ -73,6 +73,7 @@ Commands:
 | `edit LABEL=TEXT` | Set the edit field on LABEL's row (or the field currently showing LABEL) to TEXT |
 | `state` | Game state, ends with `END`; `err not in game` from menus |
 | `sites [QUARTERS\|ARMORY\|TOWER\|SHIP] [radius]` | Legal placement cells, ends with `END` |
+| `trace` | Last state machine transitions of each selected unit or ship, ends with `END`; needs `-Dcom.oddlabs.tt.model.task.trace=true` |
 | `tick` | Current simulation tick (high-precision ticks, 4 ms each) |
 | `warp MILLIS` | Fast-forward the simulation by that much game time; answers once it has caught up |
 | `wait tick N` | Answers once the simulation reaches tick N |

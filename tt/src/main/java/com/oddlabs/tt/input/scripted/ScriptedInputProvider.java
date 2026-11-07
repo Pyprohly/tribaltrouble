@@ -386,6 +386,13 @@ public final class ScriptedInputProvider implements InputProvider<Long> {
                     String dump = GameStateDump.dump(root, window.getWidth(), window.getHeight());
                     return dump.startsWith("err") ? dump.strip() : dump + "END";
                 }
+                case "trace": {
+                    if (root == null) {
+                        return "err no gui root yet";
+                    }
+                    String dump = GameStateDump.trace(root);
+                    return dump.startsWith("err") ? dump.strip() : dump + "END";
+                }
                 default:
                     return "err unknown command: " + line;
             }

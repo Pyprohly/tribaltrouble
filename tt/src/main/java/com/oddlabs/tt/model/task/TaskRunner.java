@@ -13,4 +13,9 @@ public interface TaskRunner {
     Activity getActivity();
 
     Task getPrimaryTask();
+
+    /** The last transitions of the selectable's state machine, or null when it has none or tracing is off. */
+    default @Nullable TransitionTrace<?, ?, ?> getTrace() {
+        return null;
+    }
 }

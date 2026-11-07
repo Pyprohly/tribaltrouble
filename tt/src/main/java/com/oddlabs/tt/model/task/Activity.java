@@ -16,11 +16,6 @@ public interface Activity {
     @NonNull
     State animate(float t);
 
-    /** What the activity has to report, read once after {@link #animate} returned DONE. */
-    default @NonNull Reason outcome() {
-        return Reason.COMPLETED;
-    }
-
     boolean isBlocking();
 
     void cancel();

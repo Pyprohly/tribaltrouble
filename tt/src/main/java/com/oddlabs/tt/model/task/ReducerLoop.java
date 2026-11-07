@@ -16,15 +16,22 @@ import java.util.function.Supplier;
 final class ReducerLoop<S, E, F> {
     private final StateReducer<S, E, F> reducer;
     private final Consumer<F> executor;
+    private final @Nullable TransitionTrace<S, E, F> trace;
     private S state;
 
     private final ArrayDeque<E> queue = new ArrayDeque<>();
     private boolean busy;
 
     ReducerLoop(StateReducer<S, E, F> reducer, S initial, Consumer<F> executor) {
+        this(reducer, initial, executor, null);
+    }
+
+    ReducerLoop(StateReducer<S, E, F> reducer, S initial, Consumer<F> executor,
+            @Nullable TransitionTrace<S, E, F> trace) {
         this.reducer = reducer;
         this.state = initial;
         this.executor = executor;
+        this.trace = trace;
     }
 
     S state() {
@@ -65,6 +72,12 @@ final class ReducerLoop<S, E, F> {
             E event;
             while ((event = queue.pollFirst()) != null) {
                 Transition<S, F> transition = reducer.reduce(state, event);
+
+                // A reducer hands back the same state when nothing changed, as on most frame reports.
+                if (trace != null && transition.nextState() != state) {
+                    trace.record(event, transition.nextState(), transition.effect());
+                }
+
                 state = transition.nextState();
                 executor.accept(transition.effect());
             }

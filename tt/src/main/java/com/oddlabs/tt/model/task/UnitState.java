@@ -5,8 +5,9 @@ import org.jspecify.annotations.Nullable;
 
 /**
  * A unit's whole state: its tasks, what its controller is doing for them, and the posture whose
- * activity is set aside while something above the posture runs. The parked posture, when there is
- * one, is always the unit's posture and never the task that is running.
+ * activity is set aside while something above the posture runs. Between events the parked posture,
+ * when there is one, is the unit's posture and not the task that is running; while an event is
+ * reduced a new posture can briefly stand beside the old one still parked.
  */
 @NullMarked
 public record UnitState(TaskStack tasks, Slot slot, @Nullable Posture parked) {
@@ -28,7 +29,11 @@ public record UnitState(TaskStack tasks, Slot slot, @Nullable Posture parked) {
         record Vacant() implements Slot {
         }
 
-        /** An activity runs for the task, and has got as far as the progress says. */
+        /**
+         * An activity runs for the task, and has got as far as the progress says. The task is told
+         * apart from others by identity, never by equals: an equal order given again, or an equal
+         * posture after mounting the same ship seat, is a new task with a new activity.
+         */
         record Running(Task task, Activity.State progress) implements Slot {
         }
 

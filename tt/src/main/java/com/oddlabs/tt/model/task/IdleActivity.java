@@ -7,7 +7,7 @@ import com.oddlabs.tt.model.Unit;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
-public final class IdleActivity implements Activity {
+public final class IdleActivity implements UnitActivity {
     private static final float MIN_SCAN_DELAY = 1f;
     private static final float MAX_SCAN_DELAY = 2f;
 
@@ -36,10 +36,10 @@ public final class IdleActivity implements Activity {
     }
 
     @Override
-    public @NonNull Reason outcome() {
+    public @NonNull UnitReason outcome() {
         Selectable<?> target = spotted;
         spotted = null;
-        return target != null ? new Reason.Spotted(target) : Reason.COMPLETED;
+        return target != null ? new UnitReason.Spotted(target) : Reason.COMPLETED;
     }
 
     @Override

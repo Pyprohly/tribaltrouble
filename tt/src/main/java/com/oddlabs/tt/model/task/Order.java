@@ -15,29 +15,59 @@ import org.jspecify.annotations.Nullable;
 @NullMarked
 public sealed interface Order extends Task {
     /** The same order with its retry budget restored, including that of any task nested in it. */
-    Order resetAttempts();
+    Order withAttemptsReset();
+
+    /** Walks to a target, breaking off when aggressive to hunt the enemies it sees and then walking on. */
+    sealed interface March extends Order {
+        Target target();
+
+        boolean aggressive();
+
+        int attempts();
+
+        @Nullable
+        Hunt engaged();
+
+        /** The same march, having walked the given number of times and engaged the given hunt. */
+        March withProgress(int attempts, @Nullable Hunt engaged);
+    }
 
     /** Walks to a target; an aggressive walk breaks off to hunt the enemies it sees. */
-    record Walk(Target target, boolean aggressive, int attempts, @Nullable Hunt engaged) implements Order {
+    record Walk(Target target, boolean aggressive, int attempts, @Nullable Hunt engaged) implements March {
         public Walk(Target target, boolean aggressive) {
             this(target, aggressive, 0, null);
         }
 
         @Override
-        public Walk resetAttempts() {
-            return new Walk(target, aggressive, 0, engaged != null ? engaged.resetAttempts() : null);
+        public Walk withAttemptsReset() {
+            return new Walk(target, aggressive, 0, engaged != null ? engaged.withAttemptsReset() : null);
+        }
+
+        @Override
+        public Walk withProgress(int attempts, @Nullable Hunt engaged) {
+            return new Walk(target, aggressive, attempts, engaged);
         }
     }
 
     /** Walks to a target to defend it, hunting the enemies it sees on the way. */
-    record Defend(Target target, int attempts, @Nullable Hunt engaged) implements Order {
+    record Defend(Target target, int attempts, @Nullable Hunt engaged) implements March {
         public Defend(Target target) {
             this(target, 0, null);
         }
 
         @Override
-        public Defend resetAttempts() {
-            return new Defend(target, 0, engaged != null ? engaged.resetAttempts() : null);
+        public boolean aggressive() {
+            return true;
+        }
+
+        @Override
+        public Defend withAttemptsReset() {
+            return new Defend(target, 0, engaged != null ? engaged.withAttemptsReset() : null);
+        }
+
+        @Override
+        public Defend withProgress(int attempts, @Nullable Hunt engaged) {
+            return new Defend(target, attempts, engaged);
         }
     }
 
@@ -48,7 +78,7 @@ public sealed interface Order extends Task {
         }
 
         @Override
-        public Hunt resetAttempts() {
+        public Hunt withAttemptsReset() {
             return new Hunt(target, 0);
         }
     }
@@ -60,7 +90,7 @@ public sealed interface Order extends Task {
         }
 
         @Override
-        public Attack resetAttempts() {
+        public Attack withAttemptsReset() {
             return this;
         }
     }
@@ -77,8 +107,20 @@ public sealed interface Order extends Task {
         }
 
         @Override
-        public Gather resetAttempts() {
-            return new Gather(supplyType, supply, assignedBuilding, foundBuilding, phase.resetAttempts());
+        public Gather withAttemptsReset() {
+            return withPhase(phase.withAttemptsReset());
+        }
+
+        public Gather withPhase(Phase next) {
+            return new Gather(supplyType, supply, assignedBuilding, foundBuilding, next);
+        }
+
+        public Gather withSupply(@Nullable Supply next) {
+            return new Gather(supplyType, next, assignedBuilding, foundBuilding, phase);
+        }
+
+        public Gather withFoundBuilding(@Nullable Building next) {
+            return new Gather(supplyType, supply, assignedBuilding, next, phase);
         }
 
         @Override
@@ -88,13 +130,13 @@ public sealed interface Order extends Task {
 
         /** Where a gather is in its round trip; the attempts count walks made in the current phase. */
         public sealed interface Phase {
-            Phase resetAttempts();
+            Phase withAttemptsReset();
         }
 
         /** Walks to the supply, or decides which one to look for. */
         public record Approaching(int attempts) implements Phase {
             @Override
-            public Approaching resetAttempts() {
+            public Approaching withAttemptsReset() {
                 return new Approaching(0);
             }
         }
@@ -102,15 +144,15 @@ public sealed interface Order extends Task {
         /** Harvests until full; the attempts are those of the approach, kept for when the harvest ends. */
         public record Harvesting(Harvest harvest, int attempts) implements Phase {
             @Override
-            public Harvesting resetAttempts() {
-                return new Harvesting(harvest.resetAttempts(), 0);
+            public Harvesting withAttemptsReset() {
+                return new Harvesting(harvest.withAttemptsReset(), 0);
             }
         }
 
         /** Carries the supplies to a store. */
         public record Delivering(int attempts) implements Phase {
             @Override
-            public Delivering resetAttempts() {
+            public Delivering withAttemptsReset() {
                 return new Delivering(0);
             }
         }
@@ -118,7 +160,7 @@ public sealed interface Order extends Task {
         /** Hands the supplies to the store it reached. */
         public record Depositing(Building store, int attempts) implements Phase {
             @Override
-            public Depositing resetAttempts() {
+            public Depositing withAttemptsReset() {
                 return new Depositing(store, 0);
             }
         }
@@ -131,8 +173,8 @@ public sealed interface Order extends Task {
         }
 
         @Override
-        public Repair resetAttempts() {
-            return new Repair(building, phase.resetAttempts());
+        public Repair withAttemptsReset() {
+            return new Repair(building, phase.withAttemptsReset());
         }
 
         @Override
@@ -142,13 +184,13 @@ public sealed interface Order extends Task {
 
         /** Whether a repair works on the building or fetches wood for it; the attempts count walks made doing so. */
         public sealed interface Phase {
-            Phase resetAttempts();
+            Phase withAttemptsReset();
         }
 
         /** Walks to the building and repairs it. */
         public record Mending(int attempts) implements Phase {
             @Override
-            public Mending resetAttempts() {
+            public Mending withAttemptsReset() {
                 return new Mending(0);
             }
         }
@@ -156,8 +198,8 @@ public sealed interface Order extends Task {
         /** Harvests wood to repair with. */
         public record Fetching(Harvest harvest, int attempts) implements Phase {
             @Override
-            public Fetching resetAttempts() {
-                return new Fetching(harvest.resetAttempts(), 0);
+            public Fetching withAttemptsReset() {
+                return new Fetching(harvest.withAttemptsReset(), 0);
             }
         }
     }
@@ -169,7 +211,7 @@ public sealed interface Order extends Task {
         }
 
         @Override
-        public Enter resetAttempts() {
+        public Enter withAttemptsReset() {
             return new Enter(building, 0);
         }
     }
@@ -181,7 +223,7 @@ public sealed interface Order extends Task {
         }
 
         @Override
-        public Build resetAttempts() {
+        public Build withAttemptsReset() {
             return new Build(building, 0);
         }
     }
@@ -193,7 +235,7 @@ public sealed interface Order extends Task {
         }
 
         @Override
-        public Transfer resetAttempts() {
+        public Transfer withAttemptsReset() {
             return new Transfer(found, 0);
         }
     }
@@ -203,7 +245,7 @@ public sealed interface Order extends Task {
      * ever runs inside a {@link Gather} or a {@link Repair}.
      */
     record Harvest(@Nullable Supply supply, Class<? extends Supply> supplyType, int attempts) {
-        public Harvest resetAttempts() {
+        public Harvest withAttemptsReset() {
             return new Harvest(supply, supplyType, 0);
         }
     }

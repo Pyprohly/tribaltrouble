@@ -6,7 +6,7 @@ import com.oddlabs.tt.model.weapon.MagicFactory;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
-public final class MagicActivity implements Activity {
+public final class MagicActivity implements UnitActivity {
     private enum MagicState {
         PREPARING,
         CASTING,

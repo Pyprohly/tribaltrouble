@@ -16,12 +16,14 @@ import java.util.List;
 public final class ShipController implements TaskRunner, StateController<ShipState, ShipEvent> {
     private final Ship ship;
     private final ReducerLoop<ShipState, ShipEvent, List<ShipCommand>> loop;
-    private @Nullable Activity running;
+    private final @Nullable TransitionTrace<ShipState, ShipEvent, List<ShipCommand>> trace;
+    private @Nullable ShipActivity running;
 
     public ShipController(Ship ship) {
         this.ship = ship;
+        this.trace = TransitionTrace.ENABLED ? new TransitionTrace<>() : null;
         this.loop = new ReducerLoop<>(new ShipReducer(ship::slid), new ShipState(new Task.Inert()),
-                this::executeAll);
+                this::executeAll, trace);
     }
 
     /** Takes the first decision; called once the ship is far enough constructed to act. */
@@ -57,13 +59,18 @@ public final class ShipController implements TaskRunner, StateController<ShipSta
     }
 
     @Override
+    public @Nullable TransitionTrace<ShipState, ShipEvent, List<ShipCommand>> getTrace() {
+        return trace;
+    }
+
+    @Override
     public void dispatch(ShipEvent event) {
         loop.dispatch(event);
     }
 
     @Override
     public void animate(float t) {
-        Activity activity = running;
+        ShipActivity activity = running;
         if (activity == null) {
             return;
         }
@@ -80,7 +87,7 @@ public final class ShipController implements TaskRunner, StateController<ShipSta
     private void execute(ShipCommand command) {
         switch (command) {
             case ShipCommand.Cancel ignored -> {
-                Activity activity = running;
+                ShipActivity activity = running;
                 assert activity != null : "cancelling with nothing running";
                 activity.cancel();
                 running = null;
@@ -97,7 +104,7 @@ public final class ShipController implements TaskRunner, StateController<ShipSta
         }
     }
 
-    private Activity create(ShipPlan.Run run) {
+    private ShipActivity create(ShipPlan.Run run) {
         return switch (run) {
             case ShipPlan.Moor ignored -> new NullActivity();
             case ShipPlan.Slide ignored -> new ShipSlideActivity(ship);

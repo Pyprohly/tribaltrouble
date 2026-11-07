@@ -9,6 +9,7 @@ import com.oddlabs.tt.model.Building;
 import com.oddlabs.tt.model.BuildingTemplate;
 import com.oddlabs.tt.model.Selectable;
 import com.oddlabs.tt.model.Unit;
+import com.oddlabs.tt.model.task.TransitionTrace;
 import com.oddlabs.tt.net.PeerHub;
 import com.oddlabs.tt.pathfinder.UnitGrid;
 import com.oddlabs.tt.player.Player;
@@ -70,6 +71,34 @@ public final class GameStateDump {
                                 s.getPositionY(), s.getPositionZ(), Math.round(screen.x),
                                 Math.round(framebuffer_height - screen.y), hp)).append(
                                         selection.contains(s) ? " selected" : "").append('\n');
+            }
+        }
+        return out.toString();
+    }
+
+    /**
+     * The last state machine transitions of each selected unit or ship, oldest first, as {@code event} lines
+     * followed by the {@code state} and {@code commands} they led to.
+     */
+    public static @NonNull String trace(@NonNull GUIRoot root) {
+        if (!(root.getDelegate() instanceof InGameDelegate delegate)) {
+            return "err not in game (delegate " + root.getDelegate().getClass().getSimpleName() + ")\n";
+        }
+        if (!TransitionTrace.ENABLED) {
+            return "err tracing is off; start the game with -D" + TransitionTrace.PROPERTY + "=true\n";
+        }
+        StringBuilder out = new StringBuilder("ok\n");
+        for (Selectable<?> s : delegate.getViewer().getSelection().getCurrentSelection().getSet()) {
+            TransitionTrace<?, ?, ?> trace = s.getTransitionTrace();
+            if (trace == null) {
+                continue;
+            }
+            out.append(String.format(Locale.ROOT, "selected %s world %.1f %.1f%n", s.getTemplate().getName(),
+                    s.getPositionX(), s.getPositionY()));
+            for (var entry : trace.entries()) {
+                out.append("  event ").append(entry.event()).append('\n');
+                out.append("    state ").append(entry.state()).append('\n');
+                out.append("    commands ").append(entry.effect()).append('\n');
             }
         }
         return out.toString();
