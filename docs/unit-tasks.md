@@ -7,8 +7,8 @@ are pure, and a thin controller carries them out.
 
 ## State
 
-A unit's whole state is one `UnitState` value: its `TaskStack`, the `Slot` saying what its
-controller is doing for those tasks, and the posture whose activity is parked, if any.
+A unit's whole state is one `UnitState` value: its `TaskStack` and the `Execution` saying what its
+controller is doing for those tasks.
 
 The `TaskStack` has three named slots. Despite the name there is no unbounded stack, just a fixed
 priority order.
@@ -32,12 +32,12 @@ Orders with several stages carry them as a sealed phase rather than a set of nul
 `Gather` is `Approaching`, `Harvesting`, `Delivering` or `Depositing`; a `Repair` is `Mending` or
 `Fetching`. Each phase holds the retry count for its own walks.
 
-The `Slot` is `Vacant` before the first decision, `Running` with the task the activity was started
+The `Execution` is `Unstarted` before the first decision, `Running` with the task the activity was started
 for and how far it has got (`Activity.State`), `Performing` while a world operation is carried out,
 and `Gone` once the unit has left the world.
 
 A ship's state is a `ShipState`: its `Task`, which is `Task.Inert` when docked or a `Voyage` with
-its current leg (sliding off the shore, sailing, working loose), and a `ShipState.Slot` saying
+its current leg (sliding off the shore, sailing, working loose), and a `ShipState.Execution` saying
 whether nothing has run yet, an activity runs, or an operation is being carried out. Buildings and
 ship proxies are always `Task.Inert`.
 
@@ -45,19 +45,20 @@ ship proxies are always `Task.Inert`.
 
 Everything a unit reacts to is an `Event`. Some come from the world: `Started`, an order, a stun, a
 spell, death, mounting and unmounting. Others are the controller reporting back, grouped under
-`Event.Report`: `Progressed` and `Finished` from the running activity, and `Performed` or `Removed`
+`Event.Report`: `Progressed` (sent when the activity becomes interruptible or stops being so) and
+`Finished` from the running activity, and `Performed` or `Removed`
 after an operation.
-`UnitController`'s public methods (`order`, `stun`, `cast`, …) each build one and pass it to
-`dispatch`, which both controllers implement from `StateController<S, E>` alongside `getState`.
+`UnitController`'s public methods (`order`, `stun`, `cast`, …) each build one and dispatch it to
+the controller's `ReducerLoop`.
 
 Both reducers implement `StateReducer<S, E, F>`, whose `reduce(state, event)` is the gist's
 `handleEvent` and the only entry point. A reducer reads the world through the view it was built
-with, `UnitView` or `ShipView`, which its controller supplies, as the gist's parent machines pass
+with, a `UnitView` or, for a ship, whether it has slid off the shore, which its controller supplies, as the gist's parent machines pass
 outside data down to their children.
 
 `UnitReducer.reduce` is pure and returns a `Transition` of the next state and a list of
-`UnitCommand`s for the controller: `Cancel`, `Park` or `Release` the running activity, `Discard` or
-`Resume` the parked one, `Start` an activity for a plan, or `Perform` an operation. An event the unit does not react to, such as a stun
+`UnitCommand`s for the controller: `Cancel` or `Release` the running activity, `Start` an activity
+for a task's plan, `Perform` an operation, or `Leave` once the unit is out of the world. An event the unit does not react to, such as a stun
 while dying or an activity report from a unit that has moved on, returns no commands.
 
 A ship's events are `ShipEvent`s: `Started`, `Sailed` with a new destination and `Docked`, and
@@ -72,7 +73,7 @@ Inside `reduce`, the current task decides for a `Reason`, the task-level event: 
 `UnitState` handles lifecycle events itself and turns the rest into a reason for the current task,
 as the gist's hierarchical machines do. A ship's voyage decides the same way. Each decision
 yields the next task and a plan: an activity to run (`UnitPlan.Run`, `ShipPlan.Run`) or a one-off
-change to the world (`UnitPlan.Operation`, `ShipPlan.Operation`). The reducers' `plan` methods
+change to the world (`UnitPlan.Operation`, `ShipPlan.Operation`). The reducers' `decide` methods
 return these as a `Decision` of the task state and its plan, which `replan` turns into commands.
 After an operation the controller reports back and the task decides again with `Reason.PERFORMED`.
 
@@ -85,7 +86,7 @@ rather than giving up.
 
 `UnitController` and `ShipController` are the imperative shell, and `Selectable` animates and
 inspects them, along with the `InertTaskRunner` of buildings and ship proxies, as a `TaskRunner`.
-`UnitController` holds the running activity and the parked one, `ShipController` the running
+`UnitController` holds the running activity and the posture's, `ShipController` the running
 activity, and each a `ReducerLoop` that holds the state and reduces events into it. They carry out
 the commands and turn plans into `Activity` instances. Activities keep animation, movement and timing, and report what they found through
 `Activity.outcome()` instead of calling back into the controller.
@@ -100,8 +101,9 @@ moved the unit on.
 
 One rule, in `UnitReducer`, decides when the running activity is replaced. A decision is taken as
 soon as the running activity is interruptible and waits otherwise. Urgent inputs (stun, spell,
-death, mounting) cancel it at once. A posture's activity is parked, not cancelled, while something
-runs above it, so idle scan timers and ship boarding progress survive orders and interruptions. How
+death, mounting) cancel it at once. `UnitController` keeps a posture's activity, rather than
+cancelling it, while something runs above it, and resumes it when the reducer starts the same
+posture again, so idle scan timers and ship boarding progress survive orders and interruptions. How
 interruptible a new activity is before its first frame is a property of its plan
 (`UnitPlan.Run.initialProgress()`).
 

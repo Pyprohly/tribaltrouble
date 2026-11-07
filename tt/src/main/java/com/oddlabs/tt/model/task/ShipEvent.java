@@ -23,7 +23,7 @@ public sealed interface ShipEvent {
     /** What the controller reports back about the activities and operations it carried out. */
     sealed interface Report extends ShipEvent {
         /** The running activity is done, and reports what it found. */
-        record Finished(ShipReason outcome) implements Report {
+        record Finished(Reason outcome) implements Report {
         }
 
         /** The operation the controller was asked for has been carried out. */

@@ -25,16 +25,18 @@ import java.util.List;
 /**
  * Runs a unit's tasks: the imperative shell around {@link UnitReducer}. Every {@link Event} is
  * reduced into the unit's state, and the {@link UnitCommand}s that come back are carried out on the
- * running and the parked activity, or on the world.
+ * running activity and the posture's, or on the world.
  */
 @NullMarked
-public final class UnitController implements TaskRunner, StateController<UnitState, Event> {
+public final class UnitController implements TaskRunner {
     private final Unit unit;
     private final ReducerLoop<UnitState, Event, List<UnitCommand>> loop;
     private final @Nullable TransitionTrace<UnitState, Event, List<UnitCommand>> trace;
 
     private @Nullable UnitActivity running;
-    private @Nullable UnitActivity parked;
+    /** The posture whose activity is kept, running or set aside, for as long as the posture lasts. */
+    private @Nullable Posture posture;
+    private @Nullable UnitActivity postureActivity;
     /** An activity just started for a plan that begins uninterruptible, until its first frame. */
     private @Nullable UnitActivity startedUninterruptible;
 
@@ -52,10 +54,9 @@ public final class UnitController implements TaskRunner, StateController<UnitSta
 
     /** Takes the first decision; called once the unit is far enough constructed to act. */
     public void start() {
-        dispatch(new Event.Started());
+        loop.dispatch(new Event.Started());
     }
 
-    @Override
     public UnitState getState() {
         return loop.state();
     }
@@ -76,37 +77,32 @@ public final class UnitController implements TaskRunner, StateController<UnitSta
     }
 
     public void order(@Nullable Order order) {
-        dispatch(new Event.Ordered(order));
+        loop.dispatch(new Event.Ordered(order));
     }
 
     public void stun(float seconds) {
-        dispatch(new Event.Stunned(seconds));
+        loop.dispatch(new Event.Stunned(seconds));
     }
 
     /** Casts a spell; a stunned unit casts it once the stun wears off. */
     public void cast(MagicFactory factory, boolean clearOrder) {
-        dispatch(new Event.Cast(factory, clearOrder));
+        loop.dispatch(new Event.Cast(factory, clearOrder));
     }
 
     public void die() {
-        dispatch(new Event.Died());
+        loop.dispatch(new Event.Died());
     }
 
     public void mountTower() {
-        dispatch(new Event.MountedTower());
+        loop.dispatch(new Event.MountedTower());
     }
 
     public void mountShip(Ship ship, ShipAllocation allocation) {
-        dispatch(new Event.MountedShip(ship, allocation));
+        loop.dispatch(new Event.MountedShip(ship, allocation));
     }
 
     public void unmount() {
-        dispatch(new Event.Unmounted());
-    }
-
-    @Override
-    public void dispatch(Event event) {
-        loop.dispatch(event);
+        loop.dispatch(new Event.Unmounted());
     }
 
     @Override
@@ -120,11 +116,12 @@ public final class UnitController implements TaskRunner, StateController<UnitSta
             assert activity != startedUninterruptible
                     || progress != Activity.State.INTERRUPTIBLE : "an activity planned uninterruptible was interruptible on its first frame";
             startedUninterruptible = null;
-            return switch (progress) {
-                case DONE -> new Event.Report.Finished(activity.outcome());
-                case INTERRUPTIBLE -> Event.Report.Progressed.INTERRUPTIBLE;
-                case UNINTERRUPTIBLE -> Event.Report.Progressed.UNINTERRUPTIBLE;
-            };
+            if (progress == Activity.State.DONE) {
+                return new Event.Report.Finished(activity.outcome());
+            }
+            boolean unchanged = loop.state().execution() instanceof UnitState.Execution.Running executing
+                    && executing.progress() == progress;
+            return unchanged ? null : new Event.Report.Progressed(progress);
         });
     }
 
@@ -133,8 +130,8 @@ public final class UnitController implements TaskRunner, StateController<UnitSta
             execute(command);
         }
         UnitState state = loop.state();
-        assert (running != null) == (state.slot() instanceof UnitState.Slot.Running) : "the running activity and the unit's slot disagree";
-        assert (parked != null) == (state.parked() != null) : "the parked activity and the unit's state disagree";
+        assert (running != null) == (state.execution() instanceof UnitState.Execution.Running) : "the running activity and the unit's execution disagree";
+        assert posture == null || posture == state.tasks().posture() : "a posture's activity outlived the posture";
     }
 
     private void execute(UnitCommand command) {
@@ -142,35 +139,45 @@ public final class UnitController implements TaskRunner, StateController<UnitSta
             case UnitCommand.Cancel ignored -> {
                 UnitActivity activity = running;
                 assert activity != null : "cancelling with nothing running";
-                activity.cancel();
-                running = null;
-            }
-            case UnitCommand.Park ignored -> {
-                assert running != null : "parking with nothing running";
-                parked = running;
+                if (activity != postureActivity) {
+                    activity.cancel();
+                }
                 running = null;
             }
             case UnitCommand.Release ignored -> running = null;
-            case UnitCommand.Discard ignored -> {
-                UnitActivity activity = parked;
-                assert activity != null : "discarding with nothing parked";
-                activity.cancel();
-                parked = null;
-            }
-            case UnitCommand.Resume ignored -> {
-                assert parked != null : "resuming with nothing parked";
-                running = parked;
-                parked = null;
-            }
-            case UnitCommand.Start start -> {
-                UnitActivity activity = create(start.run());
-                running = activity;
-                startedUninterruptible = start.run().initialProgress() == Activity.State.UNINTERRUPTIBLE ? activity : null;
-            }
+            case UnitCommand.Start start -> startActivity(start.task(), start.run());
             case UnitCommand.Perform perform -> {
                 perform(perform.operation());
                 loop.dispatch(unit.isDead() ? new Event.Report.Removed() : new Event.Report.Performed());
             }
+            case UnitCommand.Leave ignored -> {
+                UnitActivity kept = postureActivity;
+                if (kept != null && kept != running) {
+                    kept.cancel();
+                }
+                running = null;
+                posture = null;
+                postureActivity = null;
+            }
+        }
+    }
+
+    private void startActivity(Task task, UnitPlan.Run run) {
+        // Postures are compared by identity; see UnitState.Execution.Running.
+        if (task == posture) {
+            running = postureActivity;
+            return;
+        }
+        UnitActivity old = postureActivity;
+        if (task instanceof Posture && old != null) {
+            old.cancel();
+        }
+        UnitActivity activity = create(run);
+        running = activity;
+        startedUninterruptible = run.initialProgress() == Activity.State.UNINTERRUPTIBLE ? activity : null;
+        if (task instanceof Posture next) {
+            posture = next;
+            postureActivity = activity;
         }
     }
 
@@ -181,9 +188,9 @@ public final class UnitController implements TaskRunner, StateController<UnitSta
             case UnitPlan.Sit sit -> new SittingActivity(unit, sit.ship(), sit.allocation());
             case UnitPlan.Walk walk -> new WalkActivity(unit, walk.target(), walk.range(), walk.aggressive());
             case UnitPlan.FindSupply find -> new WalkActivity(unit, new FinderTrackerAlgorithm<>(unit.getUnitGrid(),
-                    supplyFinder(find.supplyType())), UnitReason.FoundSupply::new);
+                    supplyFinder(find.supplyType())), Reason.FoundSupply::new);
             case UnitPlan.FindStore ignored -> new WalkActivity(unit, new FinderTrackerAlgorithm<>(unit.getUnitGrid(),
-                    new BuildingFinder(unit.getOwner(), Abilities.SUPPLY_CONTAINER)), UnitReason.FoundStore::new);
+                    new BuildingFinder(unit.getOwner(), Abilities.SUPPLY_CONTAINER)), Reason.FoundStore::new);
             case UnitPlan.Attack attack -> {
                 Seat seat = attack.seat();
                 yield seat != null ? new AttackActivity(unit, attack.target(), seat.allocation(),

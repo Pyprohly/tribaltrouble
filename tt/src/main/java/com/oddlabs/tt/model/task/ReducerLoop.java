@@ -22,10 +22,6 @@ final class ReducerLoop<S, E, F> {
     private final ArrayDeque<E> queue = new ArrayDeque<>();
     private boolean busy;
 
-    ReducerLoop(StateReducer<S, E, F> reducer, S initial, Consumer<F> executor) {
-        this(reducer, initial, executor, null);
-    }
-
     ReducerLoop(StateReducer<S, E, F> reducer, S initial, Consumer<F> executor,
             @Nullable TransitionTrace<S, E, F> trace) {
         this.reducer = reducer;

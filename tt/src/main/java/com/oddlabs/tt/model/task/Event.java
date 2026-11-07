@@ -41,14 +41,12 @@ public sealed interface Event {
 
     /** What the controller reports back about the activities and operations it carried out. */
     sealed interface Report extends Event {
-        /** The running activity animated a frame and is not done. */
+        /** The running activity animated a frame, is not done, and became interruptible or stopped being so. */
         record Progressed(Activity.State progress) implements Report {
-            public static final Progressed INTERRUPTIBLE = new Progressed(Activity.State.INTERRUPTIBLE);
-            public static final Progressed UNINTERRUPTIBLE = new Progressed(Activity.State.UNINTERRUPTIBLE);
         }
 
         /** The running activity is done, and reports what it found. */
-        record Finished(UnitReason outcome) implements Report {
+        record Finished(Reason outcome) implements Report {
         }
 
         /** The operation the controller was asked for has been carried out. */

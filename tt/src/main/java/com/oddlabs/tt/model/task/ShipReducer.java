@@ -4,6 +4,7 @@ import org.jspecify.annotations.NullMarked;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.BooleanSupplier;
 
 /**
  * A ship's state machine: whether it is docked or on a voyage, and which leg of the voyage it is on.
@@ -15,23 +16,25 @@ public final class ShipReducer implements StateReducer<ShipState, ShipEvent, Lis
     /** How many times a ship fails to work itself loose before it gives up the voyage. */
     private static final int MAX_FAILED_UNSTUCKS = 3;
 
-    private final ShipView view;
+    /** Whether the ship has already left the shore it was built on. */
+    private final BooleanSupplier slid;
 
-    public ShipReducer(ShipView view) {
-        this.view = view;
+    public ShipReducer(BooleanSupplier slid) {
+        this.slid = slid;
     }
 
     @Override
     public Transition<ShipState, List<ShipCommand>> reduce(ShipState state, ShipEvent event) {
         return switch (event) {
-            case ShipEvent.Started ignored -> state.slot() == ShipState.Slot.VACANT ? replan(state,
+            case ShipEvent.Started ignored -> state.execution() == ShipState.Execution.UNSTARTED ? replan(state,
                     ShipCommand.CANCEL, state.task(), Reason.BEGIN) : unchanged(state);
             case ShipEvent.Sailed sailed -> replan(state, ShipCommand.CANCEL, new Voyage(sailed.target()),
                     Reason.BEGIN);
             case ShipEvent.Docked ignored -> replan(state, ShipCommand.CANCEL, new Task.Inert(), Reason.BEGIN);
-            case ShipEvent.Report.Finished finished -> state.slot() == ShipState.Slot.RUNNING ? replan(state,
+            case ShipEvent.Report.Finished finished -> state.execution() == ShipState.Execution.RUNNING ? replan(state,
                     ShipCommand.RELEASE, state.task(), finished.outcome()) : unchanged(state);
-            case ShipEvent.Report.Performed ignored -> state.slot() == ShipState.Slot.PERFORMING ? replan(state,
+            case ShipEvent.Report.Performed ignored -> state.execution() == ShipState.Execution.PERFORMING ? replan(
+                    state,
                     ShipCommand.CANCEL, state.task(), Reason.PERFORMED) : unchanged(state);
         };
     }
@@ -42,37 +45,37 @@ public final class ShipReducer implements StateReducer<ShipState, ShipEvent, Lis
 
     /** Stops what runs with the stop command, plans for the task, and starts or performs what it asks for. */
     private Transition<ShipState, List<ShipCommand>> replan(ShipState state, ShipCommand stop, Task task,
-            ShipReason reason) {
+            Reason reason) {
         List<ShipCommand> commands = new ArrayList<>(2);
-        if (state.slot() == ShipState.Slot.RUNNING) {
+        if (state.execution() == ShipState.Execution.RUNNING) {
             commands.add(stop);
         }
-        Decision<Task, ShipPlan> decision = plan(task, reason);
-        ShipState.Slot slot = switch (decision.plan()) {
+        Decision<Task, ShipPlan> decision = decide(task, reason);
+        ShipState.Execution execution = switch (decision.plan()) {
             case ShipPlan.Run run -> {
                 commands.add(new ShipCommand.Start(run));
-                yield ShipState.Slot.RUNNING;
+                yield ShipState.Execution.RUNNING;
             }
             case ShipPlan.Operation operation -> {
                 commands.add(new ShipCommand.Perform(operation));
-                yield ShipState.Slot.PERFORMING;
+                yield ShipState.Execution.PERFORMING;
             }
         };
-        return new Transition<>(new ShipState(decision.state(), slot), commands);
+        return new Transition<>(new ShipState(decision.state(), execution), commands);
     }
 
-    private Decision<Task, ShipPlan> plan(Task state, ShipReason reason) {
+    private Decision<Task, ShipPlan> decide(Task state, Reason reason) {
         if (!(state instanceof Voyage voyage)) {
             return new Decision<>(new Task.Inert(), new ShipPlan.Moor());
         }
         if (reason instanceof Reason.Begin) {
-            return leg(new Voyage(voyage.target(), view.slid() ? Voyage.Phase.SAILING : Voyage.Phase.SLIDING,
+            return leg(new Voyage(voyage.target(), slid.getAsBoolean() ? Voyage.Phase.SAILING : Voyage.Phase.SLIDING,
                     voyage.failedUnstucks()));
         }
         return switch (voyage.phase()) {
             case SLIDING -> reason instanceof Reason.Performed ? leg(with(voyage, Voyage.Phase.SAILING,
                     voyage.failedUnstucks())) : new Decision<>(voyage, ShipPlan.Operation.FINISH_SLIDE);
-            case SAILING -> reason instanceof ShipReason.Blocked ? leg(with(voyage, Voyage.Phase.UNSTICKING,
+            case SAILING -> reason instanceof Reason.Blocked ? leg(with(voyage, Voyage.Phase.UNSTICKING,
                     voyage.failedUnstucks())) : new Decision<>(new Task.Inert(), ShipPlan.Operation.END_TRIP);
             case UNSTICKING -> {
                 if (reason instanceof Reason.Completed) {

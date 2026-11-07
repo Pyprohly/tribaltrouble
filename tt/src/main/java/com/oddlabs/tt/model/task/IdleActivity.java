@@ -36,10 +36,10 @@ public final class IdleActivity implements UnitActivity {
     }
 
     @Override
-    public @NonNull UnitReason outcome() {
+    public @NonNull Reason outcome() {
         Selectable<?> target = spotted;
         spotted = null;
-        return target != null ? new UnitReason.Spotted(target) : Reason.COMPLETED;
+        return target != null ? new Reason.Spotted(target) : Reason.COMPLETED;
     }
 
     @Override

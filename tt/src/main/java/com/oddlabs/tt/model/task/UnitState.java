@@ -1,32 +1,29 @@
 package com.oddlabs.tt.model.task;
 
 import org.jspecify.annotations.NullMarked;
-import org.jspecify.annotations.Nullable;
 
-/**
- * A unit's whole state: its tasks, what its controller is doing for them, and the posture whose
- * activity is set aside while something above the posture runs. Between events the parked posture,
- * when there is one, is the unit's posture and not the task that is running; while an event is
- * reduced a new posture can briefly stand beside the old one still parked.
- */
+/** A unit's whole state: its tasks, and what its controller is doing for them. */
 @NullMarked
-public record UnitState(TaskStack tasks, Slot slot, @Nullable Posture parked) {
+public record UnitState(TaskStack tasks, Execution execution) {
     public UnitState(TaskStack tasks) {
-        this(tasks, Slot.VACANT, null);
+        this(tasks, Execution.UNSTARTED);
     }
 
-    public UnitState withTasks(TaskStack next) {
-        return new UnitState(next, slot, parked);
+    public UnitState withTasks(TaskStack tasks) {
+        return new UnitState(tasks, execution);
     }
 
-    /** What the controller is doing for the unit's tasks. */
-    public sealed interface Slot {
-        Slot VACANT = new Vacant();
-        Slot PERFORMING = new Performing();
-        Slot GONE = new Gone();
+    /**
+     * What the controller is carrying out, which can still be for a task the unit has moved on from
+     * while an uninterruptible activity finishes.
+     */
+    public sealed interface Execution {
+        Execution UNSTARTED = new Unstarted();
+        Execution PERFORMING = new Performing();
+        Execution GONE = new Gone();
 
         /** Nothing has run yet. */
-        record Vacant() implements Slot {
+        record Unstarted() implements Execution {
         }
 
         /**
@@ -34,15 +31,15 @@ public record UnitState(TaskStack tasks, Slot slot, @Nullable Posture parked) {
          * apart from others by identity, never by equals: an equal order given again, or an equal
          * posture after mounting the same ship seat, is a new task with a new activity.
          */
-        record Running(Task task, Activity.State progress) implements Slot {
+        record Running(Task task, Activity.State progress) implements Execution {
         }
 
         /** A world operation is being carried out, and its report is awaited. */
-        record Performing() implements Slot {
+        record Performing() implements Execution {
         }
 
         /** The unit has left the world, and nothing it is told matters any more. */
-        record Gone() implements Slot {
+        record Gone() implements Execution {
         }
     }
 }

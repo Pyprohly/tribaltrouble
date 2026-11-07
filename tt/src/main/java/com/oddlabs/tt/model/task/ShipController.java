@@ -13,7 +13,7 @@ import java.util.List;
  * running activity or on the ship.
  */
 @NullMarked
-public final class ShipController implements TaskRunner, StateController<ShipState, ShipEvent> {
+public final class ShipController implements TaskRunner {
     private final Ship ship;
     private final ReducerLoop<ShipState, ShipEvent, List<ShipCommand>> loop;
     private final @Nullable TransitionTrace<ShipState, ShipEvent, List<ShipCommand>> trace;
@@ -28,22 +28,21 @@ public final class ShipController implements TaskRunner, StateController<ShipSta
 
     /** Takes the first decision; called once the ship is far enough constructed to act. */
     public void start() {
-        dispatch(new ShipEvent.Started());
+        loop.dispatch(new ShipEvent.Started());
     }
 
     public void sail(Target target) {
-        dispatch(new ShipEvent.Sailed(target));
+        loop.dispatch(new ShipEvent.Sailed(target));
     }
 
     public void dock() {
-        dispatch(new ShipEvent.Docked());
+        loop.dispatch(new ShipEvent.Docked());
     }
 
     public boolean isSailing() {
         return loop.state().task() instanceof Voyage;
     }
 
-    @Override
     public ShipState getState() {
         return loop.state();
     }
@@ -61,11 +60,6 @@ public final class ShipController implements TaskRunner, StateController<ShipSta
     @Override
     public @Nullable TransitionTrace<ShipState, ShipEvent, List<ShipCommand>> getTrace() {
         return trace;
-    }
-
-    @Override
-    public void dispatch(ShipEvent event) {
-        loop.dispatch(event);
     }
 
     @Override
