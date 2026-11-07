@@ -18,6 +18,13 @@ import org.jspecify.annotations.Nullable;
 public sealed interface UnitPlan {
     /** An activity to run until it finishes or the unit's task changes. */
     sealed interface Run extends UnitPlan {
+        /**
+         * The progress the activity starts with, so a decision taken right after it starts sees the
+         * same boundary as one taken a frame later.
+         */
+        default Activity.State initialProgress() {
+            return Activity.State.INTERRUPTIBLE;
+        }
     }
 
     /** A change to the world, after which the unit decides again with {@link Reason#PERFORMED}. */
@@ -48,7 +55,11 @@ public sealed interface UnitPlan {
     record FindStore() implements Run {
     }
 
-    record Attack(Selectable<?> target, @Nullable Ship ship, @Nullable ShipAllocation allocation) implements Run {
+    record Attack(Selectable<?> target, @Nullable Seat seat) implements Run {
+        @Override
+        public Activity.State initialProgress() {
+            return Activity.State.UNINTERRUPTIBLE;
+        }
     }
 
     record Harvest(Supply supply) implements Run {
@@ -58,12 +69,24 @@ public sealed interface UnitPlan {
     }
 
     record Cast(MagicFactory factory) implements Run {
+        @Override
+        public Activity.State initialProgress() {
+            return Activity.State.UNINTERRUPTIBLE;
+        }
     }
 
     record Stun(float seconds) implements Run {
+        @Override
+        public Activity.State initialProgress() {
+            return Activity.State.UNINTERRUPTIBLE;
+        }
     }
 
     record Die() implements Run {
+        @Override
+        public Activity.State initialProgress() {
+            return Activity.State.UNINTERRUPTIBLE;
+        }
     }
 
     /** Hands the unit's supplies to an adjacent store. */

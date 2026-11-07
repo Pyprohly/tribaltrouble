@@ -6,9 +6,16 @@ import com.oddlabs.tt.model.weapon.MagicFactory;
 import org.jspecify.annotations.NullMarked;
 import org.jspecify.annotations.Nullable;
 
-/** Something from outside a unit's tasks that they react to. */
+/**
+ * Everything a unit reacts to: what the world does to it, and what its controller reports back
+ * about the activities and operations it carried out.
+ */
 @NullMarked
 public sealed interface Event {
+    /** The unit is far enough constructed to act. */
+    record Started() implements Event {
+    }
+
     /** The unit was given an order in place of the one it had, or had its order taken away when null. */
     record Ordered(@Nullable Order order) implements Event {
     }
@@ -32,7 +39,21 @@ public sealed interface Event {
     record Unmounted() implements Event {
     }
 
-    /** The running activity finished, and the current task decides for the reason it gave. */
-    record Finished(Reason reason) implements Event {
+    /** The running activity animated a frame and is not done. */
+    record Progressed(Activity.State progress) implements Event {
+        public static final Progressed INTERRUPTIBLE = new Progressed(Activity.State.INTERRUPTIBLE);
+        public static final Progressed UNINTERRUPTIBLE = new Progressed(Activity.State.UNINTERRUPTIBLE);
+    }
+
+    /** The running activity is done, and reports what it found. */
+    record Finished(Reason outcome) implements Event {
+    }
+
+    /** The operation the controller was asked for has been carried out. */
+    record Performed() implements Event {
+    }
+
+    /** The operation took the unit out of the world, as entering a building does. */
+    record Removed() implements Event {
     }
 }

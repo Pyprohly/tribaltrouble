@@ -28,11 +28,6 @@ public final class MagicActivity implements Activity {
     }
 
     @Override
-    public @NonNull State initialState() {
-        return State.UNINTERRUPTIBLE;
-    }
-
-    @Override
     public boolean isBlocking() {
         return true;
     }

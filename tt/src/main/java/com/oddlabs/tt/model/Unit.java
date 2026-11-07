@@ -143,7 +143,8 @@ public class Unit extends Selectable<UnitTemplate> implements Occupant, Movable 
                 UnitGrid grid = getUnitGrid();
                 List<Target> temp_occupants = new ArrayList<>();
                 for (var s : getOwner().getUnits().getSet()) {
-                    if (s instanceof Unit unit && unit.controller.getState().current() instanceof Order.Walk walk) {
+                    if (s instanceof Unit unit
+                            && unit.controller.getState().tasks().current() instanceof Order.Walk walk) {
                         Target target = walk.target();
                         if (!grid.isGridOccupied(target.getGridX(), target.getGridY())) {
                             grid.occupyGrid(target.getGridX(), target.getGridY(), this);
@@ -655,7 +656,7 @@ public class Unit extends Selectable<UnitTemplate> implements Occupant, Movable 
     }
 
     public final boolean isStunned() {
-        return controller.getState().interruption() instanceof Interruption.Stunned;
+        return controller.getState().tasks().interruption() instanceof Interruption.Stunned;
     }
 
     private void walkToTarget(@NonNull Target target, boolean scan_attack) {

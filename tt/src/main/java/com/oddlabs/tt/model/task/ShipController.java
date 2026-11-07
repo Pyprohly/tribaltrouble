@@ -5,23 +5,28 @@ import com.oddlabs.tt.util.Target;
 import org.jspecify.annotations.NullMarked;
 import org.jspecify.annotations.Nullable;
 
+import java.util.List;
+
 /**
- * Runs a ship's voyages. A new destination or the ship's destruction takes effect at once; otherwise
- * the ship decides again whenever a leg of its voyage ends.
+ * Runs a ship's voyages: the imperative shell around {@link ShipReducer}. Every {@link ShipEvent} is
+ * reduced into the ship's state, and the {@link ShipCommand}s that come back are carried out on the
+ * running activity or on the ship.
  */
 @NullMarked
-public final class ShipController implements TaskRunner, StateController<Task, ShipEvent> {
+public final class ShipController implements TaskRunner, StateController<ShipState, ShipEvent> {
     private final Ship ship;
-    private Task state = new Task.Inert();
+    private final ReducerLoop<ShipState, ShipEvent, List<ShipCommand>> loop;
     private @Nullable Activity running;
 
     public ShipController(Ship ship) {
         this.ship = ship;
+        this.loop = new ReducerLoop<>(new ShipReducer(ship::slid), new ShipState(new Task.Inert()),
+                this::executeAll);
     }
 
     /** Takes the first decision; called once the ship is far enough constructed to act. */
     public void start() {
-        decide(Reason.BEGIN);
+        dispatch(new ShipEvent.Started());
     }
 
     public void sail(Target target) {
@@ -33,17 +38,17 @@ public final class ShipController implements TaskRunner, StateController<Task, S
     }
 
     public boolean isSailing() {
-        return state instanceof Voyage;
+        return loop.state().task() instanceof Voyage;
     }
 
     @Override
-    public Task getState() {
-        return state;
+    public ShipState getState() {
+        return loop.state();
     }
 
     @Override
     public Task getPrimaryTask() {
-        return state;
+        return loop.state().task();
     }
 
     @Override
@@ -53,16 +58,7 @@ public final class ShipController implements TaskRunner, StateController<Task, S
 
     @Override
     public void dispatch(ShipEvent event) {
-        state = switch (event) {
-            case ShipEvent.Sailed sailed -> new Voyage(sailed.target());
-            case ShipEvent.Docked ignored -> new Task.Inert();
-        };
-        Activity activity = running;
-        running = null;
-        if (activity != null) {
-            activity.cancel();
-        }
-        decide(Reason.BEGIN);
+        loop.dispatch(event);
     }
 
     @Override
@@ -71,38 +67,42 @@ public final class ShipController implements TaskRunner, StateController<Task, S
         if (activity == null) {
             return;
         }
-        if (activity.animate(t) == Activity.State.DONE && running == activity) {
-            running = null;
-            decide(activity.outcome());
+        loop.report(() -> activity.animate(t) == Activity.State.DONE ? new ShipEvent.Finished(
+                activity.outcome()) : null);
+    }
+
+    private void executeAll(List<ShipCommand> commands) {
+        for (ShipCommand command : commands) {
+            execute(command);
         }
     }
 
-    private void decide(Reason reason) {
-        while (true) {
-            ShipReducer.Decision decision = ShipReducer.decide(state, reason, ship.slid());
-            state = decision.state();
-            switch (decision.plan()) {
-                case ShipReducer.Run run -> {
-                    running = create(run);
-                    return;
+    private void execute(ShipCommand command) {
+        switch (command) {
+            case ShipCommand.Cancel ignored -> {
+                Activity activity = running;
+                assert activity != null : "cancelling with nothing running";
+                activity.cancel();
+                running = null;
+            }
+            case ShipCommand.Release ignored -> running = null;
+            case ShipCommand.Start start -> running = create(start.run());
+            case ShipCommand.Perform perform -> {
+                switch (perform.operation()) {
+                    case FINISH_SLIDE -> ship.endSlide();
+                    case END_TRIP -> ship.endTrip();
                 }
-                case ShipReducer.Operation operation -> {
-                    switch (operation) {
-                        case FINISH_SLIDE -> ship.endSlide();
-                        case END_TRIP -> ship.endTrip();
-                    }
-                    reason = Reason.PERFORMED;
-                }
+                loop.dispatch(new ShipEvent.Performed());
             }
         }
     }
 
-    private Activity create(ShipReducer.Run run) {
+    private Activity create(ShipPlan.Run run) {
         return switch (run) {
-            case ShipReducer.Moor ignored -> new NullActivity();
-            case ShipReducer.Slide ignored -> new ShipSlideActivity(ship);
-            case ShipReducer.Sail sail -> new SailActivity(ship, sail.target());
-            case ShipReducer.Unstuck ignored -> new ShipUnstuckActivity(ship);
+            case ShipPlan.Moor ignored -> new NullActivity();
+            case ShipPlan.Slide ignored -> new ShipSlideActivity(ship);
+            case ShipPlan.Sail sail -> new SailActivity(ship, sail.target());
+            case ShipPlan.Unstuck ignored -> new ShipUnstuckActivity(ship);
         };
     }
 }

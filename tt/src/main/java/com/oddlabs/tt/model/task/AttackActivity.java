@@ -55,11 +55,6 @@ public final class AttackActivity implements Activity {
     }
 
     @Override
-    public @NonNull State initialState() {
-        return State.UNINTERRUPTIBLE;
-    }
-
-    @Override
     public @NonNull State animate(float t) {
 
         if (ship != null && unit.isMounted()) {

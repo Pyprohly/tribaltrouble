@@ -2,8 +2,6 @@ package com.oddlabs.tt.model.task;
 
 import com.oddlabs.tt.model.Building;
 import com.oddlabs.tt.model.Selectable;
-import com.oddlabs.tt.model.Ship;
-import com.oddlabs.tt.model.ShipAllocation;
 import com.oddlabs.tt.model.Supply;
 import com.oddlabs.tt.util.Target;
 import org.jspecify.annotations.NullMarked;
@@ -56,9 +54,9 @@ public sealed interface Order extends Task {
     }
 
     /** Attacks a target from where the unit stands, as from a tower or a ship. */
-    record Attack(Selectable<?> target, @Nullable Ship ship, @Nullable ShipAllocation allocation) implements Order {
+    record Attack(Selectable<?> target, @Nullable Seat seat) implements Order {
         public Attack(Selectable<?> target) {
-            this(target, null, null);
+            this(target, null);
         }
 
         @Override
@@ -72,40 +70,95 @@ public sealed interface Order extends Task {
      * and otherwise to the one the last search found.
      */
     record Gather(Class<? extends Supply> supplyType, @Nullable Supply supply, @Nullable Building assignedBuilding,
-                  @Nullable Building foundBuilding, @Nullable Harvest harvesting, @Nullable Building depositedAt,
-                  int harvestAttempts, int dropoffAttempts) implements Order {
+                  @Nullable Building foundBuilding, Phase phase) implements Order {
         public Gather(Class<? extends Supply> supplyType, @Nullable Supply supply,
                 @Nullable Building assignedBuilding) {
-            this(supplyType, supply, assignedBuilding, null, null, null, 0, 0);
+            this(supplyType, supply, assignedBuilding, null, new Approaching(0));
         }
 
         @Override
         public Gather resetAttempts() {
-            return new Gather(supplyType, supply, assignedBuilding, foundBuilding,
-                    harvesting != null ? harvesting.resetAttempts() : null, depositedAt, 0, 0);
+            return new Gather(supplyType, supply, assignedBuilding, foundBuilding, phase.resetAttempts());
         }
 
         @Override
         public String key(Selectable<?> selectable) {
             return getClass().getName() + supplyType;
         }
+
+        /** Where a gather is in its round trip; the attempts count walks made in the current phase. */
+        public sealed interface Phase {
+            Phase resetAttempts();
+        }
+
+        /** Walks to the supply, or decides which one to look for. */
+        public record Approaching(int attempts) implements Phase {
+            @Override
+            public Approaching resetAttempts() {
+                return new Approaching(0);
+            }
+        }
+
+        /** Harvests until full; the attempts are those of the approach, kept for when the harvest ends. */
+        public record Harvesting(Harvest harvest, int attempts) implements Phase {
+            @Override
+            public Harvesting resetAttempts() {
+                return new Harvesting(harvest.resetAttempts(), 0);
+            }
+        }
+
+        /** Carries the supplies to a store. */
+        public record Delivering(int attempts) implements Phase {
+            @Override
+            public Delivering resetAttempts() {
+                return new Delivering(0);
+            }
+        }
+
+        /** Hands the supplies to the store it reached. */
+        public record Depositing(Building store, int attempts) implements Phase {
+            @Override
+            public Depositing resetAttempts() {
+                return new Depositing(store, 0);
+            }
+        }
     }
 
     /** Repairs or finishes a building, fetching wood whenever the unit carries none. */
-    record Repair(Building building, @Nullable Harvest harvesting, int harvestAttempts,
-                  int repairAttempts) implements Order {
+    record Repair(Building building, Phase phase) implements Order {
         public Repair(Building building) {
-            this(building, null, 0, 0);
+            this(building, new Mending(0));
         }
 
         @Override
         public Repair resetAttempts() {
-            return new Repair(building, harvesting != null ? harvesting.resetAttempts() : null, 0, 0);
+            return new Repair(building, phase.resetAttempts());
         }
 
         @Override
         public String key(Selectable<?> selectable) {
             return getClass().getName() + "@" + building.getGridX() + "," + building.getGridY();
+        }
+
+        /** Whether a repair works on the building or fetches wood for it; the attempts count walks made doing so. */
+        public sealed interface Phase {
+            Phase resetAttempts();
+        }
+
+        /** Walks to the building and repairs it. */
+        public record Mending(int attempts) implements Phase {
+            @Override
+            public Mending resetAttempts() {
+                return new Mending(0);
+            }
+        }
+
+        /** Harvests wood to repair with. */
+        public record Fetching(Harvest harvest, int attempts) implements Phase {
+            @Override
+            public Fetching resetAttempts() {
+                return new Fetching(harvest.resetAttempts(), 0);
+            }
         }
     }
 

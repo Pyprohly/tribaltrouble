@@ -10,56 +10,37 @@ import com.oddlabs.tt.util.Target;
 import org.jspecify.annotations.NullMarked;
 import org.jspecify.annotations.Nullable;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
- * A unit's decisions. Each one takes the unit's state and the reason it is deciding, reads the world
- * through a {@link UnitView}, and returns the next state and what to do. Nothing here changes the
- * world or keeps state of its own.
+ * A unit's state machine. {@link #reduce} applies an event to the unit's state and returns the
+ * commands its controller carries out; it reads the world through a {@link UnitView} and changes
+ * nothing itself.
  *
- * <p>A task that finishes hands over to the slot beneath it: a nested task to its parent, an order
- * to the posture, an interruption to whatever it interrupted. Each of those decides again in the
- * same call, so a decision always ends in something to do.
+ * <p>One rule governs when an activity is replaced: a decision is taken as soon as the running
+ * activity is interruptible, and waits for that otherwise. Urgent events (stuns, spells, death,
+ * mounting) cancel the running activity and decide at once. A posture's activity is never
+ * cancelled while the posture lasts: it is parked under the order or interruption above it and
+ * resumed afterwards, keeping its timers and boarding progress.
+ *
+ * <p>A decision is made by the current task, for a {@link Reason}. A task that finishes hands over
+ * to the slot beneath it: a nested task to its parent, an order to the posture, an interruption to
+ * whatever it interrupted. Each of those decides again in the same call, so a decision always ends
+ * in something to do.
  */
 @NullMarked
-public final class UnitReducer {
+public final class UnitReducer implements StateReducer<UnitState, Event, List<UnitCommand>> {
     /** How many walks a task makes towards something before it gives up on reaching it. */
     private static final int MAX_ATTEMPTS = 1;
 
-    public record Decision(UnitState state, UnitPlan plan) {
-    }
-
-    /** The state an event leaves, and what the controller does about it. */
-    public record Transition(UnitState state, Next next) {
-    }
-
-    /** When the unit decides after an event, if at all. */
-    public sealed interface Next {
-        Next DECIDE_NOW = new DecideNow(Reason.BEGIN);
-        Next DECIDE_WHEN_INTERRUPTIBLE = new DecideWhenInterruptible();
-        Next IGNORE = new Ignore();
-
-        /** Cancels the running activity and decides at once for the reason. */
-        record DecideNow(Reason reason) implements Next {
+    /** What a task does next, or that it is done. */
+    private sealed interface Step<O> {
+        record Continue<O>(O next, UnitPlan plan) implements Step<O> {
         }
 
-        /** Decides for {@link Reason#BEGIN} once the running activity allows it. */
-        record DecideWhenInterruptible() implements Next {
+        record Done<O>() implements Step<O> {
         }
-
-        /** Leaves the unit as it was. */
-        record Ignore() implements Next {
-        }
-    }
-
-    /** What an order does next, or that it is done. */
-    private record Step(@Nullable Order order, @Nullable UnitPlan plan) {
-        static final Step DONE = new Step(null, null);
-    }
-
-    /** What a nested harvest does next, or that it is done. */
-    private record HarvestStep(Order.@Nullable Harvest harvest, UnitPlan.@Nullable Run run) {
-        static final HarvestStep DONE = new HarvestStep(null, null);
     }
 
     @FunctionalInterface
@@ -67,67 +48,162 @@ public final class UnitReducer {
         Order rebuild(int attempts, Order.@Nullable Hunt engaged);
     }
 
-    private UnitReducer() {
+    private final UnitView view;
+
+    public UnitReducer(UnitView view) {
+        this.view = view;
     }
 
-    /** Applies an event to the state. */
-    public static Transition reduce(UnitState state, Event event) {
-        Interruption current = state.interruption();
+    @Override
+    public Transition<UnitState, List<UnitCommand>> reduce(UnitState state, Event event) {
+        if (state.slot() instanceof UnitState.Slot.Gone) {
+            return unchanged(state);
+        }
+        TaskStack tasks = state.tasks();
+        Interruption current = tasks.interruption();
         return switch (event) {
-            case Event.Ordered ordered -> new Transition(state.withOrder(ordered.order()),
-                    Next.DECIDE_WHEN_INTERRUPTIBLE);
+            case Event.Started ignored -> state.slot() instanceof UnitState.Slot.Vacant ? decideNow(state,
+                    Reason.BEGIN) : unchanged(state);
+            case Event.Ordered ordered -> decideWhenInterruptible(state.withTasks(tasks.withOrder(ordered.order())));
             case Event.Stunned stunned -> {
                 if (current instanceof Interruption.Dying) {
-                    yield new Transition(state, Next.IGNORE);
+                    yield unchanged(state);
                 }
                 Interruption stun = new Interruption.Stunned(stunned.seconds());
-                yield new Transition(current instanceof Interruption.Stunned ? state.replacingInterruption(
-                        stun) : state.interruptedBy(stun), Next.DECIDE_NOW);
+                yield decideNow(state.withTasks(current instanceof Interruption.Stunned ? tasks.replacingInterruption(
+                        stun) : tasks.interruptedBy(stun)), Reason.BEGIN);
             }
             case Event.Cast cast -> {
                 if (current instanceof Interruption.Dying) {
-                    yield new Transition(state, Next.IGNORE);
+                    yield unchanged(state);
                 }
-                UnitState next = cast.clearOrder() ? state.withOrder(null) : state;
+                TaskStack next = cast.clearOrder() ? tasks.withOrder(null) : tasks;
                 Interruption casting = new Interruption.Casting(cast.factory());
                 if (current instanceof Interruption.Stunned) {
-                    yield new Transition(next.followedBy(casting), Next.DECIDE_WHEN_INTERRUPTIBLE);
+                    yield decideWhenInterruptible(state.withTasks(next.followedBy(casting)));
                 }
-                yield new Transition(next.interruptedBy(casting), Next.DECIDE_NOW);
+                yield decideNow(state.withTasks(next.interruptedBy(casting)), Reason.BEGIN);
             }
-            case Event.Died ignored -> new Transition(new UnitState(state.posture(), null, List.of(
-                    new Interruption.Dying())), Next.DECIDE_NOW);
-            case Event.MountedTower ignored -> new Transition(new UnitState(new Posture.Idle(false)), Next.DECIDE_NOW);
-            case Event.MountedShip mounted -> new Transition(new UnitState(
+            case Event.Died ignored -> decideNow(state.withTasks(new TaskStack(tasks.posture(), null, List.of(
+                    new Interruption.Dying()))), Reason.BEGIN);
+            case Event.MountedTower ignored -> decideNow(state.withTasks(new TaskStack(new Posture.Idle(false))),
+                    Reason.BEGIN);
+            case Event.MountedShip mounted -> decideNow(state.withTasks(new TaskStack(
                     mounted.allocation().getRole() == ShipAllocation.FIGHTING ? new Posture.Fighting(mounted.ship(),
-                            mounted.allocation()) : new Posture.Sitting(mounted.ship(), mounted.allocation())),
-                    Next.DECIDE_NOW);
-            case Event.Unmounted ignored -> new Transition(new UnitState(new Posture.Idle(true)), Next.DECIDE_NOW);
-            case Event.Finished finished -> new Transition(state, new Next.DecideNow(finished.reason()));
+                            mounted.allocation()) : new Posture.Sitting(mounted.ship(), mounted.allocation()))),
+                    Reason.BEGIN);
+            case Event.Unmounted ignored -> decideNow(state.withTasks(new TaskStack(new Posture.Idle(true))),
+                    Reason.BEGIN);
+            case Event.Progressed progressed -> {
+                if (!(state.slot() instanceof UnitState.Slot.Running running)) {
+                    yield unchanged(state);
+                }
+                // Reported every frame, so the state is only rebuilt when the progress changed.
+                yield decideWhenInterruptible(running.progress() == progressed.progress() ? state : new UnitState(
+                        tasks, new UnitState.Slot.Running(running.task(), progressed.progress()), state.parked()));
+            }
+            case Event.Finished finished -> state.slot() instanceof UnitState.Slot.Running running ? finish(state,
+                    running, finished.outcome()) : unchanged(state);
+            // An event that decided while the operation was carried out has already moved the unit on.
+            case Event.Performed ignored -> state.slot() instanceof UnitState.Slot.Performing ? decideNow(state,
+                    Reason.PERFORMED) : unchanged(state);
+            case Event.Removed ignored -> {
+                List<UnitCommand> commands = new ArrayList<>(2);
+                if (state.slot() instanceof UnitState.Slot.Running) {
+                    commands.add(UnitCommand.RELEASE);
+                }
+                if (state.parked() != null) {
+                    commands.add(UnitCommand.DISCARD);
+                }
+                yield new Transition<>(new UnitState(tasks, UnitState.Slot.GONE, null), commands);
+            }
         };
     }
 
-    public static Decision decide(UnitState state, Reason reason, UnitView view) {
+    private static Transition<UnitState, List<UnitCommand>> unchanged(UnitState state) {
+        return new Transition<>(state, List.of());
+    }
+
+    /** Decides if the current task is not the one running and the running activity can be interrupted. */
+    private Transition<UnitState, List<UnitCommand>> decideWhenInterruptible(UnitState state) {
+        if (state.slot() instanceof UnitState.Slot.Running running && (running.task() == state.tasks().current()
+                || running.progress() == Activity.State.UNINTERRUPTIBLE)) {
+            return unchanged(state);
+        }
+        return decideNow(state, Reason.BEGIN);
+    }
+
+    private Transition<UnitState, List<UnitCommand>> finish(UnitState state, UnitState.Slot.Running running,
+            Reason outcome) {
+        Reason reason = state.tasks().current() == running.task() ? outcome : Reason.BEGIN;
+        return decide(state, UnitCommand.RELEASE, reason);
+    }
+
+    private Transition<UnitState, List<UnitCommand>> decideNow(UnitState state, Reason reason) {
+        return decide(state, UnitCommand.CANCEL, reason);
+    }
+
+    /**
+     * Stops what runs, parking a posture's activity and otherwise giving the stop command, decides,
+     * and starts or resumes what the decision asks for.
+     */
+    private Transition<UnitState, List<UnitCommand>> decide(UnitState state, UnitCommand stop, Reason reason) {
+        List<UnitCommand> commands = new ArrayList<>(3);
+        Posture parked = state.parked();
+        if (state.slot() instanceof UnitState.Slot.Running running) {
+            if (running.task() == state.tasks().posture()) {
+                commands.add(UnitCommand.PARK);
+                parked = state.tasks().posture();
+            } else {
+                commands.add(stop);
+            }
+        }
+        Transition<TaskStack, UnitPlan> decision = decide(state.tasks(), reason);
+        TaskStack tasks = decision.nextState();
+        if (parked != null && parked != tasks.posture()) {
+            commands.add(UnitCommand.DISCARD);
+            parked = null;
+        }
+        return switch (decision.effect()) {
+            case UnitPlan.Run run -> {
+                Task task = tasks.current();
+                if (task == parked) {
+                    commands.add(UnitCommand.RESUME);
+                    parked = null;
+                } else {
+                    commands.add(new UnitCommand.Start(run));
+                }
+                yield new Transition<>(new UnitState(tasks, new UnitState.Slot.Running(task, run.initialProgress()),
+                        parked), commands);
+            }
+            case UnitPlan.Operation operation -> {
+                commands.add(new UnitCommand.Perform(operation));
+                yield new Transition<>(new UnitState(tasks, UnitState.Slot.PERFORMING, parked), commands);
+            }
+        };
+    }
+
+    private Transition<TaskStack, UnitPlan> decide(TaskStack state, Reason reason) {
         Interruption interruption = state.interruption();
         if (interruption != null) {
             UnitPlan plan = interruption(interruption, reason);
             if (plan != null) {
-                return new Decision(state, plan);
+                return new Transition<>(state, plan);
             }
-            return decide(state.withoutInterruption(), Reason.BEGIN, view);
+            return decide(state.withoutInterruption(), Reason.BEGIN);
         }
         Order order = state.order();
         if (order != null) {
-            Step step = order(reason instanceof Reason.Begin ? order.resetAttempts() : order, reason, view);
-            if (step.order() != null && step.plan() != null) {
-                return new Decision(state.withOrder(step.order()), step.plan());
+            if (order(reason instanceof Reason.Begin ? order.resetAttempts() : order,
+                    reason) instanceof Step.Continue<Order>(Order next, UnitPlan plan)) {
+                return new Transition<>(state.withOrder(next), plan);
             }
-            return posture(state.withOrder(null), Reason.BEGIN, view);
+            return posture(state.withOrder(null), Reason.BEGIN);
         }
-        return posture(state, reason, view);
+        return posture(state, reason);
     }
 
-    private static @Nullable UnitPlan interruption(Interruption interruption, Reason reason) {
+    private @Nullable UnitPlan interruption(Interruption interruption, Reason reason) {
         return switch (interruption) {
             case Interruption.Dying ignored -> new UnitPlan.Die();
             case Interruption.Stunned stunned -> reason instanceof Reason.Begin ? new UnitPlan.Stun(
@@ -137,279 +213,279 @@ public final class UnitReducer {
         };
     }
 
-    private static Decision posture(UnitState state, Reason reason, UnitView view) {
+    private Transition<TaskStack, UnitPlan> posture(TaskStack state, Reason reason) {
         Selectable<?> spotted = reason instanceof Reason.Spotted s ? s.target() : null;
         return switch (state.posture()) {
             case Posture.Idle idle -> {
                 if (spotted == null) {
-                    yield new Decision(state, new UnitPlan.Watch(idle.canMove()));
+                    yield new Transition<>(state, new UnitPlan.Watch(idle.canMove()));
                 }
                 // A unit that can move chases the enemy and then walks back to where it stood.
                 Order engage = idle.canMove() ? new Order.Walk(new LandscapeTarget(view.gridX(), view.gridY()), true, 0,
                         new Order.Hunt(spotted)) : new Order.Attack(spotted);
-                yield decide(state.withOrder(engage), Reason.BEGIN, view);
+                yield decide(state.withOrder(engage), Reason.BEGIN);
             }
             case Posture.Fighting fighting -> {
                 if (spotted == null) {
-                    yield new Decision(state, new UnitPlan.Fight(fighting.ship(), fighting.allocation()));
+                    yield new Transition<>(state, new UnitPlan.Fight(fighting.ship(), fighting.allocation()));
                 }
-                yield decide(state.withOrder(new Order.Attack(spotted, fighting.ship(), fighting.allocation())),
-                        Reason.BEGIN, view);
+                yield decide(state.withOrder(new Order.Attack(spotted, new Seat(fighting.ship(),
+                        fighting.allocation()))), Reason.BEGIN);
             }
-            case Posture.Sitting sitting -> new Decision(state, new UnitPlan.Sit(sitting.ship(), sitting.allocation()));
+            case Posture.Sitting sitting -> new Transition<>(state, new UnitPlan.Sit(sitting.ship(),
+                    sitting.allocation()));
         };
     }
 
-    private static Step order(Order order, Reason reason, UnitView view) {
+    private Step<Order> order(Order order, Reason reason) {
         return switch (order) {
             case Order.Walk walk -> march(walk.target(), walk.aggressive(), walk.attempts(), walk.engaged(), reason,
-                    view,
                     (attempts, engaged) -> new Order.Walk(walk.target(), walk.aggressive(), attempts, engaged));
-            case Order.Defend defend -> march(defend.target(), true, defend.attempts(), defend.engaged(), reason, view,
+            case Order.Defend defend -> march(defend.target(), true, defend.attempts(), defend.engaged(), reason,
                     (attempts, engaged) -> new Order.Defend(defend.target(), attempts, engaged));
-            case Order.Hunt hunt -> hunt(hunt, view);
-            case Order.Attack attack -> attack(attack, view);
-            case Order.Gather gather -> gather(gather, reason, view);
-            case Order.Repair repair -> repair(repair, reason, view);
-            case Order.Enter enter -> enter(enter, reason, view);
-            case Order.Build build -> build(build, view);
-            case Order.Transfer transfer -> transfer(transfer, reason, view);
+            case Order.Hunt hunt -> hunt(hunt);
+            case Order.Attack attack -> attack(attack);
+            case Order.Gather gather -> gather(gather, reason);
+            case Order.Repair repair -> repair(repair, reason);
+            case Order.Enter enter -> enter(enter, reason);
+            case Order.Build build -> build(build);
+            case Order.Transfer transfer -> transfer(transfer, reason);
         };
     }
 
-    private static Step run(Order order, UnitPlan plan) {
-        return new Step(order, plan);
+    private static <O> Step<O> run(O next, UnitPlan plan) {
+        return new Step.Continue<>(next, plan);
     }
 
-    private static Step march(Target target, boolean aggressive, int attempts, Order.@Nullable Hunt engaged,
-            Reason reason, UnitView view, Marching marching) {
+    private static <O> Step<O> done() {
+        return new Step.Done<>();
+    }
+
+    private Step<Order> march(Target target, boolean aggressive, int attempts, Order.@Nullable Hunt engaged,
+            Reason reason, Marching marching) {
         if (reason instanceof Reason.Spotted spotted) {
             // Breaking off to hunt restores the walk's budget, so it carries on once the hunt ends.
-            return march(target, aggressive, 0, new Order.Hunt(spotted.target()), Reason.BEGIN, view, marching);
+            return march(target, aggressive, 0, new Order.Hunt(spotted.target()), Reason.BEGIN, marching);
         }
-        if (engaged != null) {
-            Step hunting = hunt(engaged, view);
-            if (hunting.order() instanceof Order.Hunt hunt && hunting.plan() != null) {
-                return run(marching.rebuild(attempts, hunt), hunting.plan());
-            }
+        if (engaged != null && hunt(engaged) instanceof Step.Continue<Order>(Order.Hunt hunt, UnitPlan plan)) {
+            return run(marching.rebuild(attempts, hunt), plan);
         }
         if (attempts >= MAX_ATTEMPTS) {
-            return Step.DONE;
+            return done();
         }
         return run(marching.rebuild(attempts + 1, null), new UnitPlan.Walk(target, 0f, aggressive));
     }
 
-    private static Step hunt(Order.Hunt hunt, UnitView view) {
+    private Step<Order> hunt(Order.Hunt hunt) {
         Selectable<?> target = hunt.target();
         if (view.isDead(target)) {
-            return Step.DONE;
+            return done();
         }
         float range = view.range(target);
         if (view.isCloseEnough(range, target)) {
-            return run(new Order.Hunt(target, 0), new UnitPlan.Attack(target, null, null));
+            return run(new Order.Hunt(target, 0), new UnitPlan.Attack(target, null));
         }
         if (hunt.attempts() >= MAX_ATTEMPTS) {
-            return Step.DONE;
+            return done();
         }
         return run(new Order.Hunt(target, hunt.attempts() + 1), new UnitPlan.Walk(target, range, false));
     }
 
-    private static Step attack(Order.Attack attack, UnitView view) {
+    private Step<Order> attack(Order.Attack attack) {
         if (view.isDead(attack.target()) || !view.canReach(attack.target())) {
-            return Step.DONE;
+            return done();
         }
-        return run(attack, new UnitPlan.Attack(attack.target(), attack.ship(), attack.allocation()));
+        return run(attack, new UnitPlan.Attack(attack.target(), attack.seat()));
     }
 
-    private static Step gather(Order.Gather gather, Reason reason, UnitView view) {
-        Order.Harvest harvesting = gather.harvesting();
-        if (harvesting != null) {
-            HarvestStep step = harvest(harvesting, reason, view);
-            if (step.harvest() != null && step.run() != null) {
-                return run(withHarvesting(gather, step.harvest()), step.run());
+    private Step<Order> gather(Order.Gather gather, Reason reason) {
+        switch (gather.phase()) {
+            case Order.Gather.Harvesting harvesting -> {
+                if (harvest(harvesting.harvest(),
+                        reason) instanceof Step.Continue<Order.Harvest>(Order.Harvest harvest, UnitPlan plan)) {
+                    return run(in(gather, new Order.Gather.Harvesting(harvest, harvesting.attempts())), plan);
+                }
+                gather = in(gather, new Order.Gather.Approaching(harvesting.attempts()));
             }
-            gather = withHarvesting(gather, null);
-        } else if (reason instanceof Reason.Found found) {
-            Building building = found.occupant() instanceof Building b ? b : null;
-            gather = new Order.Gather(gather.supplyType(), gather.supply(), gather.assignedBuilding(), building, null,
-                    gather.depositedAt(), gather.harvestAttempts(), gather.dropoffAttempts());
-        }
-        Building depositedAt = gather.depositedAt();
-        if (depositedAt != null) {
-            gather = new Order.Gather(gather.supplyType(), gather.supply(), gather.assignedBuilding(),
-                    gather.foundBuilding(), null, null, gather.harvestAttempts(), gather.dropoffAttempts());
-            if (reason instanceof Reason.Performed && view.carriesAnything()) {
-                // The store is full: move into it rather than carry the rest around.
-                return enter(new Order.Enter(depositedAt), Reason.BEGIN, view);
+            case Order.Gather.Depositing depositing -> {
+                gather = in(gather, new Order.Gather.Delivering(depositing.attempts()));
+                if (reason instanceof Reason.Performed && view.carriesAnything()) {
+                    // The store is full: move into it rather than carry the rest around.
+                    return enter(new Order.Enter(depositing.store()), Reason.BEGIN);
+                }
+            }
+            case Order.Gather.Delivering ignored -> {
+                if (reason instanceof Reason.Found found) {
+                    Building building = found.occupant() instanceof Building b ? b : null;
+                    gather = new Order.Gather(gather.supplyType(), gather.supply(), gather.assignedBuilding(),
+                            building, gather.phase());
+                }
+            }
+            case Order.Gather.Approaching ignored -> {
             }
         }
         if (view.carries(gather.supplyType())) {
-            return dropoff(gather, view);
+            return dropoff(gather, gather.phase() instanceof Order.Gather.Delivering d ? d.attempts() : 0);
         }
-        return collect(gather, view);
+        return collect(gather, gather.phase() instanceof Order.Gather.Approaching a ? a.attempts() : 0);
     }
 
-    private static Step collect(Order.Gather gather, UnitView view) {
+    private Step<Order> collect(Order.Gather gather, int attempts) {
         Supply supply = gather.supply();
-        int attempts = gather.harvestAttempts();
         if (supply != null && view.isDead(supply)) {
             supply = null;
             attempts = 0;
         }
         if (supply != null && view.isCloseEnough(view.range(supply), supply)) {
-            return gather(collecting(gather, supply, attempts, new Order.Harvest(supply, gather.supplyType(), 0)),
-                    Reason.BEGIN, view);
+            return gather(collecting(gather, supply, new Order.Gather.Harvesting(new Order.Harvest(supply,
+                    gather.supplyType(), 0), attempts)), Reason.BEGIN);
         }
         if (attempts >= MAX_ATTEMPTS) {
-            return transfer(new Order.Transfer(), Reason.BEGIN, view);
+            return transfer(new Order.Transfer(), Reason.BEGIN);
         }
         if (supply == null) {
-            return gather(collecting(gather, null, attempts + 1, new Order.Harvest(null, gather.supplyType(), 0)),
-                    Reason.BEGIN, view);
+            return gather(collecting(gather, null, new Order.Gather.Harvesting(new Order.Harvest(null,
+                    gather.supplyType(), 0), attempts + 1)), Reason.BEGIN);
         }
-        return run(collecting(gather, supply, attempts + 1, null), new UnitPlan.Walk(supply, 0f, false));
+        return run(collecting(gather, supply, new Order.Gather.Approaching(attempts + 1)), new UnitPlan.Walk(supply,
+                0f, false));
     }
 
-    private static Step dropoff(Order.Gather gather, UnitView view) {
+    private Step<Order> dropoff(Order.Gather gather, int attempts) {
         Building assigned = gather.assignedBuilding();
         boolean assignedStanding = assigned != null && !view.isDead(assigned);
         Building found = gather.foundBuilding();
         Building store = assignedStanding ? assigned.getEntrance() : found != null ? found.getEntrance() : null;
         if (store != null && view.isCloseEnough(0f, store)) {
-            return new Step(dropping(gather, store, gather.dropoffAttempts()), new UnitPlan.Deposit(store));
+            return run(in(gather, new Order.Gather.Depositing(store, attempts)), new UnitPlan.Deposit(store));
         }
-        if (gather.dropoffAttempts() >= MAX_ATTEMPTS) {
-            return Step.DONE;
+        if (attempts >= MAX_ATTEMPTS) {
+            return done();
         }
-        Order.Gather next = dropping(gather, null, gather.dropoffAttempts() + 1);
+        Order.Gather next = in(gather, new Order.Gather.Delivering(attempts + 1));
         if (assignedStanding) {
             return run(next, new UnitPlan.Walk(assigned.getEntrance(), 0f, false));
         }
         return run(next, new UnitPlan.FindStore());
     }
 
-    private static Order.Gather collecting(Order.Gather gather, @Nullable Supply supply, int harvestAttempts,
-            Order.@Nullable Harvest harvesting) {
+    private Order.Gather collecting(Order.Gather gather, @Nullable Supply supply, Order.Gather.Phase phase) {
         return new Order.Gather(gather.supplyType(), supply, gather.assignedBuilding(), gather.foundBuilding(),
-                harvesting, null, harvestAttempts, 0);
+                phase);
     }
 
-    private static Order.Gather dropping(Order.Gather gather, @Nullable Building depositedAt, int dropoffAttempts) {
-        return new Order.Gather(gather.supplyType(), gather.supply(), gather.assignedBuilding(),
-                gather.foundBuilding(), null, depositedAt, 0, dropoffAttempts);
+    private Order.Gather in(Order.Gather gather, Order.Gather.Phase phase) {
+        return collecting(gather, gather.supply(), phase);
     }
 
-    private static Order.Gather withHarvesting(Order.Gather gather, Order.@Nullable Harvest harvesting) {
-        return new Order.Gather(gather.supplyType(), gather.supply(), gather.assignedBuilding(),
-                gather.foundBuilding(), harvesting, gather.depositedAt(), gather.harvestAttempts(),
-                gather.dropoffAttempts());
-    }
-
-    private static HarvestStep harvest(Order.Harvest harvest, Reason reason, UnitView view) {
+    private Step<Order.Harvest> harvest(Order.Harvest harvest, Reason reason) {
         if (view.isFull(harvest.supplyType())) {
-            return HarvestStep.DONE;
+            return done();
         }
         Supply supply = harvest.supply();
         if (reason instanceof Reason.Found found) {
             supply = found.occupant() instanceof Supply s ? s : null;
         }
         if (supply != null && !view.isEmpty(supply) && view.isCloseEnough(0f, supply)) {
-            return new HarvestStep(new Order.Harvest(supply, harvest.supplyType(), 0), new UnitPlan.Harvest(supply));
+            return run(new Order.Harvest(supply, harvest.supplyType(), 0), new UnitPlan.Harvest(supply));
         }
         if (harvest.attempts() >= MAX_ATTEMPTS) {
-            return HarvestStep.DONE;
+            return done();
         }
-        return new HarvestStep(new Order.Harvest(supply, harvest.supplyType(), harvest.attempts() + 1),
-                new UnitPlan.FindSupply(harvest.supplyType()));
+        return run(new Order.Harvest(supply, harvest.supplyType(), harvest.attempts() + 1), new UnitPlan.FindSupply(
+                harvest.supplyType()));
     }
 
-    private static Step repair(Order.Repair repair, Reason reason, UnitView view) {
+    private Step<Order> repair(Order.Repair repair, Reason reason) {
         Building building = repair.building();
-        Order.Harvest harvesting = repair.harvesting();
-        if (harvesting != null) {
-            HarvestStep step = harvest(harvesting, reason, view);
-            if (step.harvest() != null && step.run() != null) {
-                return run(new Order.Repair(building, step.harvest(), repair.harvestAttempts(),
-                        repair.repairAttempts()),
-                        step.run());
+        int fetchAttempts = 0;
+        int mendAttempts = 0;
+        switch (repair.phase()) {
+            case Order.Repair.Fetching fetching -> {
+                if (harvest(fetching.harvest(),
+                        reason) instanceof Step.Continue<Order.Harvest>(Order.Harvest harvest, UnitPlan plan)) {
+                    return run(new Order.Repair(building, new Order.Repair.Fetching(harvest, fetching.attempts())),
+                            plan);
+                }
+                fetchAttempts = fetching.attempts();
             }
-            repair = new Order.Repair(building, null, repair.harvestAttempts(), repair.repairAttempts());
+            case Order.Repair.Mending mending -> mendAttempts = mending.attempts();
         }
         if (view.isDead(building)) {
-            return Step.DONE;
+            return done();
         }
         if (view.carries(TreeSupply.class)) {
             if (view.isCloseEnough(0f, building)) {
                 if (view.isDamaged(building)) {
-                    return run(new Order.Repair(building, null, 0, repair.repairAttempts()),
+                    return run(new Order.Repair(building, new Order.Repair.Mending(mendAttempts)),
                             new UnitPlan.Repair(building));
                 }
                 if (view.storesSupplies(building) && view.sharesOwner(building)) {
-                    return enter(new Order.Enter(building), Reason.BEGIN, view);
+                    return enter(new Order.Enter(building), Reason.BEGIN);
                 }
-                return Step.DONE;
+                return done();
             }
-            if (repair.repairAttempts() >= MAX_ATTEMPTS) {
-                return Step.DONE;
+            if (mendAttempts >= MAX_ATTEMPTS) {
+                return done();
             }
-            return run(new Order.Repair(building, null, 0, repair.repairAttempts() + 1),
-                    new UnitPlan.Walk(building, 0f, false));
+            return run(new Order.Repair(building, new Order.Repair.Mending(mendAttempts + 1)), new UnitPlan.Walk(
+                    building, 0f, false));
         }
-        if (repair.harvestAttempts() >= MAX_ATTEMPTS) {
-            return Step.DONE;
+        if (fetchAttempts >= MAX_ATTEMPTS) {
+            return done();
         }
-        return repair(new Order.Repair(building, new Order.Harvest(null, TreeSupply.class, 0),
-                repair.harvestAttempts() + 1, 0), Reason.BEGIN, view);
+        return repair(new Order.Repair(building, new Order.Repair.Fetching(new Order.Harvest(null, TreeSupply.class,
+                0), fetchAttempts + 1)), Reason.BEGIN);
     }
 
-    private static Step enter(Order.Enter enter, Reason reason, UnitView view) {
+    private Step<Order> enter(Order.Enter enter, Reason reason) {
         Building building = enter.building();
         if (reason instanceof Reason.Performed || view.isDead(building)) {
-            return Step.DONE;
+            return done();
         }
         if (view.isCloseEnough(0f, building)) {
-            return view.canEnter(building) ? new Step(enter, new UnitPlan.Enter(building, true)) : Step.DONE;
+            return view.canEnter(building) ? run(enter, new UnitPlan.Enter(building, true)) : done();
         }
         if (enter.attempts() >= MAX_ATTEMPTS) {
-            return Step.DONE;
+            return done();
         }
         return run(new Order.Enter(building, enter.attempts() + 1), new UnitPlan.Walk(building, 0f, false));
     }
 
-    private static Step build(Order.Build build, UnitView view) {
+    private Step<Order> build(Order.Build build) {
         Building building = build.building();
         if (view.isDead(building)) {
-            return Step.DONE;
+            return done();
         }
         if (view.isPlaced(building)) {
-            return view.isDamaged(building) ? repair(new Order.Repair(building), Reason.BEGIN, view) : Step.DONE;
+            return view.isDamaged(building) ? repair(new Order.Repair(building), Reason.BEGIN) : done();
         }
         float distance = view.placingDistance(building);
         if (view.isCloseEnough(distance, building)) {
             // Once placed, the site is built by repairing it.
-            return view.isPlacingLegal(building) ? new Step(new Order.Repair(building), new UnitPlan.Place(
-                    building)) : Step.DONE;
+            return view.isPlacingLegal(building) ? run(new Order.Repair(building), new UnitPlan.Place(
+                    building)) : done();
         }
         if (build.attempts() >= MAX_ATTEMPTS) {
-            return Step.DONE;
+            return done();
         }
         return run(new Order.Build(building, build.attempts() + 1), new UnitPlan.Walk(building, distance, false));
     }
 
-    private static Step transfer(Order.Transfer transfer, Reason reason, UnitView view) {
+    private Step<Order> transfer(Order.Transfer transfer, Reason reason) {
         if (reason instanceof Reason.Performed) {
-            return Step.DONE;
+            return done();
         }
         Building found = transfer.found();
         if (reason instanceof Reason.Found f) {
             found = f.occupant() instanceof Building b ? b : null;
         }
         if (found != null && view.isCloseEnough(0f, found)) {
-            return view.canEnter(found) ? new Step(new Order.Transfer(found, transfer.attempts()),
-                    new UnitPlan.Enter(found, false)) : Step.DONE;
+            return view.canEnter(found) ? run(new Order.Transfer(found, transfer.attempts()), new UnitPlan.Enter(found,
+                    false)) : done();
         }
         if (transfer.attempts() >= MAX_ATTEMPTS) {
-            return Step.DONE;
+            return done();
         }
         return run(new Order.Transfer(found, transfer.attempts() + 1), new UnitPlan.FindStore());
     }

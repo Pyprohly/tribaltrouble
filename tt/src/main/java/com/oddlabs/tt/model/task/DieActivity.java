@@ -29,11 +29,6 @@ public final class DieActivity implements Activity {
     }
 
     @Override
-    public @NonNull State initialState() {
-        return State.UNINTERRUPTIBLE;
-    }
-
-    @Override
     public @NonNull State animate(float t) {
         anim_time -= t;
         offset_z -= dz * t;

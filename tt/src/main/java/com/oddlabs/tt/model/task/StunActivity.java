@@ -20,11 +20,6 @@ public final class StunActivity implements Activity {
     }
 
     @Override
-    public @NonNull State initialState() {
-        return State.UNINTERRUPTIBLE;
-    }
-
-    @Override
     public boolean isBlocking() {
         return true;
     }

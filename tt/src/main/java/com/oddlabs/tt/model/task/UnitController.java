@@ -20,53 +20,40 @@ import com.oddlabs.tt.util.Target;
 import org.jspecify.annotations.NullMarked;
 import org.jspecify.annotations.Nullable;
 
+import java.util.List;
+
 /**
- * Runs a unit's tasks. Every {@link Event} is dispatched to {@link UnitReducer}, which applies it to
- * the {@link UnitState} and decides what the current task does; this class turns the answer into an
- * activity or a world change.
- *
- * <p>One rule governs when an activity is replaced: a decision is taken as soon as the running
- * activity is interruptible, and waits for that otherwise. Urgent events (stuns, spells, death,
- * mounting) cancel the running activity and decide at once. A posture's activity is never
- * cancelled while the posture lasts: it is parked under the order or interruption above it and
- * resumed afterwards, keeping its timers and boarding progress.
+ * Runs a unit's tasks: the imperative shell around {@link UnitReducer}. Every {@link Event} is
+ * reduced into the unit's state, and the {@link UnitCommand}s that come back are carried out on the
+ * running and the parked activity, or on the world.
  */
 @NullMarked
 public final class UnitController implements TaskRunner, StateController<UnitState, Event> {
     private final Unit unit;
-    private final UnitView view;
-    private UnitState state = new UnitState(new Posture.Idle(true));
+    private final ReducerLoop<UnitState, Event, List<UnitCommand>> loop;
 
     private @Nullable Activity running;
-    /** The task the running activity was started for. */
-    private @Nullable Task runningTask;
-    private Activity.State progress = Activity.State.INTERRUPTIBLE;
-    private boolean pending;
-
     private @Nullable Activity parked;
-    private @Nullable Posture parkedPosture;
-
-    /** Counts events, so a decision can tell that an operation it performed changed the task under it. */
-    private int events;
 
     public UnitController(Unit unit) {
         this.unit = unit;
-        this.view = new LiveView(unit);
+        this.loop = new ReducerLoop<>(new UnitReducer(new LiveView(unit)), new UnitState(new TaskStack(
+                new Posture.Idle(true))), this::executeAll);
     }
 
     /** Takes the first decision; called once the unit is far enough constructed to act. */
     public void start() {
-        decide(Reason.BEGIN);
+        dispatch(new Event.Started());
     }
 
     @Override
     public UnitState getState() {
-        return state;
+        return loop.state();
     }
 
     @Override
     public Task getPrimaryTask() {
-        return state.primary();
+        return loop.state().tasks().primary();
     }
 
     @Override
@@ -105,32 +92,7 @@ public final class UnitController implements TaskRunner, StateController<UnitSta
 
     @Override
     public void dispatch(Event event) {
-        UnitReducer.Transition transition = UnitReducer.reduce(state, event);
-        if (transition.next() instanceof UnitReducer.Next.Ignore) {
-            return;
-        }
-        state = transition.state();
-        events++;
-        switch (transition.next()) {
-            case UnitReducer.Next.DecideNow now -> {
-                stop();
-                decide(now.reason());
-            }
-            case UnitReducer.Next.DecideWhenInterruptible ignored -> {
-                // When only a task beneath the running one changed, it takes effect once it becomes current.
-                boolean currentChanged = running == null || state.current() != runningTask;
-                if (!currentChanged) {
-                    return;
-                }
-                if (running == null || progress != Activity.State.UNINTERRUPTIBLE) {
-                    decide(Reason.BEGIN);
-                } else {
-                    pending = true;
-                }
-            }
-            case UnitReducer.Next.Ignore ignored -> {
-            }
-        }
+        loop.dispatch(event);
     }
 
     @Override
@@ -139,81 +101,50 @@ public final class UnitController implements TaskRunner, StateController<UnitSta
         if (activity == null) {
             return;
         }
-        Activity.State result = activity.animate(t);
-        if (running != activity) {
-            return;
+        loop.report(() -> switch (activity.animate(t)) {
+            case DONE -> new Event.Finished(activity.outcome());
+            case INTERRUPTIBLE -> Event.Progressed.INTERRUPTIBLE;
+            case UNINTERRUPTIBLE -> Event.Progressed.UNINTERRUPTIBLE;
+        });
+    }
+
+    private void executeAll(List<UnitCommand> commands) {
+        for (UnitCommand command : commands) {
+            execute(command);
         }
-        progress = result;
-        if (result == Activity.State.DONE) {
-            Reason outcome = state.current() == runningTask ? activity.outcome() : Reason.BEGIN;
-            running = null;
-            if (runningTask instanceof Posture posture && posture == state.posture()) {
-                park(activity, posture);
+    }
+
+    private void execute(UnitCommand command) {
+        switch (command) {
+            case UnitCommand.Cancel ignored -> {
+                Activity activity = running;
+                assert activity != null : "cancelling with nothing running";
+                activity.cancel();
+                running = null;
             }
-            dispatch(new Event.Finished(outcome));
-        } else if (result == Activity.State.INTERRUPTIBLE && pending) {
-            decide(Reason.BEGIN);
-        }
-    }
-
-    private void decide(Reason reason) {
-        pending = false;
-        while (true) {
-            UnitReducer.Decision decision = UnitReducer.decide(state, reason, view);
-            state = decision.state();
-            switch (decision.plan()) {
-                case UnitPlan.Run run -> {
-                    start(run);
-                    return;
-                }
-                case UnitPlan.Operation operation -> {
-                    stop();
-                    int before = events;
-                    perform(operation);
-                    if (events != before || unit.isDead()) {
-                        // The operation mounted or removed the unit, and that event has already decided.
-                        return;
-                    }
-                    reason = Reason.PERFORMED;
-                }
+            case UnitCommand.Park ignored -> {
+                assert running != null : "parking with nothing running";
+                parked = running;
+                running = null;
+            }
+            case UnitCommand.Release ignored -> running = null;
+            case UnitCommand.Discard ignored -> {
+                Activity activity = parked;
+                assert activity != null : "discarding with nothing parked";
+                activity.cancel();
+                parked = null;
+            }
+            case UnitCommand.Resume ignored -> {
+                assert parked != null : "resuming with nothing parked";
+                running = parked;
+                parked = null;
+            }
+            case UnitCommand.Start start -> running = create(start.run());
+            case UnitCommand.Perform perform -> {
+                perform(perform.operation());
+                loop.dispatch(unit.isDead() ? new Event.Removed() : new Event.Performed());
             }
         }
-    }
-
-    private void start(UnitPlan.Run run) {
-        Task task = state.current();
-        stop();
-        Activity next = null;
-        if (parkedPosture != state.posture() || task == parkedPosture) {
-            next = task == parkedPosture ? parked : null;
-            parked = null;
-            parkedPosture = null;
-        }
-        if (next == null) {
-            next = create(run);
-        }
-        running = next;
-        runningTask = task;
-        progress = next.initialState();
-    }
-
-    /** Stops the running activity, parking it if it belongs to the posture. */
-    private void stop() {
-        Activity activity = running;
-        if (activity == null) {
-            return;
-        }
-        running = null;
-        if (runningTask instanceof Posture posture && posture == state.posture()) {
-            park(activity, posture);
-        } else {
-            activity.cancel();
-        }
-    }
-
-    private void park(Activity activity, Posture posture) {
-        parked = activity;
-        parkedPosture = posture;
     }
 
     private Activity create(UnitPlan.Run run) {
@@ -226,9 +157,11 @@ public final class UnitController implements TaskRunner, StateController<UnitSta
                     supplyFinder(find.supplyType())), false);
             case UnitPlan.FindStore ignored -> new WalkActivity(unit, new FinderTrackerAlgorithm<>(unit.getUnitGrid(),
                     new BuildingFinder(unit.getOwner(), Abilities.SUPPLY_CONTAINER)), false);
-            case UnitPlan.Attack attack -> attack.ship() != null && attack.allocation() != null ? new AttackActivity(
-                    unit, attack.target(), attack.allocation(), attack.ship()) : new AttackActivity(unit,
-                            attack.target());
+            case UnitPlan.Attack attack -> {
+                Seat seat = attack.seat();
+                yield seat != null ? new AttackActivity(unit, attack.target(), seat.allocation(),
+                        seat.ship()) : new AttackActivity(unit, attack.target());
+            }
             case UnitPlan.Harvest harvest -> new HarvestActivity(unit, harvest.supply());
             case UnitPlan.Repair repair -> new RepairActivity(unit, repair.building());
             case UnitPlan.Cast cast -> new MagicActivity(unit, cast.factory());

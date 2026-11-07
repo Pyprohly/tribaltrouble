@@ -3,72 +3,41 @@ package com.oddlabs.tt.model.task;
 import org.jspecify.annotations.NullMarked;
 import org.jspecify.annotations.Nullable;
 
-import java.util.ArrayList;
-import java.util.List;
-
 /**
- * A unit's whole task state: what it does by default, the order it was given, and the
- * interruptions that have taken over from both. Interruptions run first to last; the first one
- * that is there runs, else the order, else the posture.
+ * A unit's whole state: its tasks, what its controller is doing for them, and the posture whose
+ * activity is set aside while something above the posture runs. The parked posture, when there is
+ * one, is always the unit's posture and never the task that is running.
  */
 @NullMarked
-public record UnitState(Posture posture, @Nullable Order order, List<Interruption> interruptions) {
-    public UnitState {
-        interruptions = List.copyOf(interruptions);
+public record UnitState(TaskStack tasks, Slot slot, @Nullable Posture parked) {
+    public UnitState(TaskStack tasks) {
+        this(tasks, Slot.VACANT, null);
     }
 
-    public UnitState(Posture posture) {
-        this(posture, null, List.of());
+    public UnitState withTasks(TaskStack next) {
+        return new UnitState(next, slot, parked);
     }
 
-    public @Nullable Interruption interruption() {
-        return interruptions.isEmpty() ? null : interruptions.getFirst();
-    }
+    /** What the controller is doing for the unit's tasks. */
+    public sealed interface Slot {
+        Slot VACANT = new Vacant();
+        Slot PERFORMING = new Performing();
+        Slot GONE = new Gone();
 
-    /** The task whose activity runs. */
-    public Task current() {
-        Interruption interruption = interruption();
-        if (interruption != null) {
-            return interruption;
+        /** Nothing has run yet. */
+        record Vacant() implements Slot {
         }
-        return order != null ? order : posture;
-    }
 
-    /** What the unit is doing, as other systems see it: its order, else its interruption, else its posture. */
-    public Task primary() {
-        if (order != null) {
-            return order;
+        /** An activity runs for the task, and has got as far as the progress says. */
+        record Running(Task task, Activity.State progress) implements Slot {
         }
-        Interruption interruption = interruption();
-        return interruption != null ? interruption : posture;
-    }
 
-    public UnitState withOrder(@Nullable Order next) {
-        return new UnitState(posture, next, interruptions);
-    }
+        /** A world operation is being carried out, and its report is awaited. */
+        record Performing() implements Slot {
+        }
 
-    /** Puts an interruption ahead of the ones already there. */
-    public UnitState interruptedBy(Interruption interruption) {
-        List<Interruption> next = new ArrayList<>(interruptions.size() + 1);
-        next.add(interruption);
-        next.addAll(interruptions);
-        return new UnitState(posture, order, next);
-    }
-
-    /** Replaces the running interruption. */
-    public UnitState replacingInterruption(Interruption interruption) {
-        return withoutInterruption().interruptedBy(interruption);
-    }
-
-    /** Queues an interruption to run once the ones already there have ended. */
-    public UnitState followedBy(Interruption interruption) {
-        List<Interruption> next = new ArrayList<>(interruptions);
-        next.add(interruption);
-        return new UnitState(posture, order, next);
-    }
-
-    /** Ends the running interruption. */
-    public UnitState withoutInterruption() {
-        return new UnitState(posture, order, interruptions.subList(1, interruptions.size()));
+        /** The unit has left the world, and nothing it is told matters any more. */
+        record Gone() implements Slot {
+        }
     }
 }
