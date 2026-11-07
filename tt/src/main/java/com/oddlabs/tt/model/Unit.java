@@ -5,7 +5,6 @@ import com.oddlabs.tt.audio.AudioParameters;
 import com.oddlabs.tt.audio.AudioPlayer;
 import com.oddlabs.tt.landscape.LandscapeTarget;
 import com.oddlabs.tt.model.task.DieActivity;
-import com.oddlabs.tt.model.task.Interruption;
 import com.oddlabs.tt.model.task.Order;
 import com.oddlabs.tt.model.task.TaskRunner;
 import com.oddlabs.tt.model.task.UnitStateController;
@@ -656,7 +655,11 @@ public class Unit extends Selectable<UnitTemplate> implements Occupant, Movable 
     }
 
     public final boolean isStunned() {
-        return controller.getState().tasks().interruption() instanceof Interruption.Stunned;
+        return controller.getState().tasks().stun() != null;
+    }
+
+    public final boolean isCasting() {
+        return controller.getState().tasks().casting() != null;
     }
 
     private void walkToTarget(@NonNull Target target, boolean scan_attack) {

@@ -1,7 +1,6 @@
 package com.oddlabs.tt.trigger.campaign;
 
 import com.oddlabs.tt.model.Unit;
-import com.oddlabs.tt.model.task.Interruption;
 import com.oddlabs.tt.trigger.IntervalTrigger;
 import org.jspecify.annotations.NonNull;
 
@@ -31,10 +30,9 @@ public final class MagicUsedTrigger extends IntervalTrigger {
         float dy = chieftain.getPositionY() - y;
         if (!chieftain.isDead()) {
             if (r * r > dx * dx + dy * dy) {
-                if (!blowing && chieftain.getPrimaryTask() instanceof Interruption.Casting
-                        && chieftain.getLastMagicIndex() == index)
+                if (!blowing && chieftain.isCasting() && chieftain.getLastMagicIndex() == index)
                     blowing = true;
-                if (blowing && !(chieftain.getPrimaryTask() instanceof Interruption.Casting))
+                if (blowing && !chieftain.isCasting())
                     triggered();
             }
         }

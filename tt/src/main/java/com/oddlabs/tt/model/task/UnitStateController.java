@@ -55,7 +55,7 @@ public final class UnitStateController implements TaskRunner {
 
     /** Takes the first decision; called once the unit is far enough constructed to act. */
     public void start() {
-        loop.dispatch(new Event.Started());
+        dispatch(new Event.Started());
     }
 
     public UnitState getState() {
@@ -78,32 +78,32 @@ public final class UnitStateController implements TaskRunner {
     }
 
     public void order(@Nullable Order order) {
-        loop.dispatch(new Event.Ordered(order));
+        dispatch(new Event.Ordered(order));
     }
 
     public void stun(float seconds) {
-        loop.dispatch(new Event.Stunned(seconds));
+        dispatch(new Event.Stunned(seconds));
     }
 
     /** Casts a spell; a stunned unit casts it once the stun wears off. */
     public void cast(MagicFactory factory, boolean clearOrder) {
-        loop.dispatch(new Event.Cast(factory, clearOrder));
+        dispatch(new Event.Cast(factory, clearOrder));
     }
 
     public void die() {
-        loop.dispatch(new Event.Died());
+        dispatch(new Event.Died());
     }
 
     public void mountTower() {
-        loop.dispatch(new Event.MountedTower());
+        dispatch(new Event.MountedTower());
     }
 
     public void mountShip(Ship ship, ShipAllocation allocation) {
-        loop.dispatch(new Event.MountedShip(ship, allocation));
+        dispatch(new Event.MountedShip(ship, allocation));
     }
 
     public void unmount() {
-        loop.dispatch(new Event.Unmounted());
+        dispatch(new Event.Unmounted());
     }
 
     @Override
@@ -126,6 +126,10 @@ public final class UnitStateController implements TaskRunner {
         });
     }
 
+    private void dispatch(Event event) {
+        loop.dispatch(event);
+    }
+
     private void executeAll(List<UnitCommand> commands) {
         for (UnitCommand command : commands) {
             execute(command);
@@ -145,11 +149,11 @@ public final class UnitStateController implements TaskRunner {
                 }
                 runningActivity = null;
             }
-            case UnitCommand.Release ignored -> runningActivity = null;
+            case UnitCommand.Drop ignored -> runningActivity = null;
             case UnitCommand.Start start -> startActivity(start.task(), start.run());
             case UnitCommand.Perform perform -> {
                 perform(perform.operation());
-                loop.dispatch(unit.isDead() ? new Event.Report.Removed() : new Event.Report.Performed());
+                dispatch(unit.isDead() ? new Event.Report.Removed() : new Event.Report.Performed());
             }
             case UnitCommand.Leave ignored -> {
                 UnitActivity kept = postureActivity;

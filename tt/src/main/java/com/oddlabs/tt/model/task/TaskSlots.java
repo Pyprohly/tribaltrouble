@@ -79,7 +79,9 @@ public record TaskSlots(
     /** Ends the running interruption. */
     public TaskSlots withoutInterruption() {
         assert dying == null : "dying never ends";
-        return stun != null ? new TaskSlots(posture, order, null, null, casting) : new TaskSlots(posture, order, null,
-                null, null);
+        if (stun != null) {
+            return new TaskSlots(posture, order, null, null, casting);
+        }
+        return new TaskSlots(posture, order, null, null, null);
     }
 }

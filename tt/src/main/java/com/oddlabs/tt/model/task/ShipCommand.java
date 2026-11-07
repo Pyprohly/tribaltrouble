@@ -6,14 +6,14 @@ import org.jspecify.annotations.NullMarked;
 @NullMarked
 public sealed interface ShipCommand {
     ShipCommand CANCEL = new Cancel();
-    ShipCommand RELEASE = new Release();
+    ShipCommand DROP = new Drop();
 
     /** Cancels the running activity. */
     record Cancel() implements ShipCommand {
     }
 
     /** Drops the running activity without cancelling it, because it has finished. */
-    record Release() implements ShipCommand {
+    record Drop() implements ShipCommand {
     }
 
     /** Starts an activity for the plan. */

@@ -139,7 +139,7 @@ public final class UnitStateReducer implements StateReducer<UnitState, Event, Li
             UnitState.Execution.Running running,
             Reason outcome) {
         Reason reason = state.tasks().current() == running.task() ? outcome : Reason.BEGIN;
-        return replan(state, UnitCommand.RELEASE, reason);
+        return replan(state, UnitCommand.DROP, reason);
     }
 
     private Transition<UnitState, List<UnitCommand>> replanNow(UnitState state, Reason reason) {

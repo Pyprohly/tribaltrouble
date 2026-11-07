@@ -10,7 +10,7 @@ import org.jspecify.annotations.NullMarked;
 @NullMarked
 public sealed interface UnitCommand {
     UnitCommand CANCEL = new Cancel();
-    UnitCommand RELEASE = new Release();
+    UnitCommand DROP = new Drop();
     UnitCommand LEAVE = new Leave();
 
     /** Cancels the running activity, unless it is the posture's. */
@@ -18,7 +18,7 @@ public sealed interface UnitCommand {
     }
 
     /** Drops the running activity without cancelling it, because it has finished. */
-    record Release() implements UnitCommand {
+    record Drop() implements UnitCommand {
     }
 
     /**
@@ -35,7 +35,7 @@ public sealed interface UnitCommand {
     record Perform(UnitPlan.Operation operation) implements UnitCommand {
     }
 
-    /** Drops every activity of a unit that has left the world, cancelling the posture's that was set aside. */
+    /** Lets go of every activity of a unit that has left the world, cancelling the posture's that was set aside. */
     record Leave() implements UnitCommand {
     }
 }

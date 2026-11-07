@@ -32,7 +32,7 @@ public final class ShipStateReducer implements StateReducer<ShipState, ShipEvent
                     Reason.BEGIN);
             case ShipEvent.Docked ignored -> replan(state, ShipCommand.CANCEL, new Task.Inert(), Reason.BEGIN);
             case ShipEvent.Report.Finished finished -> state.execution() == ShipState.Execution.RUNNING ? replan(state,
-                    ShipCommand.RELEASE, state.task(), finished.outcome()) : unchanged(state);
+                    ShipCommand.DROP, state.task(), finished.outcome()) : unchanged(state);
             case ShipEvent.Report.Performed ignored -> state.execution() == ShipState.Execution.PERFORMING ? replan(
                     state,
                     ShipCommand.CANCEL, state.task(), Reason.PERFORMED) : unchanged(state);

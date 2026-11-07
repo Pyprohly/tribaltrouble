@@ -28,15 +28,15 @@ public final class ShipStateController implements TaskRunner {
 
     /** Takes the first decision; called once the ship is far enough constructed to act. */
     public void start() {
-        loop.dispatch(new ShipEvent.Started());
+        dispatch(new ShipEvent.Started());
     }
 
     public void sail(Target target) {
-        loop.dispatch(new ShipEvent.Sailed(target));
+        dispatch(new ShipEvent.Sailed(target));
     }
 
     public void dock() {
-        loop.dispatch(new ShipEvent.Docked());
+        dispatch(new ShipEvent.Docked());
     }
 
     public boolean isSailing() {
@@ -72,6 +72,10 @@ public final class ShipStateController implements TaskRunner {
                 activity.outcome()) : null);
     }
 
+    private void dispatch(ShipEvent event) {
+        loop.dispatch(event);
+    }
+
     private void executeAll(List<ShipCommand> commands) {
         for (ShipCommand command : commands) {
             execute(command);
@@ -86,14 +90,14 @@ public final class ShipStateController implements TaskRunner {
                 activity.cancel();
                 runningActivity = null;
             }
-            case ShipCommand.Release ignored -> runningActivity = null;
+            case ShipCommand.Drop ignored -> runningActivity = null;
             case ShipCommand.Start start -> runningActivity = create(start.run());
             case ShipCommand.Perform perform -> {
                 switch (perform.operation()) {
                     case FINISH_SLIDE -> ship.endSlide();
                     case END_TRIP -> ship.endTrip();
                 }
-                loop.dispatch(new ShipEvent.Report.Performed());
+                dispatch(new ShipEvent.Report.Performed());
             }
         }
     }
