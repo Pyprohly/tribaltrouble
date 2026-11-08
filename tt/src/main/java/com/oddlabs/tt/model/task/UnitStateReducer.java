@@ -2,6 +2,7 @@ package com.oddlabs.tt.model.task;
 
 import com.oddlabs.tt.landscape.LandscapeTarget;
 import com.oddlabs.tt.landscape.TreeSupply;
+import com.oddlabs.tt.model.Abilities;
 import com.oddlabs.tt.model.Building;
 import com.oddlabs.tt.model.Selectable;
 import com.oddlabs.tt.model.ShipAllocation;
@@ -14,7 +15,7 @@ import java.util.List;
 
 /**
  * A unit's state machine. {@link #reduce} applies an event to the unit's state and returns the
- * commands its controller carries out; it reads the world through a {@link UnitView} and changes
+ * commands its controller carries out; it reads the unit through a {@link UnitView} and changes
  * nothing itself.
  *
  * <p>One rule governs when an activity is replaced: a decision is taken as soon as the running
@@ -119,21 +120,20 @@ public final class UnitStateReducer implements StateReducer<UnitState, Event, Li
             case Event.Report.Performed _ ->
                 state.execution() instanceof UnitState.Execution.Performing ? replanNow(state,
                         Reason.PERFORMED) : unchanged(state);
-            case Event.Report.Removed _ -> new Transition<>(new UnitState(tasks, UnitState.Execution.GONE, false),
-                    state.postureSuspended() ? List.of(UnitCommand.DISCARD) : List.of());
+            case Event.Report.Removed _ -> new Transition<>(new UnitState(tasks, UnitState.Execution.GONE),
+                    List.of(UnitCommand.DISCARD));
         };
     }
 
     /**
-     * Gives the unit a new posture and nothing else to do. The old posture's activity is cancelled: by
-     * the stop if it runs, else by discarding it.
+     * Gives the unit a new posture and nothing else to do. The old posture's activity is discarded
+     * first, which stops it too when it is the one running.
      */
     private Transition<UnitState, List<UnitCommand>> remount(UnitState state, Posture posture) {
-        Transition<UnitState, List<UnitCommand>> next = replanNow(new UnitState(new TaskSlots(posture),
-                state.execution(), false), Reason.BEGIN);
-        if (!state.postureSuspended()) {
-            return next;
-        }
+        boolean postureRunning = state.execution() instanceof UnitState.Execution.Running running
+                && running.task() == state.tasks().posture();
+        Transition<UnitState, List<UnitCommand>> next = replan(new UnitState(new TaskSlots(posture),
+                state.execution()), postureRunning ? null : UnitCommand.INTERRUPT, Reason.BEGIN);
         List<UnitCommand> commands = new ArrayList<>(next.effect().size() + 1);
         commands.add(UnitCommand.DISCARD);
         commands.addAll(next.effect());
@@ -167,40 +167,26 @@ public final class UnitStateReducer implements StateReducer<UnitState, Event, Li
     }
 
     /**
-     * Stops what runs with the stop command, or suspends it if it is the posture's, plans, and starts,
-     * resumes or performs what the plan asks for.
+     * Stops what runs with the stop command, unless there is none because it was already stopped,
+     * plans, and starts or performs what the plan asks for.
      */
-    private Transition<UnitState, List<UnitCommand>> replan(UnitState state, UnitCommand.Stop stop, Reason reason) {
+    private Transition<UnitState, List<UnitCommand>> replan(UnitState state, UnitCommand.@Nullable Stop stop,
+            Reason reason) {
         List<UnitCommand> commands = new ArrayList<>(2);
-        boolean suspended = state.postureSuspended();
-        if (state.execution() instanceof UnitState.Execution.Running running) {
-            // Postures are compared by identity; see UnitState.Execution.Running.
-            if (running.task() == state.tasks().posture()) {
-                commands.add(UnitCommand.SUSPEND);
-                suspended = true;
-            } else {
-                commands.add(stop);
-            }
+        if (stop != null && state.execution() instanceof UnitState.Execution.Running) {
+            commands.add(stop);
         }
         Decision decision = decide(state.tasks(), reason);
         TaskSlots tasks = decision.tasks();
         return switch (decision.plan()) {
             case UnitPlan.Run run -> {
-                Task task = tasks.current();
-                boolean resume = suspended && task == tasks.posture();
-                commands.add(resume ? UnitCommand.RESUME : new UnitCommand.Run(run));
-                yield new Transition<>(
-                        new UnitState(
-                                tasks,
-                                new UnitState.Execution.Running(task, run.initialProgress()),
-                                suspended && !resume
-                        ),
-                        commands
-                );
+                commands.add(new UnitCommand.Run(run));
+                yield new Transition<>(new UnitState(tasks, new UnitState.Execution.Running(tasks.current(),
+                        run.initialProgress())), commands);
             }
             case UnitPlan.Operation operation -> {
                 commands.add(new UnitCommand.Perform(operation));
-                yield new Transition<>(new UnitState(tasks, UnitState.Execution.PERFORMING, suspended), commands);
+                yield new Transition<>(new UnitState(tasks, UnitState.Execution.PERFORMING), commands);
             }
         };
     }
@@ -248,7 +234,7 @@ public final class UnitStateReducer implements StateReducer<UnitState, Event, Li
     }
 
     /** What the posture does while nothing is above it. */
-    private static UnitPlan decidePosture(Posture posture) {
+    private static UnitPlan.Lasting decidePosture(Posture posture) {
         return switch (posture) {
             case Posture.Idle idle -> new UnitPlan.Watch(idle.canMove());
             case Posture.Fighting fighting -> new UnitPlan.Fight(fighting.ship(), fighting.allocation());
@@ -299,7 +285,7 @@ public final class UnitStateReducer implements StateReducer<UnitState, Event, Li
 
     private Step hunt(Order.Hunt hunt) {
         Selectable<?> target = hunt.target();
-        if (view.isDead(target)) {
+        if (target.isDead()) {
             return Step.DONE;
         }
         float range = view.range(target);
@@ -313,7 +299,7 @@ public final class UnitStateReducer implements StateReducer<UnitState, Event, Li
     }
 
     private Step attack(Order.Attack attack) {
-        if (view.isDead(attack.target()) || !view.canReach(attack.target())) {
+        if (attack.target().isDead() || !view.canReach(attack.target())) {
             return Step.DONE;
         }
         return new Step.Continue(attack, new UnitPlan.Attack(attack.target(), attack.seat()));
@@ -352,7 +338,7 @@ public final class UnitStateReducer implements StateReducer<UnitState, Event, Li
 
     private Step approach(Order.Gather gather, int attempts) {
         Supply supply = gather.supply();
-        if (supply != null && view.isDead(supply)) {
+        if (supply != null && supply.isDead()) {
             supply = null;
             attempts = 0;
         }
@@ -373,7 +359,7 @@ public final class UnitStateReducer implements StateReducer<UnitState, Event, Li
 
     private Step deliver(Order.Gather gather, int attempts) {
         Building assigned = gather.assignedBuilding();
-        boolean assignedStanding = assigned != null && !view.isDead(assigned);
+        boolean assignedStanding = assigned != null && !assigned.isDead();
         Building found = gather.foundBuilding();
         Building store = assignedStanding ? assigned.getEntrance() : found != null ? found.getEntrance() : null;
         if (store != null && view.isCloseEnough(0f, store)) {
@@ -399,7 +385,7 @@ public final class UnitStateReducer implements StateReducer<UnitState, Event, Li
         if (reason instanceof Reason.FoundSupply found) {
             supply = found.supply();
         }
-        if (supply != null && !view.isEmpty(supply) && view.isCloseEnough(0f, supply)) {
+        if (supply != null && !supply.isEmpty() && view.isCloseEnough(0f, supply)) {
             return new HarvestStep(new Order.Harvest(supply, harvest.supplyType(), 0), new UnitPlan.Harvest(supply));
         }
         if (harvest.attempts() >= MAX_ATTEMPTS) {
@@ -425,16 +411,16 @@ public final class UnitStateReducer implements StateReducer<UnitState, Event, Li
             }
             case Order.Repair.Mending mending -> mendAttempts = mending.attempts();
         }
-        if (view.isDead(building)) {
+        if (building.isDead()) {
             return Step.DONE;
         }
         if (view.carries(TreeSupply.class)) {
             if (view.isCloseEnough(0f, building)) {
-                if (view.isDamaged(building)) {
+                if (building.isDamaged()) {
                     return new Step.Continue(new Order.Repair(building, new Order.Repair.Mending(mendAttempts)),
                             new UnitPlan.Repair(building));
                 }
-                if (view.storesSupplies(building) && view.sharesOwner(building)) {
+                if (building.getAbilities().hasAbilities(Abilities.SUPPLY_CONTAINER) && view.sharesOwner(building)) {
                     return new Step.Become(new Order.Enter(building));
                 }
                 return Step.DONE;
@@ -455,7 +441,7 @@ public final class UnitStateReducer implements StateReducer<UnitState, Event, Li
 
     private Step enter(Order.Enter enter, Reason reason) {
         Building building = enter.building();
-        if (reason instanceof Reason.Performed || view.isDead(building)) {
+        if (reason instanceof Reason.Performed || building.isDead()) {
             return Step.DONE;
         }
         if (view.isCloseEnough(0f, building)) {
@@ -470,16 +456,16 @@ public final class UnitStateReducer implements StateReducer<UnitState, Event, Li
 
     private Step build(Order.Build build) {
         Building building = build.building();
-        if (view.isDead(building)) {
+        if (building.isDead()) {
             return Step.DONE;
         }
-        if (view.isPlaced(building)) {
-            return view.isDamaged(building) ? new Step.Become(new Order.Repair(building)) : Step.DONE;
+        if (building.isPlaced()) {
+            return building.isDamaged() ? new Step.Become(new Order.Repair(building)) : Step.DONE;
         }
-        float distance = view.placingDistance(building);
+        float distance = building.getSize();
         if (view.isCloseEnough(distance, building)) {
             // Once placed, the site is built by repairing it.
-            return view.isPlacingLegal(building) ? new Step.Continue(new Order.Repair(building), new UnitPlan.Place(
+            return building.isPlacingLegal() ? new Step.Continue(new Order.Repair(building), new UnitPlan.Place(
                     building)) : Step.DONE;
         }
         if (build.attempts() >= MAX_ATTEMPTS) {

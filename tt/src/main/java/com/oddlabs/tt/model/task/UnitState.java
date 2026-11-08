@@ -2,26 +2,22 @@ package com.oddlabs.tt.model.task;
 
 import org.jspecify.annotations.NullMarked;
 
-/**
- * A unit's whole state: its tasks, what its controller is doing for them, and whether the controller
- * holds the posture's activity set aside.
- */
+/** A unit's whole state: its tasks, and what its controller is doing for them. */
 @NullMarked
 public record UnitState(
                         TaskSlots tasks,
-                        Execution execution,
-                        boolean postureSuspended
+                        Execution execution
 ) {
     public UnitState(TaskSlots tasks) {
-        this(tasks, Execution.UNSTARTED, false);
+        this(tasks, Execution.UNSTARTED);
     }
 
     public UnitState withTasks(TaskSlots next) {
-        return new UnitState(next, execution, postureSuspended);
+        return new UnitState(next, execution);
     }
 
     public UnitState withExecution(Execution next) {
-        return new UnitState(tasks, next, postureSuspended);
+        return new UnitState(tasks, next);
     }
 
     /**

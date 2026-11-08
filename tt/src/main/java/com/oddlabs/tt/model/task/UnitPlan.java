@@ -27,20 +27,24 @@ public sealed interface UnitPlan {
         }
     }
 
+    /** A posture's activity, which the controller keeps for as long as the posture lasts. */
+    sealed interface Lasting extends Run {
+    }
+
     /** A change to the world, after which the unit decides again with {@link Reason#PERFORMED}. */
     sealed interface Operation extends UnitPlan {
     }
 
     /** Stands idle, scanning for enemies in unit range, or in tower range when it cannot move. */
-    record Watch(boolean canMove) implements Run {
+    record Watch(boolean canMove) implements Lasting {
     }
 
     /** Boards a fighting place on a ship, then scans for enemies in reach. */
-    record Fight(Ship ship, ShipAllocation allocation) implements Run {
+    record Fight(Ship ship, ShipAllocation allocation) implements Lasting {
     }
 
     /** Boards a ship place and rows, steers or sits. */
-    record Sit(Ship ship, ShipAllocation allocation) implements Run {
+    record Sit(Ship ship, ShipAllocation allocation) implements Lasting {
     }
 
     /** Walks to within range of a target. */

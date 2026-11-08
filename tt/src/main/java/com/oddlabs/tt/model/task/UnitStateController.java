@@ -25,7 +25,7 @@ import java.util.List;
 /**
  * Runs a unit's tasks: the imperative shell around {@link UnitStateReducer}. Every {@link Event} is
  * reduced into the unit's state, and the {@link UnitCommand}s that come back are carried out on the
- * running activity and the posture's that was set aside, or on the world.
+ * running activity and the posture's, or on the world.
  */
 @NullMarked
 public final class UnitStateController implements TaskRunner {
@@ -34,10 +34,11 @@ public final class UnitStateController implements TaskRunner {
     private final @Nullable TransitionTrace<UnitState, Event, List<UnitCommand>> trace;
 
     private @Nullable UnitActivity runningActivity;
-    /** The posture's activity, set aside while something else runs. */
-    private @Nullable UnitActivity suspendedActivity;
-    /** Read only by an assertion: an activity started for a plan that begins committed, until its first frame. */
-    private @Nullable UnitActivity startedCommitted;
+    /**
+     * The activity built for the posture's {@link UnitPlan.Lasting} plan, reused each time that plan runs. An
+     * interrupt sets it aside instead of cancelling it; only {@link UnitCommand.Discard} cancels it.
+     */
+    private @Nullable UnitActivity postureActivity;
 
     public UnitStateController(Unit unit) {
         this.unit = unit;
@@ -112,9 +113,6 @@ public final class UnitStateController implements TaskRunner {
         }
         loop.report(() -> {
             Activity.State progress = activity.animate(t);
-            assert activity != startedCommitted
-                    || progress != Activity.State.YIELDING : "an activity planned committed was yielding on its first frame";
-            startedCommitted = null;
             if (progress == Activity.State.DONE) {
                 return new Event.Report.Finished(activity.outcome());
             }
@@ -134,7 +132,6 @@ public final class UnitStateController implements TaskRunner {
         }
         UnitState state = loop.state();
         assert (runningActivity != null) == (state.execution() instanceof UnitState.Execution.Running) : "the running activity and the unit's execution disagree";
-        assert (suspendedActivity != null) == state.postureSuspended() : "the suspended activity and the unit's state disagree";
     }
 
     private void execute(UnitCommand command) {
@@ -142,35 +139,34 @@ public final class UnitStateController implements TaskRunner {
             case UnitCommand.Interrupt _ -> {
                 UnitActivity activity = runningActivity;
                 assert activity != null : "cancelling with nothing running";
-                if (activity != null) {
+                if (activity != null && activity != postureActivity) {
                     activity.cancel();
                 }
                 runningActivity = null;
             }
             case UnitCommand.Release _ -> runningActivity = null;
-            case UnitCommand.Suspend _ -> {
-                assert runningActivity != null
-                        && suspendedActivity == null : "suspending with nothing running, or over another";
-                suspendedActivity = runningActivity;
-                runningActivity = null;
-            }
             case UnitCommand.Discard _ -> {
-                UnitActivity activity = suspendedActivity;
-                assert activity != null : "discarding with nothing set aside";
+                UnitActivity activity = postureActivity;
                 if (activity != null) {
                     activity.cancel();
+                    if (runningActivity == activity) {
+                        runningActivity = null;
+                    }
+                    postureActivity = null;
                 }
-                suspendedActivity = null;
             }
             case UnitCommand.Run run -> {
-                UnitActivity activity = create(run.run());
+                UnitActivity activity;
+                if (run.run() instanceof UnitPlan.Lasting lasting) {
+                    activity = postureActivity;
+                    if (activity == null) {
+                        activity = create(lasting);
+                        postureActivity = activity;
+                    }
+                } else {
+                    activity = create(run.run());
+                }
                 runningActivity = activity;
-                startedCommitted = run.run().initialProgress() == Activity.State.COMMITTED ? activity : null;
-            }
-            case UnitCommand.Resume _ -> {
-                assert suspendedActivity != null : "resuming with nothing set aside";
-                runningActivity = suspendedActivity;
-                suspendedActivity = null;
             }
             case UnitCommand.Perform perform -> {
                 perform(perform.operation());
@@ -252,11 +248,6 @@ public final class UnitStateController implements TaskRunner {
         }
 
         @Override
-        public boolean isDead(Target target) {
-            return target.isDead();
-        }
-
-        @Override
         public boolean isCloseEnough(float range, Target target) {
             return unit.isCloseEnough(range, target);
         }
@@ -291,39 +282,9 @@ public final class UnitStateController implements TaskRunner {
         }
 
         @Override
-        public boolean isEmpty(Supply supply) {
-            return supply.isEmpty();
-        }
-
-        @Override
         public boolean canEnter(Building building) {
             UnitContainer container = building.getUnitContainer();
             return container != null && container.canEnter(unit);
-        }
-
-        @Override
-        public boolean isPlaced(Building building) {
-            return building.isPlaced();
-        }
-
-        @Override
-        public boolean isDamaged(Building building) {
-            return building.isDamaged();
-        }
-
-        @Override
-        public boolean isPlacingLegal(Building building) {
-            return building.isPlacingLegal();
-        }
-
-        @Override
-        public float placingDistance(Building building) {
-            return building.getSize();
-        }
-
-        @Override
-        public boolean storesSupplies(Building building) {
-            return building.getAbilities().hasAbilities(Abilities.SUPPLY_CONTAINER);
         }
 
         @Override

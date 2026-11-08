@@ -4,22 +4,20 @@ import org.jspecify.annotations.NullMarked;
 
 /**
  * What a unit's transition asks its controller to do, in the order given. The controller keeps a
- * posture's activity for as long as the posture lasts, so suspending it sets it aside and resuming it
- * picks it up with its timers and boarding progress intact.
+ * posture's activity for as long as the posture lasts: stopping it only sets it aside, finished or
+ * not, and running the posture again picks it up with its timers and boarding progress intact.
  */
 @NullMarked
 public sealed interface UnitCommand {
     Stop INTERRUPT = new Interrupt();
     Stop RELEASE = new Release();
-    Stop SUSPEND = new Suspend();
     UnitCommand DISCARD = new Discard();
-    UnitCommand RESUME = new Resume();
 
     /** Ends the running activity before the next plan starts. */
     sealed interface Stop extends UnitCommand {
     }
 
-    /** Cancels the running activity. */
+    /** Cancels the running activity, or sets it aside if it is the posture's. */
     record Interrupt() implements Stop {
     }
 
@@ -27,20 +25,15 @@ public sealed interface UnitCommand {
     record Release() implements Stop {
     }
 
-    /** Sets the posture's running activity aside, finished or not, until it is resumed or discarded. */
-    record Suspend() implements Stop {
-    }
-
-    /** Cancels the posture's activity that was set aside, because the posture is gone. */
+    /**
+     * Cancels the posture's activity, running or set aside, because the posture is gone; does
+     * nothing when the controller holds none.
+     */
     record Discard() implements UnitCommand {
     }
 
-    /** Starts a new activity for the plan. */
+    /** Starts a new activity for the plan, or runs the posture's again when the controller holds it. */
     record Run(UnitPlan.Run run) implements UnitCommand {
-    }
-
-    /** Runs the posture's activity that was set aside again. */
-    record Resume() implements UnitCommand {
     }
 
     /**

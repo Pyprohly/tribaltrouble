@@ -6,14 +6,15 @@ import com.oddlabs.tt.model.Supply;
 import com.oddlabs.tt.util.Target;
 import org.jspecify.annotations.NullMarked;
 
-/** What a unit's decisions may read about it and the world around it. Nothing here changes anything. */
+/**
+ * What a unit's decisions read about the unit itself and how it stands towards the world. Nothing
+ * here changes anything.
+ */
 @NullMarked
 public interface UnitView {
     int gridX();
 
     int gridY();
-
-    boolean isDead(Target target);
 
     boolean isCloseEnough(float range, Target target);
 
@@ -30,20 +31,7 @@ public interface UnitView {
     /** Whether the unit carries as much of this supply type as it can. */
     boolean isFull(Class<? extends Supply> supplyType);
 
-    boolean isEmpty(Supply supply);
-
     boolean canEnter(Building building);
-
-    boolean isPlaced(Building building);
-
-    boolean isDamaged(Building building);
-
-    boolean isPlacingLegal(Building building);
-
-    /** How close the unit must stand to place the building. */
-    float placingDistance(Building building);
-
-    boolean storesSupplies(Building building);
 
     boolean sharesOwner(Building building);
 }
