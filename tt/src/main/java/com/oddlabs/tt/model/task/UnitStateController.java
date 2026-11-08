@@ -141,21 +141,21 @@ public final class UnitStateController implements TaskRunner {
 
     private void execute(UnitCommand command) {
         switch (command) {
-            case UnitCommand.Cancel ignored -> {
+            case UnitCommand.Interrupt _ -> {
                 UnitActivity activity = runningActivity;
                 assert activity != null : "cancelling with nothing running";
-                if (activity != postureActivity) {
+                if (activity != null && activity != postureActivity) {
                     activity.cancel();
                 }
                 runningActivity = null;
             }
-            case UnitCommand.Drop ignored -> runningActivity = null;
-            case UnitCommand.Start start -> startActivity(start.task(), start.run());
+            case UnitCommand.Release _ -> runningActivity = null;
+            case UnitCommand.Run run -> startActivity(run.task(), run.run());
             case UnitCommand.Perform perform -> {
                 perform(perform.operation());
                 dispatch(unit.isDead() ? new Event.Report.Removed() : new Event.Report.Performed());
             }
-            case UnitCommand.Leave ignored -> {
+            case UnitCommand.Dispose _ -> {
                 UnitActivity kept = postureActivity;
                 if (kept != null && kept != runningActivity) {
                     kept.cancel();
@@ -173,9 +173,8 @@ public final class UnitStateController implements TaskRunner {
             runningActivity = postureActivity;
             return;
         }
-        UnitActivity old = postureActivity;
-        if (task instanceof Posture && old != null) {
-            old.cancel();
+        if (task instanceof Posture && postureActivity != null) {
+            postureActivity.cancel();
         }
         UnitActivity activity = create(run);
         runningActivity = activity;
@@ -194,7 +193,7 @@ public final class UnitStateController implements TaskRunner {
             case UnitPlan.Walk walk -> new WalkActivity(unit, walk.target(), walk.range(), walk.aggressive());
             case UnitPlan.FindSupply find -> new WalkActivity(unit, new FinderTrackerAlgorithm<>(unit.getUnitGrid(),
                     supplyFinder(find.supplyType())), Reason.FoundSupply::new);
-            case UnitPlan.FindStore ignored -> new WalkActivity(unit, new FinderTrackerAlgorithm<>(unit.getUnitGrid(),
+            case UnitPlan.FindStore _ -> new WalkActivity(unit, new FinderTrackerAlgorithm<>(unit.getUnitGrid(),
                     new BuildingFinder(unit.getOwner(), Abilities.SUPPLY_CONTAINER)), Reason.FoundStore::new);
             case UnitPlan.Attack attack -> {
                 Seat seat = attack.seat();
@@ -205,7 +204,7 @@ public final class UnitStateController implements TaskRunner {
             case UnitPlan.Repair repair -> new RepairActivity(unit, repair.building());
             case UnitPlan.Cast cast -> new MagicActivity(unit, cast.factory());
             case UnitPlan.Stun stun -> new StunActivity(unit, stun.seconds());
-            case UnitPlan.Die ignored -> new DieActivity(unit);
+            case UnitPlan.Die _ -> new DieActivity(unit);
         };
     }
 

@@ -26,16 +26,16 @@ public final class ShipStateReducer implements StateReducer<ShipState, ShipEvent
     @Override
     public Transition<ShipState, List<ShipCommand>> reduce(ShipState state, ShipEvent event) {
         return switch (event) {
-            case ShipEvent.Started ignored -> state.execution() == ShipState.Execution.UNSTARTED ? replan(state,
-                    ShipCommand.CANCEL, state.task(), Reason.BEGIN) : unchanged(state);
-            case ShipEvent.Sailed sailed -> replan(state, ShipCommand.CANCEL, new Voyage(sailed.target()),
+            case ShipEvent.Started _ -> state.execution() == ShipState.Execution.UNSTARTED ? replan(state,
+                    ShipCommand.INTERRUPT, state.task(), Reason.BEGIN) : unchanged(state);
+            case ShipEvent.Sailed sailed -> replan(state, ShipCommand.INTERRUPT, new Voyage(sailed.target()),
                     Reason.BEGIN);
-            case ShipEvent.Docked ignored -> replan(state, ShipCommand.CANCEL, new Task.Inert(), Reason.BEGIN);
+            case ShipEvent.Docked _ -> replan(state, ShipCommand.INTERRUPT, new Task.Inert(), Reason.BEGIN);
             case ShipEvent.Report.Finished finished -> state.execution() == ShipState.Execution.RUNNING ? replan(state,
-                    ShipCommand.DROP, state.task(), finished.outcome()) : unchanged(state);
-            case ShipEvent.Report.Performed ignored -> state.execution() == ShipState.Execution.PERFORMING ? replan(
+                    ShipCommand.RELEASE, state.task(), finished.outcome()) : unchanged(state);
+            case ShipEvent.Report.Performed _ -> state.execution() == ShipState.Execution.PERFORMING ? replan(
                     state,
-                    ShipCommand.CANCEL, state.task(), Reason.PERFORMED) : unchanged(state);
+                    ShipCommand.INTERRUPT, state.task(), Reason.PERFORMED) : unchanged(state);
         };
     }
 
@@ -44,7 +44,7 @@ public final class ShipStateReducer implements StateReducer<ShipState, ShipEvent
     }
 
     /** Stops what runs with the stop command, plans for the task, and starts or performs what it asks for. */
-    private Transition<ShipState, List<ShipCommand>> replan(ShipState state, ShipCommand stop, Task task,
+    private Transition<ShipState, List<ShipCommand>> replan(ShipState state, ShipCommand.Stop stop, Task task,
             Reason reason) {
         List<ShipCommand> commands = new ArrayList<>(2);
         if (state.execution() == ShipState.Execution.RUNNING) {
@@ -53,7 +53,7 @@ public final class ShipStateReducer implements StateReducer<ShipState, ShipEvent
         Decision<Task, ShipPlan> decision = decide(task, reason);
         ShipState.Execution execution = switch (decision.plan()) {
             case ShipPlan.Run run -> {
-                commands.add(new ShipCommand.Start(run));
+                commands.add(new ShipCommand.Run(run));
                 yield ShipState.Execution.RUNNING;
             }
             case ShipPlan.Operation operation -> {

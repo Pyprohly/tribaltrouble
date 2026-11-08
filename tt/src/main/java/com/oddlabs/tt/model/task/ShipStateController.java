@@ -84,14 +84,14 @@ public final class ShipStateController implements TaskRunner {
 
     private void execute(ShipCommand command) {
         switch (command) {
-            case ShipCommand.Cancel ignored -> {
+            case ShipCommand.Interrupt _ -> {
                 ShipActivity activity = runningActivity;
                 assert activity != null : "cancelling with nothing running";
                 activity.cancel();
                 runningActivity = null;
             }
-            case ShipCommand.Drop ignored -> runningActivity = null;
-            case ShipCommand.Start start -> runningActivity = create(start.run());
+            case ShipCommand.Release _ -> runningActivity = null;
+            case ShipCommand.Run run -> runningActivity = create(run.run());
             case ShipCommand.Perform perform -> {
                 switch (perform.operation()) {
                     case FINISH_SLIDE -> ship.endSlide();
@@ -104,10 +104,10 @@ public final class ShipStateController implements TaskRunner {
 
     private ShipActivity create(ShipPlan.Run run) {
         return switch (run) {
-            case ShipPlan.Moor ignored -> new NullActivity();
-            case ShipPlan.Slide ignored -> new ShipSlideActivity(ship);
+            case ShipPlan.Moor _ -> new NullActivity();
+            case ShipPlan.Slide _ -> new ShipSlideActivity(ship);
             case ShipPlan.Sail sail -> new SailActivity(ship, sail.target());
-            case ShipPlan.Unstuck ignored -> new ShipUnstuckActivity(ship);
+            case ShipPlan.Unstuck _ -> new ShipUnstuckActivity(ship);
         };
     }
 }

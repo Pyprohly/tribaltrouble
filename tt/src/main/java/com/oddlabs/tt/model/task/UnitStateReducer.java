@@ -69,7 +69,7 @@ public final class UnitStateReducer implements StateReducer<UnitState, Event, Li
         }
         TaskSlots tasks = state.tasks();
         return switch (event) {
-            case Event.Started ignored -> state.execution() instanceof UnitState.Execution.Unstarted ? replanNow(state,
+            case Event.Started _ -> state.execution() instanceof UnitState.Execution.Unstarted ? replanNow(state,
                     Reason.BEGIN) : unchanged(state);
             case Event.Ordered ordered -> replanWhenInterruptible(state.withTasks(tasks.withOrder(ordered.order())));
             case Event.Stunned stunned -> {
@@ -90,14 +90,14 @@ public final class UnitStateReducer implements StateReducer<UnitState, Event, Li
                 }
                 yield replanNow(state.withTasks(next), Reason.BEGIN);
             }
-            case Event.Died ignored -> replanNow(state.withTasks(tasks.withOnlyDying()), Reason.BEGIN);
-            case Event.MountedTower ignored -> replanNow(state.withTasks(new TaskSlots(new Posture.Idle(false))),
+            case Event.Died _ -> replanNow(state.withTasks(tasks.withOnlyDying()), Reason.BEGIN);
+            case Event.MountedTower _ -> replanNow(state.withTasks(new TaskSlots(new Posture.Idle(false))),
                     Reason.BEGIN);
             case Event.MountedShip mounted -> replanNow(state.withTasks(new TaskSlots(
                     mounted.allocation().getRole() == ShipAllocation.FIGHTING ? new Posture.Fighting(mounted.ship(),
                             mounted.allocation()) : new Posture.Sitting(mounted.ship(), mounted.allocation()))),
                     Reason.BEGIN);
-            case Event.Unmounted ignored -> replanNow(state.withTasks(new TaskSlots(new Posture.Idle(true))),
+            case Event.Unmounted _ -> replanNow(state.withTasks(new TaskSlots(new Posture.Idle(true))),
                     Reason.BEGIN);
             case Event.Report.Progressed progressed -> {
                 if (!(state.execution() instanceof UnitState.Execution.Running running)) {
@@ -111,12 +111,12 @@ public final class UnitStateReducer implements StateReducer<UnitState, Event, Li
                         state,
                         running, finished.outcome()) : unchanged(state);
             // An event that decided while the operation was carried out has already moved the unit on.
-            case Event.Report.Performed ignored ->
+            case Event.Report.Performed _ ->
                 state.execution() instanceof UnitState.Execution.Performing ? replanNow(state,
                         Reason.PERFORMED) : unchanged(state);
-            case Event.Report.Removed ignored -> new Transition<>(new UnitState(tasks, UnitState.Execution.GONE),
+            case Event.Report.Removed _ -> new Transition<>(new UnitState(tasks, UnitState.Execution.GONE),
                     List.of(
-                            UnitCommand.LEAVE));
+                            UnitCommand.DISPOSE));
         };
     }
 
@@ -139,15 +139,15 @@ public final class UnitStateReducer implements StateReducer<UnitState, Event, Li
             UnitState.Execution.Running running,
             Reason outcome) {
         Reason reason = state.tasks().current() == running.task() ? outcome : Reason.BEGIN;
-        return replan(state, UnitCommand.DROP, reason);
+        return replan(state, UnitCommand.RELEASE, reason);
     }
 
     private Transition<UnitState, List<UnitCommand>> replanNow(UnitState state, Reason reason) {
-        return replan(state, UnitCommand.CANCEL, reason);
+        return replan(state, UnitCommand.INTERRUPT, reason);
     }
 
     /** Stops what runs with the stop command, plans, and starts or performs what the plan asks for. */
-    private Transition<UnitState, List<UnitCommand>> replan(UnitState state, UnitCommand stop, Reason reason) {
+    private Transition<UnitState, List<UnitCommand>> replan(UnitState state, UnitCommand.Stop stop, Reason reason) {
         List<UnitCommand> commands = new ArrayList<>(2);
         if (state.execution() instanceof UnitState.Execution.Running) {
             commands.add(stop);
@@ -157,7 +157,7 @@ public final class UnitStateReducer implements StateReducer<UnitState, Event, Li
         return switch (decision.plan()) {
             case UnitPlan.Run run -> {
                 Task task = tasks.current();
-                commands.add(new UnitCommand.Start(task, run));
+                commands.add(new UnitCommand.Run(task, run));
                 yield new Transition<>(
                         new UnitState(
                                 tasks,
@@ -190,7 +190,7 @@ public final class UnitStateReducer implements StateReducer<UnitState, Event, Li
                         return new Decision<>(tasks.withOrder(next), plan);
                     }
                     case Step.Become(Order next) -> tasks = tasks.withOrder(next);
-                    case Step.Done ignored -> tasks = tasks.withOrder(null);
+                    case Step.Done _ -> tasks = tasks.withOrder(null);
                 }
             } else {
                 Selectable<?> spotted = reason instanceof Reason.Spotted s ? s.target() : null;
@@ -206,7 +206,7 @@ public final class UnitStateReducer implements StateReducer<UnitState, Event, Li
 
     private @Nullable UnitPlan decideInterruption(Interruption interruption, Reason reason) {
         return switch (interruption) {
-            case Interruption.Dying ignored -> new UnitPlan.Die();
+            case Interruption.Dying _ -> new UnitPlan.Die();
             case Interruption.Stunned stunned -> reason instanceof Reason.Begin ? new UnitPlan.Stun(
                     stunned.seconds()) : null;
             case Interruption.Casting casting -> reason instanceof Reason.Begin ? new UnitPlan.Cast(
@@ -231,7 +231,7 @@ public final class UnitStateReducer implements StateReducer<UnitState, Event, Li
                     true, 0, new Order.Hunt(spotted)) : new Order.Attack(spotted);
             case Posture.Fighting fighting -> new Order.Attack(spotted, new Seat(fighting.ship(),
                     fighting.allocation()));
-            case Posture.Sitting ignored -> null;
+            case Posture.Sitting _ -> null;
         };
     }
 
@@ -303,12 +303,12 @@ public final class UnitStateReducer implements StateReducer<UnitState, Event, Li
                     return new Step.Become(new Order.Enter(depositing.store()));
                 }
             }
-            case Order.Gather.Delivering ignored -> {
+            case Order.Gather.Delivering _ -> {
                 if (reason instanceof Reason.FoundStore found) {
                     gather = gather.withFoundBuilding(found.store());
                 }
             }
-            case Order.Gather.Approaching ignored -> {
+            case Order.Gather.Approaching _ -> {
             }
         }
         if (view.carries(gather.supplyType())) {
