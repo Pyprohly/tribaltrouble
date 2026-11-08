@@ -36,7 +36,7 @@ public final class UnitStateController implements TaskRunner {
     private @Nullable UnitActivity runningActivity;
     /** The posture's activity, set aside while something else runs. */
     private @Nullable UnitActivity suspendedActivity;
-    /** An activity just started for a plan that begins committed, until its first frame. */
+    /** Read only by an assertion: an activity started for a plan that begins committed, until its first frame. */
     private @Nullable UnitActivity startedCommitted;
 
     public UnitStateController(Unit unit) {

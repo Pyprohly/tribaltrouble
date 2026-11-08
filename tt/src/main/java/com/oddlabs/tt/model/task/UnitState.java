@@ -7,7 +7,11 @@ import org.jspecify.annotations.NullMarked;
  * holds the posture's activity set aside.
  */
 @NullMarked
-public record UnitState(TaskSlots tasks, Execution execution, boolean postureSuspended) {
+public record UnitState(
+                        TaskSlots tasks,
+                        Execution execution,
+                        boolean postureSuspended
+) {
     public UnitState(TaskSlots tasks) {
         this(tasks, Execution.UNSTARTED, false);
     }

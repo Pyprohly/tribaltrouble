@@ -16,6 +16,10 @@ public final class ShipStateReducer implements StateReducer<ShipState, ShipEvent
     /** How many times a ship fails to work itself loose before it gives up the voyage. */
     private static final int MAX_FAILED_UNSTUCKS = 3;
 
+    /** The task a decision leaves, and the plan {@link #replan} turns into commands. */
+    private record Decision(Task task, ShipPlan plan) {
+    }
+
     /** Whether the ship has already left the shore it was built on. */
     private final BooleanSupplier slid;
 
@@ -50,7 +54,7 @@ public final class ShipStateReducer implements StateReducer<ShipState, ShipEvent
         if (state.execution() == ShipState.Execution.RUNNING) {
             commands.add(stop);
         }
-        Decision<Task, ShipPlan> decision = decide(task, reason);
+        Decision decision = decide(task, reason);
         ShipState.Execution execution = switch (decision.plan()) {
             case ShipPlan.Run run -> {
                 commands.add(new ShipCommand.Run(run));
@@ -61,12 +65,12 @@ public final class ShipStateReducer implements StateReducer<ShipState, ShipEvent
                 yield ShipState.Execution.PERFORMING;
             }
         };
-        return new Transition<>(new ShipState(decision.state(), execution), commands);
+        return new Transition<>(new ShipState(decision.task(), execution), commands);
     }
 
-    private Decision<Task, ShipPlan> decide(Task state, Reason reason) {
+    private Decision decide(Task state, Reason reason) {
         if (!(state instanceof Voyage voyage)) {
-            return new Decision<>(new Task.Inert(), new ShipPlan.Moor());
+            return new Decision(new Task.Inert(), new ShipPlan.Moor());
         }
         if (reason instanceof Reason.Begin) {
             return leg(new Voyage(voyage.target(), slid.getAsBoolean() ? Voyage.Phase.SAILING : Voyage.Phase.SLIDING,
@@ -74,16 +78,16 @@ public final class ShipStateReducer implements StateReducer<ShipState, ShipEvent
         }
         return switch (voyage.phase()) {
             case SLIDING -> reason instanceof Reason.Performed ? leg(withPhase(voyage, Voyage.Phase.SAILING,
-                    voyage.failedUnstucks())) : new Decision<>(voyage, ShipPlan.Operation.FINISH_SLIDE);
+                    voyage.failedUnstucks())) : new Decision(voyage, ShipPlan.Operation.FINISH_SLIDE);
             case SAILING -> reason instanceof Reason.Blocked ? leg(withPhase(voyage, Voyage.Phase.UNSTICKING,
-                    voyage.failedUnstucks())) : new Decision<>(new Task.Inert(), ShipPlan.Operation.END_TRIP);
+                    voyage.failedUnstucks())) : new Decision(new Task.Inert(), ShipPlan.Operation.END_TRIP);
             case UNSTICKING -> {
                 if (reason instanceof Reason.Completed) {
                     yield leg(withPhase(voyage, Voyage.Phase.SAILING, 0));
                 }
                 int failed = voyage.failedUnstucks() + 1;
                 if (failed >= MAX_FAILED_UNSTUCKS) {
-                    yield new Decision<>(new Task.Inert(), new ShipPlan.Moor());
+                    yield new Decision(new Task.Inert(), new ShipPlan.Moor());
                 }
                 yield leg(withPhase(voyage, Voyage.Phase.SAILING, failed));
             }
@@ -94,8 +98,8 @@ public final class ShipStateReducer implements StateReducer<ShipState, ShipEvent
         return new Voyage(voyage.target(), phase, failedUnstucks);
     }
 
-    private static Decision<Task, ShipPlan> leg(Voyage voyage) {
-        return new Decision<>(voyage, switch (voyage.phase()) {
+    private static Decision leg(Voyage voyage) {
+        return new Decision(voyage, switch (voyage.phase()) {
             case SLIDING -> new ShipPlan.Slide();
             case SAILING -> new ShipPlan.Sail(voyage.target());
             case UNSTICKING -> new ShipPlan.Unstuck();

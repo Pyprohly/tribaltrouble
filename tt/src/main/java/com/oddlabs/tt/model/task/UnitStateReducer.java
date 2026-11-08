@@ -56,6 +56,14 @@ public final class UnitStateReducer implements StateReducer<UnitState, Event, Li
         }
     }
 
+    /** The tasks a decision leaves, and the plan the reducer turns into commands. */
+    private record Decision(TaskSlots tasks, UnitPlan plan) {
+    }
+
+    /** The harvest a gathering or repairing order continues with, and its plan. */
+    private record HarvestStep(Order.Harvest next, UnitPlan plan) {
+    }
+
     private final UnitView view;
 
     public UnitStateReducer(UnitView view) {
@@ -76,7 +84,7 @@ public final class UnitStateReducer implements StateReducer<UnitState, Event, Li
                 if (tasks.dying() != null) {
                     yield unchanged(state);
                 }
-                yield replanNow(state.withTasks(tasks.withStun(new Interruption.Stunned(stunned.seconds()))),
+                yield replanNow(state.withTasks(tasks.withStunned(new Interruption.Stunned(stunned.seconds()))),
                         Reason.BEGIN);
             }
             case Event.Cast cast -> {
@@ -85,7 +93,7 @@ public final class UnitStateReducer implements StateReducer<UnitState, Event, Li
                 }
                 TaskSlots next = (cast.clearOrder() ? tasks.withOrder(null) : tasks).withCasting(
                         new Interruption.Casting(cast.factory()));
-                if (tasks.stun() != null) {
+                if (tasks.stunned() != null) {
                     yield replanWhenYielding(state.withTasks(next));
                 }
                 yield replanNow(state.withTasks(next), Reason.BEGIN);
@@ -174,8 +182,8 @@ public final class UnitStateReducer implements StateReducer<UnitState, Event, Li
                 commands.add(stop);
             }
         }
-        Decision<TaskSlots, UnitPlan> decision = decide(state.tasks(), reason);
-        TaskSlots tasks = decision.state();
+        Decision decision = decide(state.tasks(), reason);
+        TaskSlots tasks = decision.tasks();
         return switch (decision.plan()) {
             case UnitPlan.Run run -> {
                 Task task = tasks.current();
@@ -197,7 +205,8 @@ public final class UnitStateReducer implements StateReducer<UnitState, Event, Li
         };
     }
 
-    private Decision<TaskSlots, UnitPlan> decide(TaskSlots tasks, Reason reason) {
+    /** Called only by {@link #replan}, which turns the decision into commands. */
+    private Decision decide(TaskSlots tasks, Reason reason) {
         for (int handovers = 0;; handovers++) {
             assert handovers <= MAX_HANDOVERS : "a decision that never ends in something to do";
             Interruption interruption = tasks.interruption();
@@ -205,13 +214,13 @@ public final class UnitStateReducer implements StateReducer<UnitState, Event, Li
             if (interruption != null) {
                 UnitPlan plan = decideInterruption(interruption, reason);
                 if (plan != null) {
-                    return new Decision<>(tasks, plan);
+                    return new Decision(tasks, plan);
                 }
                 tasks = tasks.withoutInterruption();
             } else if (order != null) {
                 switch (decideOrder(reason instanceof Reason.Begin ? order.withAttemptsReset() : order, reason)) {
                     case Step.Continue(Order next, UnitPlan plan) -> {
-                        return new Decision<>(tasks.withOrder(next), plan);
+                        return new Decision(tasks.withOrder(next), plan);
                     }
                     case Step.Become(Order next) -> tasks = tasks.withOrder(next);
                     case Step.Done _ -> tasks = tasks.withOrder(null);
@@ -220,7 +229,7 @@ public final class UnitStateReducer implements StateReducer<UnitState, Event, Li
                 Selectable<?> spotted = reason instanceof Reason.Spotted s ? s.target() : null;
                 Order engage = spotted != null ? engage(tasks.posture(), spotted) : null;
                 if (engage == null) {
-                    return new Decision<>(tasks, decidePosture(tasks.posture()));
+                    return new Decision(tasks, decidePosture(tasks.posture()));
                 }
                 tasks = tasks.withOrder(engage);
             }
@@ -314,7 +323,7 @@ public final class UnitStateReducer implements StateReducer<UnitState, Event, Li
         switch (gather.phase()) {
             case Order.Gather.Harvesting harvesting -> {
                 if (harvest(harvesting.harvest(),
-                        reason) instanceof Decision<Order.Harvest, UnitPlan>(Order.Harvest harvest, UnitPlan plan)) {
+                        reason) instanceof HarvestStep(Order.Harvest harvest, UnitPlan plan)) {
                     return new Step.Continue(gather.withPhase(new Order.Gather.Harvesting(harvest,
                             harvesting.attempts())), plan);
                 }
@@ -382,7 +391,7 @@ public final class UnitStateReducer implements StateReducer<UnitState, Event, Li
     }
 
     /** What a harvest does next, or null when it is done. */
-    private @Nullable Decision<Order.Harvest, UnitPlan> harvest(Order.Harvest harvest, Reason reason) {
+    private @Nullable HarvestStep harvest(Order.Harvest harvest, Reason reason) {
         if (view.isFull(harvest.supplyType())) {
             return null;
         }
@@ -391,12 +400,12 @@ public final class UnitStateReducer implements StateReducer<UnitState, Event, Li
             supply = found.supply();
         }
         if (supply != null && !view.isEmpty(supply) && view.isCloseEnough(0f, supply)) {
-            return new Decision<>(new Order.Harvest(supply, harvest.supplyType(), 0), new UnitPlan.Harvest(supply));
+            return new HarvestStep(new Order.Harvest(supply, harvest.supplyType(), 0), new UnitPlan.Harvest(supply));
         }
         if (harvest.attempts() >= MAX_ATTEMPTS) {
             return null;
         }
-        return new Decision<>(new Order.Harvest(supply, harvest.supplyType(), harvest.attempts() + 1),
+        return new HarvestStep(new Order.Harvest(supply, harvest.supplyType(), harvest.attempts() + 1),
                 new UnitPlan.FindSupply(harvest.supplyType()));
     }
 
@@ -407,7 +416,7 @@ public final class UnitStateReducer implements StateReducer<UnitState, Event, Li
         switch (repair.phase()) {
             case Order.Repair.Fetching fetching -> {
                 if (harvest(fetching.harvest(),
-                        reason) instanceof Decision<Order.Harvest, UnitPlan>(Order.Harvest harvest, UnitPlan plan)) {
+                        reason) instanceof HarvestStep(Order.Harvest harvest, UnitPlan plan)) {
                     return new Step.Continue(new Order.Repair(building, new Order.Repair.Fetching(harvest,
                             fetching.attempts())),
                             plan);

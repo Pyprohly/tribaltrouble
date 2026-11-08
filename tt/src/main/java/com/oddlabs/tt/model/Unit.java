@@ -655,7 +655,7 @@ public class Unit extends Selectable<UnitTemplate> implements Occupant, Movable 
     }
 
     public final boolean isStunned() {
-        return controller.getState().tasks().stun() != null;
+        return controller.getState().tasks().stunned() != null;
     }
 
     public final boolean isCasting() {

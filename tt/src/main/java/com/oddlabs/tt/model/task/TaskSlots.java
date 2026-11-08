@@ -13,7 +13,7 @@ public record TaskSlots(
                         Posture posture,
                         @Nullable Order order,
                         Interruption.@Nullable Dying dying,
-                        Interruption.@Nullable Stunned stun,
+                        Interruption.@Nullable Stunned stunned,
                         Interruption.@Nullable Casting casting
 ) {
     public TaskSlots(Posture posture) {
@@ -24,8 +24,8 @@ public record TaskSlots(
         if (dying != null) {
             return dying;
         }
-        if (stun != null) {
-            return stun;
+        if (stunned != null) {
+            return stunned;
         }
         if (casting != null) {
             return casting;
@@ -58,7 +58,7 @@ public record TaskSlots(
     }
 
     public TaskSlots withOrder(@Nullable Order next) {
-        return new TaskSlots(posture, next, dying, stun, casting);
+        return new TaskSlots(posture, next, dying, stunned, casting);
     }
 
     /** Ends everything; nothing follows. */
@@ -67,19 +67,19 @@ public record TaskSlots(
     }
 
     /** Stuns the unit, replacing any stun already there. */
-    public TaskSlots withStun(Interruption.Stunned next) {
+    public TaskSlots withStunned(Interruption.Stunned next) {
         return new TaskSlots(posture, order, dying, next, casting);
     }
 
     /** Has the unit cast a spell, replacing any spell not yet cast. */
     public TaskSlots withCasting(Interruption.Casting next) {
-        return new TaskSlots(posture, order, dying, stun, next);
+        return new TaskSlots(posture, order, dying, stunned, next);
     }
 
     /** Ends the running interruption. */
     public TaskSlots withoutInterruption() {
         assert dying == null : "dying never ends";
-        if (stun != null) {
+        if (stunned != null) {
             return new TaskSlots(posture, order, null, null, casting);
         }
         return new TaskSlots(posture, order, null, null, null);
