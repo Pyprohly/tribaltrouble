@@ -42,7 +42,7 @@ public final class MagicActivity implements UnitActivity {
                     magic = magic_factory.execute(unit);
                     anim_time += magic_factory.getSecondsPerRelease() - magic_factory.getSecondsPerInit();
                 }
-                yield State.UNINTERRUPTIBLE;
+                yield State.COMMITTED;
             }
             case CASTING -> {
                 if (anim_time <= 0) {
@@ -50,11 +50,11 @@ public final class MagicActivity implements UnitActivity {
                     unit.getOwner().getWorld().getAnimationManagerGameTime().registerAnimation(magic);
                     anim_time += magic_factory.getSecondsPerAnim() - magic_factory.getSecondsPerRelease();
                 }
-                yield State.UNINTERRUPTIBLE;
+                yield State.COMMITTED;
             }
             case ENDING -> {
                 if (anim_time > 0)
-                    yield State.UNINTERRUPTIBLE;
+                    yield State.COMMITTED;
                 else
                     yield State.DONE;
             }

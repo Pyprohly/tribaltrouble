@@ -63,7 +63,7 @@ public final class SailActivity implements ShipActivity {
         }
 
         if (t == 0.0f) {
-            return State.UNINTERRUPTIBLE;
+            return State.COMMITTED;
         }
 
         replanIfNeeded();
@@ -98,7 +98,7 @@ public final class SailActivity implements ShipActivity {
                     outcome = Reason.BLOCKED;
                     return State.DONE;
                 }
-                return State.INTERRUPTIBLE;
+                return State.YIELDING;
             }
             if (ShipTrajectory.checkLandCollision(grid, fromPoint, next_pose)) {
                 outcome = Reason.BLOCKED;
@@ -113,7 +113,7 @@ public final class SailActivity implements ShipActivity {
         next_pose = null;
         ship.occupy();
 
-        return State.UNINTERRUPTIBLE;
+        return State.COMMITTED;
     }
 
     @Override

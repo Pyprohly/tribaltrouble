@@ -43,18 +43,18 @@ public final class ShipAttackActivity implements UnitActivity {
             boarding_time += t;
             unit.switchAnimation(3.0f, Unit.Animation.MOVING);
             allocation.updateIntermediate(unit, ship, boarding_time / TOTAL_BOARDING_TIME);
-            return State.INTERRUPTIBLE;
+            return State.YIELDING;
         }
         unit.switchToIdleAnimation();
         allocation.updateFinal(unit, ship);
         scanDelay -= t;
         if (scanDelay > 0)
-            return State.INTERRUPTIBLE;
+            return State.YIELDING;
         scanDelay = MIN_SCAN_DELAY + unit.getOwner().getWorld().getRandom().nextFloat() * (MAX_SCAN_DELAY - MIN_SCAN_DELAY);
         if (unit.getAbilities().hasAbilities(Abilities.ATTACK))
             unit.scanVicinity(scanFilter);
         spotted = scanFilter.removeTarget();
-        return spotted != null ? State.DONE : State.INTERRUPTIBLE;
+        return spotted != null ? State.DONE : State.YIELDING;
     }
 
     @Override

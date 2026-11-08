@@ -50,7 +50,7 @@ public final class HarvestActivity implements UnitActivity {
                 return State.DONE;
         }
 
-        return State.INTERRUPTIBLE;
+        return State.YIELDING;
     }
 
     private void restartAnimation() {

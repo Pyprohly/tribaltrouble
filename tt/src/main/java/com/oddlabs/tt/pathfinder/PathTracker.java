@@ -18,7 +18,7 @@ import org.jspecify.annotations.Nullable;
 public final class PathTracker {
     public enum State {
         OK,
-        OK_INTERRUPTIBLE,
+        OK_YIELDING,
         DONE,
         SOFTBLOCKED,
         BLOCKED
@@ -93,7 +93,7 @@ public final class PathTracker {
         }
         bezier_path.computeCurvePoint(speed);
         update();
-        state = bezier_path.isDone() ? State.OK_INTERRUPTIBLE : State.OK;
+        state = bezier_path.isDone() ? State.OK_YIELDING : State.OK;
     }
 
     public @Nullable Occupant getBlocker() {

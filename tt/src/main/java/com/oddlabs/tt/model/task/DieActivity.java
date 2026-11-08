@@ -34,7 +34,7 @@ public final class DieActivity implements UnitActivity {
         offset_z -= dz * t;
         if (anim_time < 0)
             switchState();
-        return State.UNINTERRUPTIBLE;
+        return State.COMMITTED;
     }
 
     private void switchState() {

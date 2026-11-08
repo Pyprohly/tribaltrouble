@@ -40,7 +40,7 @@ public final class ShipSlideActivity implements ShipActivity {
         }
 
         if (t == 0.0f) {
-            return State.UNINTERRUPTIBLE;
+            return State.COMMITTED;
         }
 
         ship.setLayer(UnitGrid.SEA);
@@ -50,7 +50,7 @@ public final class ShipSlideActivity implements ShipActivity {
         ShipTrajectoryPoint next = curr.moved(-1.4f * t);
 
         if (ShipTrajectory.checkShipsCollision(grid, ship, curr, next.moved(-8)) != null) {
-            return State.UNINTERRUPTIBLE;
+            return State.COMMITTED;
         }
 
         blocked = false;
@@ -66,7 +66,7 @@ public final class ShipSlideActivity implements ShipActivity {
             return State.DONE;
         }
 
-        return State.UNINTERRUPTIBLE;
+        return State.COMMITTED;
     }
 
     public final boolean isBlocking() {

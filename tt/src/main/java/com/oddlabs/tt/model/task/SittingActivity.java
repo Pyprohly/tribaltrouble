@@ -57,7 +57,7 @@ public final class SittingActivity implements UnitActivity {
             }
             allocation.updateFinal(unit, ship);
         }
-        return State.INTERRUPTIBLE;
+        return State.YIELDING;
     }
 
     public final boolean isBlocking() {

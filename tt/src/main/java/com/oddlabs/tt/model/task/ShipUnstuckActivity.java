@@ -60,7 +60,7 @@ public final class ShipUnstuckActivity implements ShipActivity {
         }
 
         if (t == 0.0f) {
-            return State.UNINTERRUPTIBLE;
+            return State.COMMITTED;
         }
 
         ship.setLayer(UnitGrid.SEA);
@@ -98,7 +98,7 @@ public final class ShipUnstuckActivity implements ShipActivity {
         next_pose = null;
         ship.occupy();
 
-        return State.UNINTERRUPTIBLE;
+        return State.COMMITTED;
     }
 
     @Override

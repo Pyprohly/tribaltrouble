@@ -34,7 +34,8 @@ Orders with several stages carry them as a sealed phase rather than a set of nul
 `Fetching`. Each phase holds the retry count for its own walks.
 
 The `Execution` is `Unstarted` before the first decision, `Running` with the task the activity was started
-for and how far it has got (`Activity.State`), `Performing` while a world operation is carried out,
+for and how far it has got (`Activity.State`: `COMMITTED` mid-action, `YIELDING` at a point where it
+may be replaced, or `DONE`), `Performing` while a world operation is carried out,
 and `Gone` once the unit has left the world.
 
 A ship's state is a `ShipState`: its `Task`, which is `Task.Inert` when docked or a `Voyage` with
@@ -46,7 +47,7 @@ ship proxies are always `Task.Inert`.
 
 Everything a unit reacts to is an `Event`. Some come from the world: `Started`, an order, a stun, a
 spell, death, mounting and unmounting. Others are the controller reporting back, grouped under
-`Event.Report`: `Progressed` (sent when the activity becomes interruptible or stops being so) and
+`Event.Report`: `Progressed` (sent when the activity starts or stops yielding) and
 `Finished` from the running activity, and `Performed` or `Removed`
 after an operation.
 `UnitStateController`'s public methods (`order`, `stun`, `cast`, …) each build one and dispatch it to
@@ -58,14 +59,16 @@ with, a `UnitView` or, for a ship, whether it has slid off the shore, which its 
 outside data down to their children.
 
 `UnitStateReducer.reduce` is pure and returns a `Transition` of the next state and a list of
-`UnitCommand`s for the controller: `Cancel` or `Release` the running activity, `Start` an activity
-for a task's plan, `Perform` an operation, or `Leave` once the unit is out of the world. An event the unit does not react to, such as a stun
+`UnitCommand`s for the controller. Three stop the running activity: `Interrupt` cancels it,
+`Release` lets go of a finished one, and `Suspend` sets the posture's aside. Two act on the posture's
+activity that was set aside: `Resume` runs it again, and `Discard` cancels it once the posture is
+gone. `Run` starts a new activity for a plan, and `Perform` carries out an operation. An event the unit does not react to, such as a stun
 while dying or an activity report from a unit that has moved on, returns no commands.
 
 A ship's events are `ShipEvent`s: `Started`, `Sailed` with a new destination and `Docked`, and
 the controller's reports under `ShipEvent.Report`, `Finished` and `Performed`. `Sailed` and
 `Docked` replace the ship's task, cancel the running activity and decide at once. `ShipStateReducer.reduce` returns a list of
-`ShipCommand`s: `Cancel` or `Release` the running activity, `Start` an activity, or `Perform` an
+`ShipCommand`s: `Interrupt` or `Release` the running activity, `Run` an activity, or `Perform` an
 operation.
 
 ## Decisions
@@ -101,11 +104,12 @@ reducer still ignores a report that no longer applies, such as `Performed` after
 moved the unit on.
 
 One rule, in `UnitStateReducer`, decides when the running activity is replaced. A decision is taken as
-soon as the running activity is interruptible and waits otherwise. Urgent inputs (stun, spell,
-death, mounting) cancel it at once. `UnitStateController` keeps a posture's activity, rather than
-cancelling it, while something runs above it, and resumes it when the reducer starts the same
-posture again, so idle scan timers and ship boarding progress survive orders and interruptions. How
-interruptible a new activity is before its first frame is a property of its plan
+soon as the running activity is yielding and waits while it is committed. Urgent inputs (stun, spell,
+death, mounting) interrupt it at once, committed or not. The reducer suspends a posture's activity, rather than
+cancelling it, while something runs above it, and resumes it when the posture runs again, so idle
+scan timers and ship boarding progress survive orders and interruptions. `UnitState.postureSuspended`
+records that the controller holds one; mounting, unmounting or leaving the world discards it. Whether
+a new activity is committed before its first frame is a property of its plan
 (`UnitPlan.Run.initialProgress()`).
 
 All of this is simulation code: the determinism rules in `AGENTS.md` apply. RNG draws happen in

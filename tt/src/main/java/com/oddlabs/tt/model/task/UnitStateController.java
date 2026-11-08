@@ -25,7 +25,7 @@ import java.util.List;
 /**
  * Runs a unit's tasks: the imperative shell around {@link UnitStateReducer}. Every {@link Event} is
  * reduced into the unit's state, and the {@link UnitCommand}s that come back are carried out on the
- * running activity and the posture's, or on the world.
+ * running activity and the posture's that was set aside, or on the world.
  */
 @NullMarked
 public final class UnitStateController implements TaskRunner {
@@ -34,12 +34,10 @@ public final class UnitStateController implements TaskRunner {
     private final @Nullable TransitionTrace<UnitState, Event, List<UnitCommand>> trace;
 
     private @Nullable UnitActivity runningActivity;
-    /** The posture that {@link #postureActivity} belongs to. */
-    private @Nullable Posture posture;
-    /** Kept, running or set aside, for as long as {@link #posture} lasts. */
-    private @Nullable UnitActivity postureActivity;
-    /** An activity just started for a plan that begins uninterruptible, until its first frame. */
-    private @Nullable UnitActivity startedUninterruptible;
+    /** The posture's activity, set aside while something else runs. */
+    private @Nullable UnitActivity suspendedActivity;
+    /** An activity just started for a plan that begins committed, until its first frame. */
+    private @Nullable UnitActivity startedCommitted;
 
     public UnitStateController(Unit unit) {
         this.unit = unit;
@@ -114,9 +112,9 @@ public final class UnitStateController implements TaskRunner {
         }
         loop.report(() -> {
             Activity.State progress = activity.animate(t);
-            assert activity != startedUninterruptible
-                    || progress != Activity.State.INTERRUPTIBLE : "an activity planned uninterruptible was interruptible on its first frame";
-            startedUninterruptible = null;
+            assert activity != startedCommitted
+                    || progress != Activity.State.YIELDING : "an activity planned committed was yielding on its first frame";
+            startedCommitted = null;
             if (progress == Activity.State.DONE) {
                 return new Event.Report.Finished(activity.outcome());
             }
@@ -136,7 +134,7 @@ public final class UnitStateController implements TaskRunner {
         }
         UnitState state = loop.state();
         assert (runningActivity != null) == (state.execution() instanceof UnitState.Execution.Running) : "the running activity and the unit's execution disagree";
-        assert posture == null || posture == state.tasks().posture() : "a posture's activity outlived the posture";
+        assert (suspendedActivity != null) == state.postureSuspended() : "the suspended activity and the unit's state disagree";
     }
 
     private void execute(UnitCommand command) {
@@ -144,44 +142,40 @@ public final class UnitStateController implements TaskRunner {
             case UnitCommand.Interrupt _ -> {
                 UnitActivity activity = runningActivity;
                 assert activity != null : "cancelling with nothing running";
-                if (activity != null && activity != postureActivity) {
+                if (activity != null) {
                     activity.cancel();
                 }
                 runningActivity = null;
             }
             case UnitCommand.Release _ -> runningActivity = null;
-            case UnitCommand.Run run -> startActivity(run.task(), run.run());
+            case UnitCommand.Suspend _ -> {
+                assert runningActivity != null
+                        && suspendedActivity == null : "suspending with nothing running, or over another";
+                suspendedActivity = runningActivity;
+                runningActivity = null;
+            }
+            case UnitCommand.Discard _ -> {
+                UnitActivity activity = suspendedActivity;
+                assert activity != null : "discarding with nothing set aside";
+                if (activity != null) {
+                    activity.cancel();
+                }
+                suspendedActivity = null;
+            }
+            case UnitCommand.Run run -> {
+                UnitActivity activity = create(run.run());
+                runningActivity = activity;
+                startedCommitted = run.run().initialProgress() == Activity.State.COMMITTED ? activity : null;
+            }
+            case UnitCommand.Resume _ -> {
+                assert suspendedActivity != null : "resuming with nothing set aside";
+                runningActivity = suspendedActivity;
+                suspendedActivity = null;
+            }
             case UnitCommand.Perform perform -> {
                 perform(perform.operation());
                 dispatch(unit.isDead() ? new Event.Report.Removed() : new Event.Report.Performed());
             }
-            case UnitCommand.Dispose _ -> {
-                UnitActivity kept = postureActivity;
-                if (kept != null && kept != runningActivity) {
-                    kept.cancel();
-                }
-                runningActivity = null;
-                posture = null;
-                postureActivity = null;
-            }
-        }
-    }
-
-    private void startActivity(Task task, UnitPlan.Run run) {
-        // Postures are compared by identity; see UnitState.Execution.Running.
-        if (task == posture) {
-            runningActivity = postureActivity;
-            return;
-        }
-        if (task instanceof Posture && postureActivity != null) {
-            postureActivity.cancel();
-        }
-        UnitActivity activity = create(run);
-        runningActivity = activity;
-        startedUninterruptible = run.initialProgress() == Activity.State.UNINTERRUPTIBLE ? activity : null;
-        if (task instanceof Posture next) {
-            posture = next;
-            postureActivity = activity;
         }
     }
 

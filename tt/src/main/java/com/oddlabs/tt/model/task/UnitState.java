@@ -2,20 +2,27 @@ package com.oddlabs.tt.model.task;
 
 import org.jspecify.annotations.NullMarked;
 
-/** A unit's whole state: its tasks, and what its controller is doing for them. */
+/**
+ * A unit's whole state: its tasks, what its controller is doing for them, and whether the controller
+ * holds the posture's activity set aside.
+ */
 @NullMarked
-public record UnitState(TaskSlots tasks, Execution execution) {
+public record UnitState(TaskSlots tasks, Execution execution, boolean postureSuspended) {
     public UnitState(TaskSlots tasks) {
-        this(tasks, Execution.UNSTARTED);
+        this(tasks, Execution.UNSTARTED, false);
     }
 
     public UnitState withTasks(TaskSlots next) {
-        return new UnitState(next, execution);
+        return new UnitState(next, execution, postureSuspended);
+    }
+
+    public UnitState withExecution(Execution next) {
+        return new UnitState(tasks, next, postureSuspended);
     }
 
     /**
      * What the controller is carrying out, which can still be for a task the unit has moved on from
-     * while an uninterruptible activity finishes.
+     * while a committed activity finishes.
      */
     public sealed interface Execution {
         Execution UNSTARTED = new Unstarted();

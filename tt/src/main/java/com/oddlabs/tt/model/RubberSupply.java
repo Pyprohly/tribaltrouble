@@ -205,7 +205,7 @@ public final class RubberSupply extends SupplyModel implements Animated, Movable
         PathTracker.State state = path_tracker.animate(METERS_PER_SECOND * t);
         switch (state) {
             case OK:
-            case OK_INTERRUPTIBLE:
+            case OK_YIELDING:
                 return;
             case DONE:
             case BLOCKED:

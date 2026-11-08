@@ -83,7 +83,7 @@ public final class WalkActivity implements UnitActivity {
         boolean blocker_moved = blocking_movable != null && (blocking_movable.getGridX() != blocker_x
                 || blocking_movable.getGridY() != blocker_y);
         if (retry_delay_counter > 0 && !blocker_moved) {
-            return State.INTERRUPTIBLE;
+            return State.YIELDING;
         }
         retry_delay_counter = 0;
         blocking_movable = null;
@@ -92,13 +92,13 @@ public final class WalkActivity implements UnitActivity {
         return switch (state) {
             case OK -> {
                 switchToMoving();
-                yield State.UNINTERRUPTIBLE;
+                yield State.COMMITTED;
             }
-            case OK_INTERRUPTIBLE -> {
+            case OK_YIELDING -> {
                 retry_delay = WAIT_RETRY_DELAY;
                 switchToMoving();
                 scan();
-                yield spotted != null ? State.DONE : State.INTERRUPTIBLE;
+                yield spotted != null ? State.DONE : State.YIELDING;
             }
             case DONE -> State.DONE;
             case BLOCKED, SOFTBLOCKED -> {
@@ -144,7 +144,7 @@ public final class WalkActivity implements UnitActivity {
     private @NonNull State doRetry() {
         retry_delay_counter = retry_delay;
         unit.switchToIdleAnimation();
-        return State.INTERRUPTIBLE;
+        return State.YIELDING;
     }
 
     @Override

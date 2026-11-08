@@ -27,12 +27,12 @@ public final class IdleActivity implements UnitActivity {
         unit.switchToIdleAnimation();
         scanDelay -= t;
         if (scanDelay > 0)
-            return State.INTERRUPTIBLE;
+            return State.YIELDING;
         scanDelay = MIN_SCAN_DELAY + unit.getOwner().getWorld().getRandom().nextFloat() * (MAX_SCAN_DELAY - MIN_SCAN_DELAY);
         if (unit.getAbilities().hasAbilities(Abilities.ATTACK))
             unit.scanVicinity(scanFilter);
         spotted = scanFilter.removeTarget();
-        return spotted != null ? State.DONE : State.INTERRUPTIBLE;
+        return spotted != null ? State.DONE : State.YIELDING;
     }
 
     @Override

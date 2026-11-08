@@ -18,10 +18,10 @@ import java.util.List;
  * nothing itself.
  *
  * <p>One rule governs when an activity is replaced: a decision is taken as soon as the running
- * activity is interruptible, and waits for that otherwise. Urgent events (stuns, spells, death,
- * mounting) cancel the running activity and decide at once. The controller keeps a posture's
- * activity while an order or interruption runs above it, so stopping and restarting the posture
- * resumes it with its timers and boarding progress.
+ * activity yields, and waits for that otherwise. Urgent events (stuns, spells, death,
+ * mounting) cancel the running activity and decide at once. A posture's activity is suspended
+ * rather than stopped, finished or not, and resumed when the posture runs again, so it keeps its
+ * timers and boarding progress; it is discarded only when the posture is replaced or the unit leaves.
  *
  * <p>A decision is made by the current task, for a {@link Reason}. A task that finishes hands
  * over to the slot beneath it: a nested task to its parent, an order to the posture, an interruption
@@ -71,7 +71,7 @@ public final class UnitStateReducer implements StateReducer<UnitState, Event, Li
         return switch (event) {
             case Event.Started _ -> state.execution() instanceof UnitState.Execution.Unstarted ? replanNow(state,
                     Reason.BEGIN) : unchanged(state);
-            case Event.Ordered ordered -> replanWhenInterruptible(state.withTasks(tasks.withOrder(ordered.order())));
+            case Event.Ordered ordered -> replanWhenYielding(state.withTasks(tasks.withOrder(ordered.order())));
             case Event.Stunned stunned -> {
                 if (tasks.dying() != null) {
                     yield unchanged(state);
@@ -86,24 +86,21 @@ public final class UnitStateReducer implements StateReducer<UnitState, Event, Li
                 TaskSlots next = (cast.clearOrder() ? tasks.withOrder(null) : tasks).withCasting(
                         new Interruption.Casting(cast.factory()));
                 if (tasks.stun() != null) {
-                    yield replanWhenInterruptible(state.withTasks(next));
+                    yield replanWhenYielding(state.withTasks(next));
                 }
                 yield replanNow(state.withTasks(next), Reason.BEGIN);
             }
             case Event.Died _ -> replanNow(state.withTasks(tasks.withOnlyDying()), Reason.BEGIN);
-            case Event.MountedTower _ -> replanNow(state.withTasks(new TaskSlots(new Posture.Idle(false))),
-                    Reason.BEGIN);
-            case Event.MountedShip mounted -> replanNow(state.withTasks(new TaskSlots(
+            case Event.MountedTower _ -> remount(state, new Posture.Idle(false));
+            case Event.MountedShip mounted -> remount(state,
                     mounted.allocation().getRole() == ShipAllocation.FIGHTING ? new Posture.Fighting(mounted.ship(),
-                            mounted.allocation()) : new Posture.Sitting(mounted.ship(), mounted.allocation()))),
-                    Reason.BEGIN);
-            case Event.Unmounted _ -> replanNow(state.withTasks(new TaskSlots(new Posture.Idle(true))),
-                    Reason.BEGIN);
+                            mounted.allocation()) : new Posture.Sitting(mounted.ship(), mounted.allocation()));
+            case Event.Unmounted _ -> remount(state, new Posture.Idle(true));
             case Event.Report.Progressed progressed -> {
                 if (!(state.execution() instanceof UnitState.Execution.Running running)) {
                     yield unchanged(state);
                 }
-                yield replanWhenInterruptible(new UnitState(tasks, new UnitState.Execution.Running(running.task(),
+                yield replanWhenYielding(state.withExecution(new UnitState.Execution.Running(running.task(),
                         progressed.progress())));
             }
             case Event.Report.Finished finished ->
@@ -114,10 +111,25 @@ public final class UnitStateReducer implements StateReducer<UnitState, Event, Li
             case Event.Report.Performed _ ->
                 state.execution() instanceof UnitState.Execution.Performing ? replanNow(state,
                         Reason.PERFORMED) : unchanged(state);
-            case Event.Report.Removed _ -> new Transition<>(new UnitState(tasks, UnitState.Execution.GONE),
-                    List.of(
-                            UnitCommand.DISPOSE));
+            case Event.Report.Removed _ -> new Transition<>(new UnitState(tasks, UnitState.Execution.GONE, false),
+                    state.postureSuspended() ? List.of(UnitCommand.DISCARD) : List.of());
         };
+    }
+
+    /**
+     * Gives the unit a new posture and nothing else to do. The old posture's activity is cancelled: by
+     * the stop if it runs, else by discarding it.
+     */
+    private Transition<UnitState, List<UnitCommand>> remount(UnitState state, Posture posture) {
+        Transition<UnitState, List<UnitCommand>> next = replanNow(new UnitState(new TaskSlots(posture),
+                state.execution(), false), Reason.BEGIN);
+        if (!state.postureSuspended()) {
+            return next;
+        }
+        List<UnitCommand> commands = new ArrayList<>(next.effect().size() + 1);
+        commands.add(UnitCommand.DISCARD);
+        commands.addAll(next.effect());
+        return new Transition<>(next.nextState(), commands);
     }
 
     private static Transition<UnitState, List<UnitCommand>> unchanged(UnitState state) {
@@ -125,11 +137,11 @@ public final class UnitStateReducer implements StateReducer<UnitState, Event, Li
     }
 
     /** Replans if the current task is not the one running and the running activity can be interrupted. */
-    private Transition<UnitState, List<UnitCommand>> replanWhenInterruptible(UnitState state) {
+    private Transition<UnitState, List<UnitCommand>> replanWhenYielding(UnitState state) {
         // Tasks are compared by identity here and in replanFinished; see UnitState.Execution.Running.
         if (state.execution() instanceof UnitState.Execution.Running running
                 && (running.task() == state.tasks().current()
-                        || running.progress() == Activity.State.UNINTERRUPTIBLE)) {
+                        || running.progress() == Activity.State.COMMITTED)) {
             return unchanged(state);
         }
         return replanNow(state, Reason.BEGIN);
@@ -146,29 +158,41 @@ public final class UnitStateReducer implements StateReducer<UnitState, Event, Li
         return replan(state, UnitCommand.INTERRUPT, reason);
     }
 
-    /** Stops what runs with the stop command, plans, and starts or performs what the plan asks for. */
+    /**
+     * Stops what runs with the stop command, or suspends it if it is the posture's, plans, and starts,
+     * resumes or performs what the plan asks for.
+     */
     private Transition<UnitState, List<UnitCommand>> replan(UnitState state, UnitCommand.Stop stop, Reason reason) {
         List<UnitCommand> commands = new ArrayList<>(2);
-        if (state.execution() instanceof UnitState.Execution.Running) {
-            commands.add(stop);
+        boolean suspended = state.postureSuspended();
+        if (state.execution() instanceof UnitState.Execution.Running running) {
+            // Postures are compared by identity; see UnitState.Execution.Running.
+            if (running.task() == state.tasks().posture()) {
+                commands.add(UnitCommand.SUSPEND);
+                suspended = true;
+            } else {
+                commands.add(stop);
+            }
         }
         Decision<TaskSlots, UnitPlan> decision = decide(state.tasks(), reason);
         TaskSlots tasks = decision.state();
         return switch (decision.plan()) {
             case UnitPlan.Run run -> {
                 Task task = tasks.current();
-                commands.add(new UnitCommand.Run(task, run));
+                boolean resume = suspended && task == tasks.posture();
+                commands.add(resume ? UnitCommand.RESUME : new UnitCommand.Run(run));
                 yield new Transition<>(
                         new UnitState(
                                 tasks,
-                                new UnitState.Execution.Running(task, run.initialProgress())
+                                new UnitState.Execution.Running(task, run.initialProgress()),
+                                suspended && !resume
                         ),
                         commands
                 );
             }
             case UnitPlan.Operation operation -> {
                 commands.add(new UnitCommand.Perform(operation));
-                yield new Transition<>(new UnitState(tasks, UnitState.Execution.PERFORMING), commands);
+                yield new Transition<>(new UnitState(tasks, UnitState.Execution.PERFORMING, suspended), commands);
             }
         };
     }

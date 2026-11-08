@@ -55,7 +55,7 @@ public final class RepairActivity implements UnitActivity {
                 building.repair(1);
         }
 
-        return repairs == REPAIRS_PER_SUPPLY ? State.DONE : State.INTERRUPTIBLE;
+        return repairs == REPAIRS_PER_SUPPLY ? State.DONE : State.YIELDING;
     }
 
     private void restartAnimation() {

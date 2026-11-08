@@ -16,7 +16,7 @@ public final class StunActivity implements UnitActivity {
     public @NonNull State animate(float t) {
         unit.switchToIdleAnimation();
         time -= t;
-        return time > 0 ? State.UNINTERRUPTIBLE : State.DONE;
+        return time > 0 ? State.COMMITTED : State.DONE;
     }
 
     @Override

@@ -4,20 +4,22 @@ import org.jspecify.annotations.NullMarked;
 
 /**
  * What a unit's transition asks its controller to do, in the order given. The controller keeps a
- * posture's activity for as long as the posture lasts, so stopping it sets it aside and starting the
- * same posture again resumes it with its timers and boarding progress intact.
+ * posture's activity for as long as the posture lasts, so suspending it sets it aside and resuming it
+ * picks it up with its timers and boarding progress intact.
  */
 @NullMarked
 public sealed interface UnitCommand {
     Stop INTERRUPT = new Interrupt();
     Stop RELEASE = new Release();
-    UnitCommand DISPOSE = new Dispose();
+    Stop SUSPEND = new Suspend();
+    UnitCommand DISCARD = new Discard();
+    UnitCommand RESUME = new Resume();
 
     /** Ends the running activity before the next plan starts. */
     sealed interface Stop extends UnitCommand {
     }
 
-    /** Interrupts the running activity: cancels it, or sets it aside if it is the posture's. */
+    /** Cancels the running activity. */
     record Interrupt() implements Stop {
     }
 
@@ -25,11 +27,20 @@ public sealed interface UnitCommand {
     record Release() implements Stop {
     }
 
-    /**
-     * Starts an activity for the plan, or resumes the posture's when the task is the posture it was
-     * started for. Starting a new posture cancels the old posture's activity.
-     */
-    record Run(Task task, UnitPlan.Run run) implements UnitCommand {
+    /** Sets the posture's running activity aside, finished or not, until it is resumed or discarded. */
+    record Suspend() implements Stop {
+    }
+
+    /** Cancels the posture's activity that was set aside, because the posture is gone. */
+    record Discard() implements UnitCommand {
+    }
+
+    /** Starts a new activity for the plan. */
+    record Run(UnitPlan.Run run) implements UnitCommand {
+    }
+
+    /** Runs the posture's activity that was set aside again. */
+    record Resume() implements UnitCommand {
     }
 
     /**
@@ -37,9 +48,5 @@ public sealed interface UnitCommand {
      * unit left the world.
      */
     record Perform(UnitPlan.Operation operation) implements UnitCommand {
-    }
-
-    /** Disposes of every activity of a unit that has left the world, cancelling the posture's that was set aside. */
-    record Dispose() implements UnitCommand {
     }
 }

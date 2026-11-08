@@ -41,7 +41,7 @@ public sealed interface Event {
 
     /** What the controller reports back about the activities and operations it carried out. */
     sealed interface Report extends Event {
-        /** The running activity animated a frame, is not done, and became interruptible or stopped being so. */
+        /** The running activity animated a frame, is not done, and started or stopped yielding. */
         record Progressed(Activity.State progress) implements Report {
         }
 

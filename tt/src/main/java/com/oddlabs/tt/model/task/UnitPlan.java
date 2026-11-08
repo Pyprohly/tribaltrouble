@@ -23,7 +23,7 @@ public sealed interface UnitPlan {
          * same boundary as one taken a frame later.
          */
         default Activity.State initialProgress() {
-            return Activity.State.INTERRUPTIBLE;
+            return Activity.State.YIELDING;
         }
     }
 
@@ -58,7 +58,7 @@ public sealed interface UnitPlan {
     record Attack(Selectable<?> target, @Nullable Seat seat) implements Run {
         @Override
         public Activity.State initialProgress() {
-            return Activity.State.UNINTERRUPTIBLE;
+            return Activity.State.COMMITTED;
         }
     }
 
@@ -71,21 +71,21 @@ public sealed interface UnitPlan {
     record Cast(MagicFactory factory) implements Run {
         @Override
         public Activity.State initialProgress() {
-            return Activity.State.UNINTERRUPTIBLE;
+            return Activity.State.COMMITTED;
         }
     }
 
     record Stun(float seconds) implements Run {
         @Override
         public Activity.State initialProgress() {
-            return Activity.State.UNINTERRUPTIBLE;
+            return Activity.State.COMMITTED;
         }
     }
 
     record Die() implements Run {
         @Override
         public Activity.State initialProgress() {
-            return Activity.State.UNINTERRUPTIBLE;
+            return Activity.State.COMMITTED;
         }
     }
 

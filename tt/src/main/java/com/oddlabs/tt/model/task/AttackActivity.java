@@ -74,11 +74,11 @@ public final class AttackActivity implements UnitActivity {
                             1f / SECONDS_PER_ATTACK);
                     state = AttackState.RELEASED;
                 }
-                yield State.UNINTERRUPTIBLE;
+                yield State.COMMITTED;
             }
             case RELEASED -> {
                 updateAttack(t);
-                yield anim_time > 0 ? State.UNINTERRUPTIBLE : State.DONE;
+                yield anim_time > 0 ? State.COMMITTED : State.DONE;
             }
         };
     }
