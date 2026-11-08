@@ -26,14 +26,14 @@ public sealed interface Order extends Task {
         int attempts();
 
         @Nullable
-        Hunt engaged();
+        Order engaged();
 
-        /** The same march, having walked the given number of times and engaged the given hunt. */
-        March withProgress(int attempts, @Nullable Hunt engaged);
+        /** The same march, having walked the given number of times and broken off for the given order. */
+        March withProgress(int attempts, @Nullable Order engaged);
     }
 
     /** Walks to a target; an aggressive walk breaks off to hunt the enemies it sees. */
-    record Walk(Target target, boolean aggressive, int attempts, @Nullable Hunt engaged) implements March {
+    record Walk(Target target, boolean aggressive, int attempts, @Nullable Order engaged) implements March {
         public Walk(Target target, boolean aggressive) {
             this(target, aggressive, 0, null);
         }
@@ -44,13 +44,13 @@ public sealed interface Order extends Task {
         }
 
         @Override
-        public Walk withProgress(int attempts, @Nullable Hunt engaged) {
+        public Walk withProgress(int attempts, @Nullable Order engaged) {
             return new Walk(target, aggressive, attempts, engaged);
         }
     }
 
     /** Walks to a target to defend it, hunting the enemies it sees on the way. */
-    record Defend(Target target, int attempts, @Nullable Hunt engaged) implements March {
+    record Defend(Target target, int attempts, @Nullable Order engaged) implements March {
         public Defend(Target target) {
             this(target, 0, null);
         }
@@ -66,7 +66,7 @@ public sealed interface Order extends Task {
         }
 
         @Override
-        public Defend withProgress(int attempts, @Nullable Hunt engaged) {
+        public Defend withProgress(int attempts, @Nullable Order engaged) {
             return new Defend(target, attempts, engaged);
         }
     }
@@ -175,6 +175,10 @@ public sealed interface Order extends Task {
         @Override
         public Repair withAttemptsReset() {
             return new Repair(building, phase.withAttemptsReset());
+        }
+
+        public Repair withPhase(Phase next) {
+            return new Repair(building, next);
         }
 
         @Override

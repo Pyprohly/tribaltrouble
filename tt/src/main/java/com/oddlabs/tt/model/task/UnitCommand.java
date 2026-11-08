@@ -26,8 +26,8 @@ public sealed interface UnitCommand {
     }
 
     /**
-     * Cancels the posture's activity, running or set aside, because the posture is gone; does
-     * nothing when the controller holds none.
+     * Cancels the posture's activity, which a stop has already set aside if it was running, because
+     * the posture is gone; does nothing when the controller holds none.
      */
     record Discard() implements UnitCommand {
     }

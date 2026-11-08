@@ -49,6 +49,9 @@ public sealed interface UnitPlan {
 
     /** Walks to within range of a target. */
     record Walk(Target target, float range, boolean aggressive) implements Run {
+        public Walk(Target target) {
+            this(target, 0f, false);
+        }
     }
 
     /** Walks to the nearest supply of a type, reporting what it found. */

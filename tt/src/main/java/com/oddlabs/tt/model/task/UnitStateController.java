@@ -147,11 +147,9 @@ public final class UnitStateController implements TaskRunner {
             case UnitCommand.Release _ -> runningActivity = null;
             case UnitCommand.Discard _ -> {
                 UnitActivity activity = postureActivity;
+                assert activity == null || runningActivity != activity : "discarding the running posture activity";
                 if (activity != null) {
                     activity.cancel();
-                    if (runningActivity == activity) {
-                        runningActivity = null;
-                    }
                     postureActivity = null;
                 }
             }

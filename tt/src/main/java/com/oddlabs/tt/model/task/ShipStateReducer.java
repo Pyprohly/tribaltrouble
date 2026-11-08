@@ -31,19 +31,19 @@ public final class ShipStateReducer implements StateReducer<ShipState, ShipEvent
     public Transition<ShipState, List<ShipCommand>> reduce(ShipState state, ShipEvent event) {
         return switch (event) {
             case ShipEvent.Started _ -> state.execution() == ShipState.Execution.UNSTARTED ? replan(state,
-                    ShipCommand.INTERRUPT, state.task(), Reason.BEGIN) : unchanged(state);
+                    ShipCommand.INTERRUPT, state.task(), Reason.BEGIN) : withoutCommands(state);
             case ShipEvent.Sailed sailed -> replan(state, ShipCommand.INTERRUPT, new Voyage(sailed.target()),
                     Reason.BEGIN);
             case ShipEvent.Docked _ -> replan(state, ShipCommand.INTERRUPT, new Task.Inert(), Reason.BEGIN);
             case ShipEvent.Report.Finished finished -> state.execution() == ShipState.Execution.RUNNING ? replan(state,
-                    ShipCommand.RELEASE, state.task(), finished.outcome()) : unchanged(state);
+                    ShipCommand.RELEASE, state.task(), finished.outcome()) : withoutCommands(state);
             case ShipEvent.Report.Performed _ -> state.execution() == ShipState.Execution.PERFORMING ? replan(
                     state,
-                    ShipCommand.INTERRUPT, state.task(), Reason.PERFORMED) : unchanged(state);
+                    ShipCommand.INTERRUPT, state.task(), Reason.PERFORMED) : withoutCommands(state);
         };
     }
 
-    private static Transition<ShipState, List<ShipCommand>> unchanged(ShipState state) {
+    private static Transition<ShipState, List<ShipCommand>> withoutCommands(ShipState state) {
         return new Transition<>(state, List.of());
     }
 
