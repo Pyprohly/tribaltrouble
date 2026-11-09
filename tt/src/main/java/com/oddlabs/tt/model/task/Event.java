@@ -55,8 +55,8 @@ public sealed interface Event {
         record Finished(Reason outcome) implements Report {
         }
 
-        /** The operation the controller was asked for has been carried out. */
-        record Performed() implements Report {
+        /** The operation has been carried out, and the unit is still in the world. */
+        record Performed(UnitPlan.Operation operation) implements Report {
         }
 
         /** The operation took the unit out of the world, as entering a building does. */

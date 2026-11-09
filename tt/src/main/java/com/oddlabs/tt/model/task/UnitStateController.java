@@ -173,7 +173,7 @@ public final class UnitStateController implements TaskRunner {
             }
             case UnitCommand.Perform perform -> {
                 perform(perform.operation());
-                dispatch(unit.isDead() ? new Event.Report.Removed() : new Event.Report.Performed());
+                dispatch(unit.isDead() ? new Event.Report.Removed() : new Event.Report.Performed(perform.operation()));
             }
         }
     }

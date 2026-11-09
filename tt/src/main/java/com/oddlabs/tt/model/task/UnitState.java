@@ -26,7 +26,6 @@ public record UnitState(
      */
     public sealed interface Execution {
         Execution UNSTARTED = new Unstarted();
-        Execution PERFORMING = new Performing();
         Execution GONE = new Gone();
 
         /** Nothing has run yet. */
@@ -54,8 +53,12 @@ public record UnitState(
             }
         }
 
-        /** A world operation is being carried out, and its report is awaited. */
-        record Performing() implements Execution {
+        /**
+         * A world operation is being carried out, and its report is awaited. The operation is told apart
+         * from others by identity, as a task is: depositing into the same store on the next trip is a new
+         * operation, and only its own report ends it.
+         */
+        record Performing(UnitPlan.Operation operation) implements Execution {
         }
 
         /** The unit has left the world, and nothing it is told matters any more. */

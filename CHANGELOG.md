@@ -21,7 +21,7 @@ section when a release is cut.
 
 ### Fixed
 
-- Gatherers whose building was destroyed now take what they carry to another store instead of giving up.
+- Gatherers whose building was destroyed now take what they carry to another armory instead of giving up.
 - Units walking somewhere with Attack now follow a new order straight away, instead of sometimes stopping first to fight an enemy they had just spotted.
 
 ## [2.2.207] - 2026-10-31
