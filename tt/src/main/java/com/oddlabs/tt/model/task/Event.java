@@ -4,7 +4,6 @@ import com.oddlabs.tt.model.Ship;
 import com.oddlabs.tt.model.ShipAllocation;
 import com.oddlabs.tt.model.weapon.MagicFactory;
 import org.jspecify.annotations.NullMarked;
-import org.jspecify.annotations.Nullable;
 
 /**
  * Everything a unit reacts to: what the world does to it, and what its controller reports back
@@ -16,8 +15,15 @@ public sealed interface Event {
     record Started() implements Event {
     }
 
-    /** The unit was given an order in place of the one it had, or had its order taken away when null. */
-    record Ordered(@Nullable Order order) implements Event {
+    /** The unit was given an order in place of the one it had. */
+    record Ordered(Order order) implements Event {
+    }
+
+    /**
+     * The unit was excused from its order: it has none any more, but an activity running for it is
+     * left to finish.
+     */
+    record Excused() implements Event {
     }
 
     record Died() implements Event {

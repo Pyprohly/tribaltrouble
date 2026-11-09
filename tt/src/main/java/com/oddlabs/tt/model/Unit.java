@@ -670,7 +670,7 @@ public class Unit extends Selectable<UnitTemplate> implements Occupant, Movable 
     @Override
     public void setTarget(@NonNull Target target, @NonNull Action action, boolean aggressive) {
         if (target == this) {
-            controller.order(null);
+            controller.excuse();
             return;
         }
         assert !target.isDead() : "Setting dead target";
@@ -714,7 +714,7 @@ public class Unit extends Selectable<UnitTemplate> implements Occupant, Movable 
                 } else if (canRepair(target, true)) {
                     controller.order(new Order.Repair((Building) target));
                 } else {
-                    controller.order(null);
+                    controller.excuse();
                 }
                 break;
             case DEFEND:
@@ -722,7 +722,7 @@ public class Unit extends Selectable<UnitTemplate> implements Occupant, Movable 
                 break;
             default:
                 IO.println("Invalid action: " + action);
-                controller.order(null);
+                controller.excuse();
                 break;
         }
     }
@@ -731,8 +731,8 @@ public class Unit extends Selectable<UnitTemplate> implements Occupant, Movable 
         return new Order.Gather(supply.getClass(), supply, nearestSupplyBuilding(supply));
     }
 
-    /** Gives the unit an order in place of the one it has, or takes its order away when null. */
-    public final void order(@Nullable Order order) {
+    /** Gives the unit an order in place of the one it has. */
+    public final void order(@NonNull Order order) {
         controller.order(order);
     }
 

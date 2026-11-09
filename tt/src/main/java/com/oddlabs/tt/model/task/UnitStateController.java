@@ -76,8 +76,13 @@ public final class UnitStateController implements TaskRunner {
         return trace;
     }
 
-    public void order(@Nullable Order order) {
+    public void order(Order order) {
         dispatch(new Event.Ordered(order));
+    }
+
+    /** Takes the unit's order away, leaving what it is doing for it to finish. */
+    public void excuse() {
+        dispatch(new Event.Excused());
     }
 
     public void stun(float seconds) {

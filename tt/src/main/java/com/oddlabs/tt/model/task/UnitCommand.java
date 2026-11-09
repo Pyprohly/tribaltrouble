@@ -26,8 +26,10 @@ public sealed interface UnitCommand {
     }
 
     /**
-     * Cancels the posture's activity, which a stop has already set aside if it was running, because
-     * the posture is gone; does nothing when the controller holds none.
+     * Cancels the posture's activity because the posture was replaced or the unit left the world;
+     * does nothing if the posture's plan never ran, since the activity is only built then. If that
+     * activity is running, a {@link Stop} must come earlier in the same commands, so it is no
+     * longer running when it gets discarded.
      */
     record Discard() implements UnitCommand {
     }

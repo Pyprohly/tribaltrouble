@@ -20,9 +20,11 @@ import java.util.List;
  *
  * <p>One rule governs when an activity is replaced: a decision is taken as soon as the running
  * activity yields, and waits for that otherwise. Urgent events (stuns, spells, death,
- * mounting) cancel the running activity and decide at once. A posture's activity is suspended
- * rather than stopped, finished or not, and resumed when the posture runs again, so it keeps its
- * timers and boarding progress; it is discarded only when the posture is replaced or the unit leaves.
+ * mounting) cancel the running activity and decide at once. A unit excused from its order decides
+ * nothing: the order's activity is left to finish, and the unit decides once it is done.
+ * A posture's activity is suspended rather than stopped, finished or not, and resumed when the
+ * posture runs again, so it keeps its timers and boarding progress; it is discarded only when the
+ * posture is replaced or the unit leaves.
  *
  * <p>A decision is made by the current task, for a {@link Reason}. A task that finishes hands
  * over to the slot beneath it: a nested task to its parent, an order to the posture, an interruption
@@ -42,12 +44,6 @@ public final class UnitStateReducer implements StateReducer<UnitState, Event, Li
      * posture to its own order and back.
      */
     private static final int MAX_HANDOVERS = 8;
-
-    /** Tells {@link #reconsider} to replace the running activity even while it is committed. */
-    private static final boolean AT_ONCE = true;
-
-    /** Tells {@link #reconsider} to wait until the running activity is yielding. */
-    private static final boolean WHEN_YIELDING = false;
 
     /** What an order does next, or that it is done. */
     private sealed interface Step {
@@ -83,43 +79,55 @@ public final class UnitStateReducer implements StateReducer<UnitState, Event, Li
         return switch (event) {
             case Event.Started _ -> {
                 if (!(state.execution() instanceof UnitState.Execution.Unstarted)) {
+                    assert false : "a unit started twice";
                     yield withoutCommands(state);
                 }
                 yield replan(state, tasks, UnitCommand.INTERRUPT, Reason.BEGIN);
             }
-            case Event.Ordered ordered -> reconsider(state, tasks.withOrder(ordered.order()), WHEN_YIELDING);
+            case Event.Ordered ordered -> {
+                // A new order waits on an activity left to finish only while it is committed, as on any other.
+                if (state.execution() instanceof UnitState.Execution.Running running && running.leftToFinish()) {
+                    state = state.withExecution(running.withLeftToFinish(false));
+                }
+                yield reconsiderWhenYielding(state, tasks.withOrder(ordered.order()));
+            }
+            case Event.Excused _ -> excuse(state);
             case Event.Stunned stunned -> {
                 if (tasks.dying() != null) {
                     yield withoutCommands(state);
                 }
-                yield reconsider(state, tasks.withStunned(new Interruption.Stunned(stunned.seconds())), AT_ONCE);
+                yield reconsiderAtOnce(state, tasks.withStunned(new Interruption.Stunned(stunned.seconds())));
             }
             case Event.Cast cast -> {
                 if (tasks.dying() != null) {
                     yield withoutCommands(state);
                 }
                 TaskSlots interrupted = cast.clearOrder() ? tasks.withOrder(null) : tasks;
-                yield reconsider(state, interrupted.withCasting(new Interruption.Casting(cast.factory())), AT_ONCE);
+                yield reconsiderAtOnce(state, interrupted.withCasting(new Interruption.Casting(cast.factory())));
             }
-            case Event.Died _ -> reconsider(state, tasks.withOnlyDying(), AT_ONCE);
-            case Event.MountedTower _ -> reconsider(state, new TaskSlots(new Posture.Idle(false)), AT_ONCE);
+            case Event.Died _ -> reconsiderAtOnce(state, tasks.withOnlyDying());
+            case Event.MountedTower _ -> reconsiderAtOnce(state, new TaskSlots(new Posture.Idle(false)));
             case Event.MountedShip mounted -> {
                 Posture posture = mounted.allocation().getRole() == ShipAllocation.FIGHTING ? new Posture.Fighting(
                         mounted.ship(), mounted.allocation()) : new Posture.Sitting(mounted.ship(),
                                 mounted.allocation());
-                yield reconsider(state, new TaskSlots(posture), AT_ONCE);
+                yield reconsiderAtOnce(state, new TaskSlots(posture));
             }
-            case Event.Unmounted _ -> reconsider(state, new TaskSlots(new Posture.Idle(true)), AT_ONCE);
+            case Event.Unmounted _ -> reconsiderAtOnce(state, new TaskSlots(new Posture.Idle(true)));
             case Event.Report.Progressed progressed -> {
                 if (!(state.execution() instanceof UnitState.Execution.Running running)) {
                     yield withoutCommands(state);
                 }
-                yield reconsider(state.withExecution(new UnitState.Execution.Running(running.task(),
-                        progressed.progress())), tasks, WHEN_YIELDING);
+                yield reconsiderWhenYielding(state.withExecution(running.withProgress(progressed.progress())), tasks);
             }
             case Event.Report.Finished finished -> {
                 if (!(state.execution() instanceof UnitState.Execution.Running running)) {
                     yield withoutCommands(state);
+                }
+                // A walk left to finish hunts what it spots, without the walk back the posture would add.
+                if (running.leftToFinish() && finished.outcome() instanceof Reason.Spotted spotted) {
+                    yield replan(state, tasks.withOrder(new Order.Hunt(spotted.target())), UnitCommand.RELEASE,
+                            Reason.BEGIN);
                 }
                 // A committed activity can outlive its task; the current task then begins instead.
                 Reason reason = running.task() == tasks.current() ? finished.outcome() : Reason.BEGIN;
@@ -132,9 +140,11 @@ public final class UnitStateReducer implements StateReducer<UnitState, Event, Li
                 }
                 yield replan(state, tasks, UnitCommand.INTERRUPT, Reason.PERFORMED);
             }
-            case Event.Report.Removed _ -> new Transition<>(new UnitState(tasks, UnitState.Execution.GONE),
+            case Event.Report.Removed _ -> new Transition<>(
+                    new UnitState(tasks, UnitState.Execution.GONE),
                     state.execution() instanceof UnitState.Execution.Running ? List.of(UnitCommand.INTERRUPT,
-                            UnitCommand.DISCARD) : List.of(UnitCommand.DISCARD));
+                            UnitCommand.DISCARD) : List.of(UnitCommand.DISCARD)
+            );
         };
     }
 
@@ -143,23 +153,43 @@ public final class UnitStateReducer implements StateReducer<UnitState, Event, Li
     }
 
     /**
-     * Gives the unit its next tasks, and decides at once unless the running activity is already the
-     * current task's, or is committed and the change is not urgent.
+     * Gives the unit its next tasks and decides at once, unless the running activity already runs for
+     * the current task.
      */
-    private Transition<UnitState, List<UnitCommand>> reconsider(
-            UnitState state,
-            TaskSlots next,
-            boolean urgent
-    ) {
+    private Transition<UnitState, List<UnitCommand>> reconsiderAtOnce(UnitState state, TaskSlots next) {
+        // Tasks are compared by identity in both reconsider methods, on Finished and in replan; see
+        // UnitState.Execution.Running.
+        if (state.execution() instanceof UnitState.Execution.Running running && running.task() == next.current()) {
+            return withoutCommands(state.withTasks(next));
+        }
+        return replan(state, next, UnitCommand.INTERRUPT, Reason.BEGIN);
+    }
+
+    /**
+     * Gives the unit its next tasks and decides at once, unless the running activity already runs for
+     * the current task, or is committed or left to finish and so carries on.
+     */
+    private Transition<UnitState, List<UnitCommand>> reconsiderWhenYielding(UnitState state, TaskSlots next) {
         if (state.execution() instanceof UnitState.Execution.Running running) {
-            // Tasks are compared by identity here, on Finished and in replan; see UnitState.Execution.Running.
             boolean alreadyRunning = running.task() == next.current();
             boolean committed = running.progress() == Activity.State.COMMITTED;
-            if (alreadyRunning || (committed && !urgent)) {
+            if (alreadyRunning || committed || running.leftToFinish()) {
                 return withoutCommands(state.withTasks(next));
             }
         }
         return replan(state, next, UnitCommand.INTERRUPT, Reason.BEGIN);
+    }
+
+    /**
+     * Takes the order away without deciding: an activity running for it is left to finish, and a
+     * decision already waiting on a committed activity still waits for it to yield.
+     */
+    private Transition<UnitState, List<UnitCommand>> excuse(UnitState state) {
+        if (state.execution() instanceof UnitState.Execution.Running running
+                && running.task() == state.tasks().order()) {
+            state = state.withExecution(running.withLeftToFinish(true));
+        }
+        return reconsiderWhenYielding(state, state.tasks().withOrder(null));
     }
 
     /**
