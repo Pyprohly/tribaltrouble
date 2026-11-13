@@ -39,7 +39,8 @@ public sealed interface UnitCommand {
     }
 
     /**
-     * Carries out the operation, then reports {@link Event.Report.Performed}, or {@link Event.Report.Removed} if the
+     * Carries out the operation, then reports {@link UnitEvent.Report.Performed}, or {@link UnitEvent.Report.Removed}
+     * if the
      * unit left the world.
      */
     record Perform(UnitPlan.Operation operation) implements UnitCommand {

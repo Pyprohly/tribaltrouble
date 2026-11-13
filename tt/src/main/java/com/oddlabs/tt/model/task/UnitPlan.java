@@ -31,7 +31,7 @@ public sealed interface UnitPlan {
     sealed interface Lasting extends Run {
     }
 
-    /** A change to the world, after which the unit decides again with {@link Reason#PERFORMED}. */
+    /** A change to the world, after which the unit decides again with {@link UnitReason#PERFORMED}. */
     sealed interface Operation extends UnitPlan {
     }
 

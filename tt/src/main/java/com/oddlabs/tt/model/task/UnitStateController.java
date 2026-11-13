@@ -23,15 +23,15 @@ import org.jspecify.annotations.Nullable;
 import java.util.List;
 
 /**
- * Runs a unit's tasks: the imperative shell around {@link UnitStateReducer}. Every {@link Event} is
+ * Runs a unit's tasks: the imperative shell around {@link UnitStateReducer}. Every {@link UnitEvent} is
  * reduced into the unit's state, and the {@link UnitCommand}s that come back are carried out on the
  * running activity and the posture's, or on the world.
  */
 @NullMarked
 public final class UnitStateController implements TaskRunner {
     private final Unit unit;
-    private final ReducerLoop<UnitState, Event, List<UnitCommand>> loop;
-    private final @Nullable TransitionTrace<UnitState, Event, List<UnitCommand>> trace;
+    private final ReducerLoop<UnitState, UnitEvent, List<UnitCommand>> loop;
+    private final @Nullable TransitionTrace<UnitState, UnitEvent, List<UnitCommand>> trace;
 
     private @Nullable UnitActivity runningActivity;
     /**
@@ -43,8 +43,8 @@ public final class UnitStateController implements TaskRunner {
     public UnitStateController(Unit unit) {
         this.unit = unit;
         this.trace = TransitionTrace.ENABLED ? new TransitionTrace<>((event,
-                commands) -> !(event instanceof Event.Report.Progressed) || !commands.isEmpty()) : null;
-        this.loop = new ReducerLoop<UnitState, Event, List<UnitCommand>>(
+                commands) -> !(event instanceof UnitEvent.Report.Progressed) || !commands.isEmpty()) : null;
+        this.loop = new ReducerLoop<UnitState, UnitEvent, List<UnitCommand>>(
                 new UnitStateReducer(new LiveUnitView(unit)),
                 new UnitState(new TaskSlots(new Posture.Idle(true))),
                 this::executeAll,
@@ -54,7 +54,7 @@ public final class UnitStateController implements TaskRunner {
 
     /** Takes the first decision; called once the unit is far enough constructed to act. */
     public void start() {
-        dispatch(new Event.Started());
+        dispatch(new UnitEvent.Started());
     }
 
     public UnitState getState() {
@@ -72,42 +72,42 @@ public final class UnitStateController implements TaskRunner {
     }
 
     @Override
-    public @Nullable TransitionTrace<UnitState, Event, List<UnitCommand>> getTrace() {
+    public @Nullable TransitionTrace<UnitState, UnitEvent, List<UnitCommand>> getTrace() {
         return trace;
     }
 
     public void order(Order order) {
-        dispatch(new Event.Ordered(order));
+        dispatch(new UnitEvent.Ordered(order));
     }
 
     /** Takes the unit's order away, leaving what it is doing for it to finish. */
     public void excuse() {
-        dispatch(new Event.Excused());
+        dispatch(new UnitEvent.Excused());
     }
 
     public void stun(float seconds) {
-        dispatch(new Event.Stunned(seconds));
+        dispatch(new UnitEvent.Stunned(seconds));
     }
 
     /** Casts a spell; a stunned unit casts it once the stun wears off. */
     public void cast(MagicFactory factory, boolean clearOrder) {
-        dispatch(new Event.Cast(factory, clearOrder));
+        dispatch(new UnitEvent.Cast(factory, clearOrder));
     }
 
     public void die() {
-        dispatch(new Event.Died());
+        dispatch(new UnitEvent.Died());
     }
 
     public void mountTower() {
-        dispatch(new Event.MountedTower());
+        dispatch(new UnitEvent.MountedTower());
     }
 
     public void mountShip(Ship ship, ShipAllocation allocation) {
-        dispatch(new Event.MountedShip(ship, allocation));
+        dispatch(new UnitEvent.MountedShip(ship, allocation));
     }
 
     public void unmount() {
-        dispatch(new Event.Unmounted());
+        dispatch(new UnitEvent.Unmounted());
     }
 
     @Override
@@ -119,15 +119,15 @@ public final class UnitStateController implements TaskRunner {
         loop.report(() -> {
             Activity.State progress = activity.animate(t);
             if (progress == Activity.State.DONE) {
-                return new Event.Report.Finished(activity.outcome());
+                return new UnitEvent.Report.Finished(activity.outcome());
             }
             boolean unchanged = loop.state().execution() instanceof UnitState.Execution.Running executing
                     && executing.progress() == progress;
-            return unchanged ? null : new Event.Report.Progressed(progress);
+            return unchanged ? null : new UnitEvent.Report.Progressed(progress);
         });
     }
 
-    private void dispatch(Event event) {
+    private void dispatch(UnitEvent event) {
         loop.dispatch(event);
     }
 
@@ -173,7 +173,8 @@ public final class UnitStateController implements TaskRunner {
             }
             case UnitCommand.Perform perform -> {
                 perform(perform.operation());
-                dispatch(unit.isDead() ? new Event.Report.Removed() : new Event.Report.Performed(perform.operation()));
+                dispatch(unit.isDead() ? new UnitEvent.Report.Removed() : new UnitEvent.Report.Performed(
+                        perform.operation()));
             }
         }
     }
@@ -185,9 +186,9 @@ public final class UnitStateController implements TaskRunner {
             case UnitPlan.Sit sit -> new SittingActivity(unit, sit.ship(), sit.allocation());
             case UnitPlan.Walk walk -> new WalkActivity(unit, walk.target(), walk.range(), walk.aggressive());
             case UnitPlan.FindSupply find -> new WalkActivity(unit, new FinderTrackerAlgorithm<>(unit.getUnitGrid(),
-                    supplyFinder(find.supplyType())), Reason.FoundSupply::new);
+                    supplyFinder(find.supplyType())), UnitReason.FoundSupply::new);
             case UnitPlan.FindStore _ -> new WalkActivity(unit, new FinderTrackerAlgorithm<>(unit.getUnitGrid(),
-                    new BuildingFinder(unit.getOwner(), Abilities.SUPPLY_CONTAINER)), Reason.FoundStore::new);
+                    new BuildingFinder(unit.getOwner(), Abilities.SUPPLY_CONTAINER)), UnitReason.FoundStore::new);
             case UnitPlan.Attack attack -> {
                 Seat seat = attack.seat();
                 yield seat != null ? new AttackActivity(unit, attack.target(), seat.allocation(),

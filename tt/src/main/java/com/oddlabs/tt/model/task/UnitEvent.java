@@ -10,49 +10,49 @@ import org.jspecify.annotations.NullMarked;
  * about the activities and operations it carried out.
  */
 @NullMarked
-public sealed interface Event {
+public sealed interface UnitEvent {
     /** The unit is far enough constructed to act. */
-    record Started() implements Event {
+    record Started() implements UnitEvent {
     }
 
     /** The unit was given an order in place of the one it had. */
-    record Ordered(Order order) implements Event {
+    record Ordered(Order order) implements UnitEvent {
     }
 
     /**
      * The unit was excused from its order: it has none any more, but an activity running for it is
      * left to finish.
      */
-    record Excused() implements Event {
+    record Excused() implements UnitEvent {
     }
 
-    record Died() implements Event {
+    record Died() implements UnitEvent {
     }
 
-    record Stunned(float seconds) implements Event {
+    record Stunned(float seconds) implements UnitEvent {
     }
 
     /** The unit casts a spell; a stunned unit casts it once the stun wears off. */
-    record Cast(MagicFactory factory, boolean clearOrder) implements Event {
+    record Cast(MagicFactory factory, boolean clearOrder) implements UnitEvent {
     }
 
-    record MountedTower() implements Event {
+    record MountedTower() implements UnitEvent {
     }
 
-    record MountedShip(Ship ship, ShipAllocation allocation) implements Event {
+    record MountedShip(Ship ship, ShipAllocation allocation) implements UnitEvent {
     }
 
-    record Unmounted() implements Event {
+    record Unmounted() implements UnitEvent {
     }
 
     /** What the controller reports back about the activities and operations it carried out. */
-    sealed interface Report extends Event {
+    sealed interface Report extends UnitEvent {
         /** The running activity animated a frame, is not done, and started or stopped yielding. */
         record Progressed(Activity.State progress) implements Report {
         }
 
         /** The running activity is done, and reports what it found. */
-        record Finished(Reason outcome) implements Report {
+        record Finished(UnitReason outcome) implements Report {
         }
 
         /** The operation has been carried out, and the unit is still in the world. */

@@ -25,7 +25,7 @@ public final class WalkActivity implements UnitActivity {
     private final @NonNull TrackerAlgorithm tracker_algorithm;
     private final @NonNull AttackScanFilter scan_filter;
     private final boolean scan_attack;
-    private final @Nullable Supplier<@NonNull Reason> found;
+    private final @Nullable Supplier<@NonNull UnitReason> found;
 
     private @Nullable Movable blocking_movable;
     private int blocker_x;
@@ -37,7 +37,7 @@ public final class WalkActivity implements UnitActivity {
     private @Nullable Selectable<?> spotted;
 
     private WalkActivity(@NonNull Unit unit, @NonNull TrackerAlgorithm tracker_algorithm, boolean scan_attack,
-            @Nullable Supplier<@NonNull Reason> found) {
+            @Nullable Supplier<@NonNull UnitReason> found) {
         this.unit = unit;
         this.tracker_algorithm = tracker_algorithm;
         this.scan_attack = scan_attack;
@@ -53,7 +53,7 @@ public final class WalkActivity implements UnitActivity {
 
     /** Walks to what the finder finds, and reports it through the given reason. */
     public <O extends Occupant> WalkActivity(@NonNull Unit unit, @NonNull FinderTrackerAlgorithm<O> finder,
-            @NonNull Function<@Nullable O, @NonNull Reason> found) {
+            @NonNull Function<@Nullable O, @NonNull UnitReason> found) {
         this(unit, finder, false, () -> found.apply(finder.getOccupant()));
     }
 
@@ -129,12 +129,12 @@ public final class WalkActivity implements UnitActivity {
     }
 
     @Override
-    public @NonNull Reason outcome() {
+    public @NonNull UnitReason outcome() {
         if (spotted != null)
-            return new Reason.Spotted(spotted);
+            return new UnitReason.Spotted(spotted);
         if (found != null)
             return found.get();
-        return Reason.COMPLETED;
+        return UnitReason.COMPLETED;
     }
 
     /*	public final void moveNextAnimate() {

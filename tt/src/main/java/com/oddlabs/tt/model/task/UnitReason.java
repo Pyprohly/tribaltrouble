@@ -6,44 +6,34 @@ import com.oddlabs.tt.model.Supply;
 import org.jspecify.annotations.NullMarked;
 import org.jspecify.annotations.Nullable;
 
-/** Why a unit's task or a ship's voyage is asked to decide. */
+/** Why a unit's task is asked to decide. */
 @NullMarked
-public sealed interface Reason {
+public sealed interface UnitReason {
     Begin BEGIN = new Begin();
     Completed COMPLETED = new Completed();
     Performed PERFORMED = new Performed();
-    Blocked BLOCKED = new Blocked();
-    NoRoute NO_ROUTE = new NoRoute();
 
     /** The task became current: it was just given, or what suspended it has ended. */
-    record Begin() implements Reason {
+    record Begin() implements UnitReason {
     }
 
     /** The activity the task started has finished. */
-    record Completed() implements Reason {
+    record Completed() implements UnitReason {
     }
 
     /** The world operation the task asked for has been carried out. */
-    record Performed() implements Reason {
+    record Performed() implements UnitReason {
     }
 
     /** A unit's walk looking for a supply ended; the supply is what it found, if anything. */
-    record FoundSupply(@Nullable Supply supply) implements Reason {
+    record FoundSupply(@Nullable Supply supply) implements UnitReason {
     }
 
     /** A unit's walk looking for a store ended; the store is what it found, if anything. */
-    record FoundStore(@Nullable Building store) implements Reason {
+    record FoundStore(@Nullable Building store) implements UnitReason {
     }
 
     /** A unit's watch or aggressive walk saw an enemy. */
-    record Spotted(Selectable<?> target) implements Reason {
-    }
-
-    /** A ship could not advance. */
-    record Blocked() implements Reason {
-    }
-
-    /** A ship had no route to follow. */
-    record NoRoute() implements Reason {
+    record Spotted(Selectable<?> target) implements UnitReason {
     }
 }

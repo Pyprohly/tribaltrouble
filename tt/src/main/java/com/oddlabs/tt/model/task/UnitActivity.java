@@ -9,7 +9,7 @@ public interface UnitActivity extends Activity {
      * activity is set aside and resumed rather than replaced, so it can be done many times and must be
      * ready to report afresh each time.
      */
-    default @NonNull Reason outcome() {
-        return Reason.COMPLETED;
+    default @NonNull UnitReason outcome() {
+        return UnitReason.COMPLETED;
     }
 }

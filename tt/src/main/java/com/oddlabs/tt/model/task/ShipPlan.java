@@ -12,7 +12,7 @@ public sealed interface ShipPlan {
     sealed interface Run extends ShipPlan {
     }
 
-    /** A change to the world, after which the ship decides again with {@link Reason#PERFORMED}. */
+    /** A change to the world, after which the ship decides again with {@link ShipReason#PERFORMED}. */
     enum Operation implements ShipPlan {
         /** The ship reached deep water. */
         FINISH_SLIDE,

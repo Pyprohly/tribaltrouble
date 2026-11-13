@@ -16,7 +16,7 @@ public final class ShipUnstuckActivity implements ShipActivity {
 
     private ShipTrajectory trajectory = null;
 
-    private @NonNull Reason outcome = Reason.COMPLETED;
+    private @NonNull ShipReason outcome = ShipReason.COMPLETED;
 
     public ShipUnstuckActivity(Ship ship) {
         this.ship = ship;
@@ -66,7 +66,7 @@ public final class ShipUnstuckActivity implements ShipActivity {
         ship.setLayer(UnitGrid.SEA);
 
         if (trajectory == null || !trajectory.exists()) {
-            outcome = Reason.NO_ROUTE;
+            outcome = ShipReason.NO_ROUTE;
             return State.DONE;
         }
 
@@ -87,7 +87,7 @@ public final class ShipUnstuckActivity implements ShipActivity {
 
         if (fromPoint.distanceTo(next_pose) > 0.0001f && ShipTrajectory.checkShipsCollision(grid, ship, fromPoint,
                 next_pose.moved(8)) != null) {
-            outcome = Reason.BLOCKED;
+            outcome = ShipReason.BLOCKED;
             return State.DONE;
         }
 
@@ -102,7 +102,7 @@ public final class ShipUnstuckActivity implements ShipActivity {
     }
 
     @Override
-    public @NonNull Reason outcome() {
+    public @NonNull ShipReason outcome() {
         return outcome;
     }
 

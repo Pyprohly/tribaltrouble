@@ -27,7 +27,8 @@ else the posture.
 Tasks that run inside other tasks are fields of their parent, not separate slots: a `Walk`
 or `Defend` holds the `Hunt` it broke off for, and the `Harvesting` phase of a `Gather` and the
 `Fetching` phase of a `Repair` hold the `Harvest` that fetches supplies. A task finishing hands
-control to its parent in the same decision.
+control to its parent in the same decision, as the gist's parent state holds its child's as a
+payload.
 
 Orders with several stages carry them as a sealed phase rather than a set of nullable fields. A
 `Gather` is `Approaching`, `Harvesting`, `Delivering` or `Depositing`; a `Repair` is `Mending` or
@@ -45,9 +46,9 @@ ship proxies are always `Task.Inert`.
 
 ## Events
 
-Everything a unit reacts to is an `Event`. Some come from the world: `Started`, an order, a stun, a
+Everything a unit reacts to is a `UnitEvent`. Some come from the world: `Started`, an order, a stun, a
 spell, death, mounting and unmounting. Others are the controller reporting back, grouped under
-`Event.Report`: `Progressed` (sent when the activity starts or stops yielding) and
+`UnitEvent.Report`: `Progressed` (sent when the activity starts or stops yielding) and
 `Finished` from the running activity, and `Performed` or `Removed`
 after an operation.
 `UnitStateController`'s public methods (`order`, `stun`, `cast`, …) each build one and dispatch it to
@@ -73,17 +74,25 @@ operation.
 
 ## Decisions
 
-Inside `reduce`, the current task decides for a `Reason`, the task-level event: the parent
+Inside `reduce`, the current task decides for a `UnitReason`, the task-level event: the parent
 `UnitState` handles lifecycle events itself and turns the rest into a reason for the current task,
-as the gist's hierarchical machines do. A ship's voyage decides the same way. Each decision
-yields the next task and a plan: an activity to run (`UnitPlan.Run`, `ShipPlan.Run`) or a one-off
-change to the world (`UnitPlan.Operation`, `ShipPlan.Operation`). The reducers' `decide` methods
-return these as a `Decision` of the task state and its plan, which `replan` turns into commands.
-After an operation the controller reports back and the task decides again with `Reason.PERFORMED`.
+as the gist's hierarchical machines do. A ship's voyage decides the same way, for a `ShipReason`. Each decision
+yields a `Step`: the next task state and a plan, either an activity to run (`UnitPlan.Run`, `ShipPlan.Run`) or a one-off
+change to the world (`UnitPlan.Operation`, `ShipPlan.Operation`), which `replan` turns into commands.
+After an operation the controller reports back and the task decides again with `UnitReason.PERFORMED`.
+
+The machines nest as the tasks do. `UnitStateReducer` handles events and picks the slot that decides:
+an interruption and the posture decide there, and an order decides in its `OrderTaskReducer`. A
+`Gather` or `Repair` that is harvesting hands its `Harvest` to a `HarvestTaskReducer`. Both child
+machines are `UnitTaskReducer`s: they take their task and their own kind of reason, and return the
+task's next `Step`, or null once it is done and the parent decides instead. The parent narrows its
+reason for the child, as the gist's failable `init?` does: `HarvestReason.of` keeps only the end of a
+search for a supply, which is the one reason a harvest tells apart.
 
 Reasons say why the task is deciding: `Begin` when it became current, `Completed` when its activity
-finished, `FoundSupply`, `FoundStore` and `Spotted` from walks and watches, and `Blocked` and `NoRoute` from ships.
-`Begin` restores an order's retry budget, so a task interrupted by a stun or a spell starts over
+finished, `Performed` after an operation, and `FoundSupply`, `FoundStore` and `Spotted` from walks and
+watches. A ship's `ShipReason` has its own `Begin`, `Completed` and `Performed`, and `Blocked` and
+`NoRoute` from sailing. `Begin` restores an order's retry budget, so a task interrupted by a stun or a spell starts over
 rather than giving up.
 
 ## Execution
