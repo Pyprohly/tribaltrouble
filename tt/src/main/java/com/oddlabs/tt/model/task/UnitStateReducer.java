@@ -148,8 +148,11 @@ public final class UnitStateReducer implements StateReducer<UnitState, UnitEvent
     private Transition<UnitState, List<UnitCommand>> reconsiderAtOnce(UnitState state, TaskSlots next) {
         // Tasks are compared by identity in both reconsider methods, on Finished and in replan;
         // see UnitState.Execution.Running.
-        if (state.execution() instanceof UnitState.Execution.Running running && running.task() == next.current()) {
-            return withoutCommands(state.withTasks(next));
+        if (state.execution() instanceof UnitState.Execution.Running running) {
+            boolean sameTask = running.task() == next.current();
+            if (sameTask) {
+                return withoutCommands(state.withTasks(next));
+            }
         }
         return replan(state, next, UnitCommand.INTERRUPT, UnitReason.BEGIN);
     }
