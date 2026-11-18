@@ -25,10 +25,6 @@ public final class TransitionTrace<S, E, F> {
     private final ArrayDeque<Entry<S, E, F>> entries = new ArrayDeque<>(CAPACITY);
     private final BiPredicate<? super E, ? super F> worthKeeping;
 
-    public TransitionTrace() {
-        this((event, effect) -> true);
-    }
-
     /** Keeps only the transitions the predicate accepts, so routine ones do not push out the rest. */
     public TransitionTrace(BiPredicate<? super E, ? super F> worthKeeping) {
         this.worthKeeping = worthKeeping;

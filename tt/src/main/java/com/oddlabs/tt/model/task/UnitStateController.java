@@ -31,24 +31,21 @@ import java.util.List;
 public final class UnitStateController implements TaskRunner {
     private final Unit unit;
     private final ReducerLoop<UnitState, UnitEvent, List<UnitCommand>> loop;
-    private final @Nullable TransitionTrace<UnitState, UnitEvent, List<UnitCommand>> trace;
 
     private @Nullable UnitActivity runningActivity;
     /**
      * The activity built for the posture's {@link UnitPlan.Lasting} plan, reused each time that plan runs. An
-     * interrupt sets it aside instead of cancelling it; only {@link UnitCommand.Discard} cancels it.
+     * interrupt sets it aside instead of cancelling it; only {@link UnitCommand.DiscardPosture} cancels it.
      */
     private @Nullable UnitActivity postureActivity;
 
     public UnitStateController(Unit unit) {
         this.unit = unit;
-        this.trace = TransitionTrace.ENABLED ? new TransitionTrace<>((event,
-                commands) -> !(event instanceof UnitEvent.Report.Progressed) || !commands.isEmpty()) : null;
         this.loop = new ReducerLoop<UnitState, UnitEvent, List<UnitCommand>>(
                 new UnitStateReducer(new LiveUnitView(unit)),
                 new UnitState(new TaskSlots(new Posture.Idle(true))),
                 this::executeAll,
-                trace
+                (event, commands) -> !(event instanceof UnitEvent.Report.Progressed) || !commands.isEmpty()
         );
     }
 
@@ -73,7 +70,7 @@ public final class UnitStateController implements TaskRunner {
 
     @Override
     public @Nullable TransitionTrace<UnitState, UnitEvent, List<UnitCommand>> getTrace() {
-        return trace;
+        return loop.trace();
     }
 
     public void order(Order order) {
@@ -142,32 +139,30 @@ public final class UnitStateController implements TaskRunner {
     private void execute(UnitCommand command) {
         switch (command) {
             case UnitCommand.Interrupt _ -> {
-                UnitActivity activity = runningActivity;
-                assert activity != null : "cancelling with nothing running";
-                if (activity != null && activity != postureActivity) {
-                    activity.cancel();
+                assert runningActivity != null : "interrupting with nothing running";
+                if (runningActivity != null && runningActivity != postureActivity) {
+                    runningActivity.cancel();
                 }
                 runningActivity = null;
             }
             case UnitCommand.Release _ -> runningActivity = null;
-            case UnitCommand.Discard _ -> {
-                UnitActivity activity = postureActivity;
-                assert activity == null || runningActivity != activity : "discarding the running posture activity";
-                if (activity != null) {
-                    activity.cancel();
+            case UnitCommand.DiscardPosture _ -> {
+                if (postureActivity != null) {
+                    assert postureActivity != runningActivity : "discarding the running posture activity";
+                    postureActivity.cancel();
                     postureActivity = null;
                 }
             }
             case UnitCommand.Run run -> {
                 UnitActivity activity;
-                if (run.run() instanceof UnitPlan.Lasting lasting) {
+                if (run.plan() instanceof UnitPlan.Lasting lasting) {
                     activity = postureActivity;
                     if (activity == null) {
                         activity = create(lasting);
                         postureActivity = activity;
                     }
                 } else {
-                    activity = create(run.run());
+                    activity = create(run.plan());
                 }
                 runningActivity = activity;
             }

@@ -16,14 +16,12 @@ import java.util.List;
 public final class ShipStateController implements TaskRunner {
     private final Ship ship;
     private final ReducerLoop<ShipState, ShipEvent, List<ShipCommand>> loop;
-    private final @Nullable TransitionTrace<ShipState, ShipEvent, List<ShipCommand>> trace;
     private @Nullable ShipActivity runningActivity;
 
     public ShipStateController(Ship ship) {
         this.ship = ship;
-        this.trace = TransitionTrace.ENABLED ? new TransitionTrace<>() : null;
         this.loop = new ReducerLoop<>(new ShipStateReducer(ship::slid), new ShipState(new Task.Inert()),
-                this::executeAll, trace);
+                this::executeAll);
     }
 
     /** Takes the first decision; called once the ship is far enough constructed to act. */
@@ -59,7 +57,7 @@ public final class ShipStateController implements TaskRunner {
 
     @Override
     public @Nullable TransitionTrace<ShipState, ShipEvent, List<ShipCommand>> getTrace() {
-        return trace;
+        return loop.trace();
     }
 
     @Override
@@ -85,13 +83,14 @@ public final class ShipStateController implements TaskRunner {
     private void execute(ShipCommand command) {
         switch (command) {
             case ShipCommand.Interrupt _ -> {
-                ShipActivity activity = runningActivity;
-                assert activity != null : "cancelling with nothing running";
-                activity.cancel();
+                assert runningActivity != null : "interrupting with nothing running";
+                if (runningActivity != null) {
+                    runningActivity.cancel();
+                }
                 runningActivity = null;
             }
             case ShipCommand.Release _ -> runningActivity = null;
-            case ShipCommand.Run run -> runningActivity = create(run.run());
+            case ShipCommand.Run run -> runningActivity = create(run.plan());
             case ShipCommand.Perform perform -> {
                 switch (perform.operation()) {
                     case FINISH_SLIDE -> ship.endSlide();

@@ -12,19 +12,19 @@ import org.jspecify.annotations.Nullable;
  * The state machine of a unit's order: decides what the order does next, or returns null once it
  * is done and the unit's posture takes over. An order can become another order, which decides in
  * the same call; a gather or a repair holds a {@link Order.Harvest} and lets its
- * {@link HarvestTaskReducer} decide while that harvest runs.
+ * {@link HarvestReducer} decide while that harvest runs.
  */
 @NullMarked
-final class OrderTaskReducer implements UnitTaskReducer<Order, UnitReason> {
+final class OrderReducer implements UnitTaskReducer<Order, UnitReason> {
     /** How many walks a task makes towards something before it gives up on reaching it. */
     static final int MAX_ATTEMPTS = 1;
 
     private final UnitView view;
-    private final HarvestTaskReducer harvestReducer;
+    private final HarvestReducer harvestReducer;
 
-    OrderTaskReducer(UnitView view) {
+    OrderReducer(UnitView view) {
         this.view = view;
-        this.harvestReducer = new HarvestTaskReducer(view);
+        this.harvestReducer = new HarvestReducer(view);
     }
 
     @Override

@@ -23,7 +23,7 @@ import java.util.List;
  * replaced or the unit leaves.
  *
  * <p>A decision is made by the current task, for a {@link UnitReason}. An order decides through its
- * own {@link OrderTaskReducer}, which hands a harvest held by the order to a {@link HarvestTaskReducer}. A
+ * own {@link OrderReducer}, which hands a harvest held by the order to a {@link HarvestReducer}. A
  * task that finishes hands over to the slot beneath it: an order to the posture, an interruption to
  * whatever it interrupted. A posture that spots an enemy gives itself an order. {@link #decide}
  * follows these handovers in one call until a task has something to do.
@@ -39,11 +39,11 @@ public final class UnitStateReducer implements StateReducer<UnitState, UnitEvent
     private static final int MAX_HANDOVERS = 2;
 
     private final UnitView view;
-    private final OrderTaskReducer orderReducer;
+    private final OrderReducer orderReducer;
 
     public UnitStateReducer(UnitView view) {
         this.view = view;
-        this.orderReducer = new OrderTaskReducer(view);
+        this.orderReducer = new OrderReducer(view);
     }
 
     @Override
@@ -69,12 +69,25 @@ public final class UnitStateReducer implements StateReducer<UnitState, UnitEvent
             case UnitEvent.Ordered ordered -> {
                 // A new order lifts the excuse: from now on it waits for the activity only while
                 // that is committed.
-                if (state.execution() instanceof UnitState.Execution.Running running && running.leftToFinish()) {
+                if (
+                    state.execution() instanceof UnitState.Execution.Running running
+                            && running.leftToFinish()
+                ) {
                     state = state.withExecution(running.withLeftToFinish(false));
                 }
                 yield reconsiderWhenYielding(state, tasks.withOrder(ordered.order()));
             }
-            case UnitEvent.Excused _ -> excuse(state);
+            case UnitEvent.Excused _ -> {
+                // Takes the order away without deciding: an activity running for it is left to
+                // finish, and a decision already waiting on a committed activity still waits for it.
+                if (
+                    state.execution() instanceof UnitState.Execution.Running running
+                            && running.task() == tasks.order()
+                ) {
+                    state = state.withExecution(running.withLeftToFinish(true));
+                }
+                yield reconsiderWhenYielding(state, tasks.withOrder(null));
+            }
             case UnitEvent.Stunned stunned -> reconsiderAtOnce(
                     state,
                     tasks.withStunned(new Interruption.Stunned(stunned.seconds()))
@@ -131,7 +144,7 @@ public final class UnitStateReducer implements StateReducer<UnitState, UnitEvent
                 if (state.execution() instanceof UnitState.Execution.Running) {
                     commands.add(UnitCommand.INTERRUPT);
                 }
-                commands.add(UnitCommand.DISCARD);
+                commands.add(UnitCommand.DISCARD_POSTURE);
                 yield new Transition<>(new UnitState(tasks, UnitState.Execution.GONE), commands);
             }
         };
@@ -174,18 +187,6 @@ public final class UnitStateReducer implements StateReducer<UnitState, UnitEvent
     }
 
     /**
-     * Takes the order away without deciding: an activity running for it is left to finish, and a
-     * decision already waiting on a committed activity still waits for it to yield.
-     */
-    private Transition<UnitState, List<UnitCommand>> excuse(UnitState state) {
-        if (state.execution() instanceof UnitState.Execution.Running running
-                && running.task() == state.tasks().order()) {
-            state = state.withExecution(running.withLeftToFinish(true));
-        }
-        return reconsiderWhenYielding(state, state.tasks().withOrder(null));
-    }
-
-    /**
      * Stops what runs with the stop command, discards the posture's activity when the posture was
      * replaced, plans for the next tasks, and starts or performs what the plan asks for.
      */
@@ -200,21 +201,20 @@ public final class UnitStateReducer implements StateReducer<UnitState, UnitEvent
             commands.add(stop);
         }
         if (next.posture() != state.tasks().posture()) {
-            commands.add(UnitCommand.DISCARD);
+            commands.add(UnitCommand.DISCARD_POSTURE);
         }
         Step<TaskSlots, UnitPlan> decision = decide(next, reason);
-        TaskSlots tasks = decision.next();
         UnitState.Execution execution = switch (decision.plan()) {
             case UnitPlan.Run run -> {
                 commands.add(new UnitCommand.Run(run));
-                yield new UnitState.Execution.Running(tasks.current(), run.initialProgress());
+                yield new UnitState.Execution.Running(decision.next().current(), run.initialProgress());
             }
             case UnitPlan.Operation operation -> {
                 commands.add(new UnitCommand.Perform(operation));
                 yield new UnitState.Execution.Performing(operation);
             }
         };
-        return new Transition<>(new UnitState(tasks, execution), commands);
+        return new Transition<>(new UnitState(decision.next(), execution), commands);
     }
 
     /**

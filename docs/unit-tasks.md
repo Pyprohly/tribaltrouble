@@ -61,7 +61,7 @@ outside data down to their children.
 
 `UnitStateReducer.reduce` is pure and returns a `Transition` of the next state and a list of
 `UnitCommand`s for the controller. Two stop the running activity: `Interrupt` cancels it, or sets
-it aside if it is the posture's, and `Release` lets go of a finished one. `Discard` cancels the
+it aside if it is the posture's, and `Release` lets go of a finished one. `DiscardPosture` cancels the
 posture's activity once the posture is gone. `Run` starts a new activity for a plan, or runs the
 posture's again when the controller holds it, and `Perform` carries out an operation. An event the unit does not react to, such as a stun
 while dying or an activity report from a unit that has moved on, returns no commands.
@@ -82,8 +82,8 @@ change to the world (`UnitPlan.Operation`, `ShipPlan.Operation`), which `replan`
 After an operation the controller reports back and the task decides again with `UnitReason.PERFORMED`.
 
 The machines nest as the tasks do. `UnitStateReducer` handles events and picks the slot that decides:
-an interruption and the posture decide there, and an order decides in its `OrderTaskReducer`. A
-`Gather` or `Repair` that is harvesting hands its `Harvest` to a `HarvestTaskReducer`. Both child
+an interruption and the posture decide there, and an order decides in its `OrderReducer`. A
+`Gather` or `Repair` that is harvesting hands its `Harvest` to a `HarvestReducer`. Both child
 machines are `UnitTaskReducer`s: they take their task and their own kind of reason, and return the
 task's next `Step`, or null once it is done and the parent decides instead. The parent narrows its
 reason for the child, as the gist's failable `init?` does: `HarvestReason.of` keeps only the end of a
@@ -112,14 +112,15 @@ because it happened first, so a report always describes the activity the reducer
 reducer still ignores a report that no longer applies, such as `Performed` after an event already
 moved the unit on.
 
-One rule, `UnitStateReducer.reconsider`, decides when the running activity is replaced. A decision is
-taken as soon as the running activity is yielding and waits while it is committed. Urgent inputs
-(stun, spell, death, mounting) interrupt it at once, committed or not. Either way nothing is replaced
+One rule decides when the running activity is replaced. `UnitStateReducer.reconsiderWhenYielding`
+takes a decision as soon as the running activity is yielding and waits while it is committed. Urgent
+inputs (stun, spell, death, mounting) go through `reconsiderAtOnce`, which interrupts it at once,
+committed or not. Either way nothing is replaced
 while the running activity is still the current task's. A posture's activity is set aside rather
 than cancelled while something runs above it, and run again when the posture does, so idle scan
 timers and ship boarding progress survive orders and interruptions. The controller holds it until
 the posture is replaced, by mounting or unmounting, or the unit leaves the world; `replan` emits
-`Discard` when it sees the posture change. Whether
+`DiscardPosture` when it sees the posture change. Whether
 a new activity is committed before its first frame is a property of its plan
 (`UnitPlan.Run.initialProgress()`).
 

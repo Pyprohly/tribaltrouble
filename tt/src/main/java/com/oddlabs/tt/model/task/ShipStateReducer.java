@@ -25,17 +25,33 @@ public final class ShipStateReducer implements StateReducer<ShipState, ShipEvent
 
     @Override
     public Transition<ShipState, List<ShipCommand>> reduce(ShipState state, ShipEvent event) {
+        Task task = state.task();
         return switch (event) {
-            case ShipEvent.Started _ -> state.execution() == ShipState.Execution.UNSTARTED ? replan(state,
-                    ShipCommand.INTERRUPT, state.task(), ShipReason.BEGIN) : withoutCommands(state);
-            case ShipEvent.Sailed sailed -> replan(state, ShipCommand.INTERRUPT, new Voyage(sailed.target()),
-                    ShipReason.BEGIN);
-            case ShipEvent.Docked _ -> replan(state, ShipCommand.INTERRUPT, new Task.Inert(), ShipReason.BEGIN);
-            case ShipEvent.Report.Finished finished -> state.execution() == ShipState.Execution.RUNNING ? replan(state,
-                    ShipCommand.RELEASE, state.task(), finished.outcome()) : withoutCommands(state);
-            case ShipEvent.Report.Performed _ -> state.execution() == ShipState.Execution.PERFORMING ? replan(
+            case ShipEvent.Started _ -> {
+                if (state.execution() != ShipState.Execution.UNSTARTED) {
+                    yield withoutCommands(state);
+                }
+                yield replan(state, task, ShipCommand.INTERRUPT, ShipReason.BEGIN);
+            }
+            case ShipEvent.Sailed sailed -> replan(
                     state,
-                    ShipCommand.INTERRUPT, state.task(), ShipReason.PERFORMED) : withoutCommands(state);
+                    new Voyage(sailed.target()),
+                    ShipCommand.INTERRUPT,
+                    ShipReason.BEGIN
+            );
+            case ShipEvent.Docked _ -> replan(state, new Task.Inert(), ShipCommand.INTERRUPT, ShipReason.BEGIN);
+            case ShipEvent.Report.Finished finished -> {
+                if (state.execution() != ShipState.Execution.RUNNING) {
+                    yield withoutCommands(state);
+                }
+                yield replan(state, task, ShipCommand.RELEASE, finished.outcome());
+            }
+            case ShipEvent.Report.Performed _ -> {
+                if (state.execution() != ShipState.Execution.PERFORMING) {
+                    yield withoutCommands(state);
+                }
+                yield replan(state, task, ShipCommand.INTERRUPT, ShipReason.PERFORMED);
+            }
         };
     }
 
@@ -43,14 +59,18 @@ public final class ShipStateReducer implements StateReducer<ShipState, ShipEvent
         return new Transition<>(state, List.of());
     }
 
-    /** Stops what runs with the stop command, plans for the task, and starts or performs what it asks for. */
-    private Transition<ShipState, List<ShipCommand>> replan(ShipState state, ShipCommand.Stop stop, Task task,
-            ShipReason reason) {
+    /** Stops what runs with the stop command, plans for the next task, and starts or performs what it asks for. */
+    private Transition<ShipState, List<ShipCommand>> replan(
+            ShipState state,
+            Task next,
+            ShipCommand.Stop stop,
+            ShipReason reason
+    ) {
         List<ShipCommand> commands = new ArrayList<>(2);
         if (state.execution() == ShipState.Execution.RUNNING) {
             commands.add(stop);
         }
-        Step<Task, ShipPlan> decision = decide(task, reason);
+        Step<Task, ShipPlan> decision = decide(next, reason);
         ShipState.Execution execution = switch (decision.plan()) {
             case ShipPlan.Run run -> {
                 commands.add(new ShipCommand.Run(run));
@@ -64,8 +84,8 @@ public final class ShipStateReducer implements StateReducer<ShipState, ShipEvent
         return new Transition<>(new ShipState(decision.next(), execution), commands);
     }
 
-    private Step<Task, ShipPlan> decide(Task state, ShipReason reason) {
-        if (!(state instanceof Voyage voyage)) {
+    private Step<Task, ShipPlan> decide(Task task, ShipReason reason) {
+        if (!(task instanceof Voyage voyage)) {
             return new Step<>(new Task.Inert(), new ShipPlan.Moor());
         }
         if (reason instanceof ShipReason.Begin) {

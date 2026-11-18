@@ -4,6 +4,7 @@ import org.jspecify.annotations.NullMarked;
 import org.jspecify.annotations.Nullable;
 
 import java.util.ArrayDeque;
+import java.util.function.BiPredicate;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
@@ -20,18 +21,31 @@ final class ReducerLoop<S, E, F> {
     private S state;
 
     private final ArrayDeque<E> queue = new ArrayDeque<>();
-    private boolean busy;
+    private boolean busy = false;
 
-    ReducerLoop(StateReducer<S, E, F> reducer, S initial, Consumer<F> executor,
-            @Nullable TransitionTrace<S, E, F> trace) {
+    ReducerLoop(StateReducer<S, E, F> reducer, S initial, Consumer<F> executor) {
+        this(reducer, initial, executor, (event, effect) -> true);
+    }
+
+    /** Traces only the transitions the predicate accepts, so routine ones do not push out the rest. */
+    ReducerLoop(
+            StateReducer<S, E, F> reducer,
+            S initial,
+            Consumer<F> executor,
+            BiPredicate<? super E, ? super F> worthTracing
+    ) {
         this.reducer = reducer;
         this.state = initial;
         this.executor = executor;
-        this.trace = trace;
+        this.trace = TransitionTrace.ENABLED ? new TransitionTrace<>(worthTracing) : null;
     }
 
     public S state() {
         return state;
+    }
+
+    public @Nullable TransitionTrace<S, E, F> trace() {
+        return trace;
     }
 
     public void dispatch(E event) {
@@ -75,6 +89,7 @@ final class ReducerLoop<S, E, F> {
                 }
 
                 state = transition.nextState();
+
                 executor.accept(transition.effect());
             }
         } finally {

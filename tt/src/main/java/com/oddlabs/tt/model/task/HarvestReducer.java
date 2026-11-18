@@ -10,10 +10,10 @@ import org.jspecify.annotations.Nullable;
  * {@link Order.Repair}, which decides again once the harvest is done.
  */
 @NullMarked
-final class HarvestTaskReducer implements UnitTaskReducer<Order.Harvest, HarvestReason> {
+final class HarvestReducer implements UnitTaskReducer<Order.Harvest, HarvestReason> {
     private final UnitView view;
 
-    HarvestTaskReducer(UnitView view) {
+    HarvestReducer(UnitView view) {
         this.view = view;
     }
 
@@ -29,7 +29,7 @@ final class HarvestTaskReducer implements UnitTaskReducer<Order.Harvest, Harvest
         if (supply != null && !supply.isEmpty() && view.isCloseEnough(0f, supply)) {
             return new Step<>(new Order.Harvest(supply, harvest.supplyType(), 0), new UnitPlan.Harvest(supply));
         }
-        if (harvest.attempts() >= OrderTaskReducer.MAX_ATTEMPTS) {
+        if (harvest.attempts() >= OrderReducer.MAX_ATTEMPTS) {
             return null;
         }
         return new Step<>(new Order.Harvest(supply, harvest.supplyType(), harvest.attempts() + 1),

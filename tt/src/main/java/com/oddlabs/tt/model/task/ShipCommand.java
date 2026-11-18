@@ -21,7 +21,7 @@ public sealed interface ShipCommand {
     }
 
     /** Starts an activity for the plan. */
-    record Run(ShipPlan.Run run) implements ShipCommand {
+    record Run(ShipPlan.Run plan) implements ShipCommand {
     }
 
     /** Carries out the operation, then reports {@link ShipEvent.Report.Performed}. */

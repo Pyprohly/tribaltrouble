@@ -11,7 +11,7 @@ import org.jspecify.annotations.NullMarked;
 public sealed interface UnitCommand {
     Stop INTERRUPT = new Interrupt();
     Stop RELEASE = new Release();
-    UnitCommand DISCARD = new Discard();
+    UnitCommand DISCARD_POSTURE = new DiscardPosture();
 
     /** Ends the running activity before the next plan starts. */
     sealed interface Stop extends UnitCommand {
@@ -31,17 +31,16 @@ public sealed interface UnitCommand {
      * activity is running, a {@link Stop} must come earlier in the same commands, so it is no
      * longer running when it gets discarded.
      */
-    record Discard() implements UnitCommand {
+    record DiscardPosture() implements UnitCommand {
     }
 
     /** Starts a new activity for the plan, or runs the posture's again when the controller holds it. */
-    record Run(UnitPlan.Run run) implements UnitCommand {
+    record Run(UnitPlan.Run plan) implements UnitCommand {
     }
 
     /**
-     * Carries out the operation, then reports {@link UnitEvent.Report.Performed}, or {@link UnitEvent.Report.Removed}
-     * if the
-     * unit left the world.
+     * Carries out the operation, then reports {@link UnitEvent.Report.Performed}, or
+     * {@link UnitEvent.Report.Removed} if the unit left the world.
      */
     record Perform(UnitPlan.Operation operation) implements UnitCommand {
     }
