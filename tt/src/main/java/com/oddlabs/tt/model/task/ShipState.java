@@ -10,12 +10,23 @@ public record ShipState(Task task, Execution execution) {
     }
 
     /** What the controller is carrying out for the ship's task. */
-    public enum Execution {
+    public sealed interface Execution {
+        Execution UNSTARTED = new Unstarted();
+        Execution RUNNING = new Running();
+
         /** Nothing has run yet. */
-        UNSTARTED,
+        record Unstarted() implements Execution {
+        }
+
         /** An activity runs for the task. */
-        RUNNING,
-        /** A world operation is being carried out, and its report is awaited. */
-        PERFORMING
+        record Running() implements Execution {
+        }
+
+        /**
+         * A world operation is being carried out, and its report is awaited. The operation is told apart
+         * from others by identity, so only its own report ends it.
+         */
+        record Performing(ShipPlan.Operation operation) implements Execution {
+        }
     }
 }

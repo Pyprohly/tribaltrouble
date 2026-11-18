@@ -33,8 +33,8 @@ public final class ShipStateController implements TaskRunner {
         dispatch(new ShipEvent.Sailed(target));
     }
 
-    public void dock() {
-        dispatch(new ShipEvent.Docked());
+    public void destroy() {
+        dispatch(new ShipEvent.Destroyed());
     }
 
     public boolean isSailing() {
@@ -93,10 +93,10 @@ public final class ShipStateController implements TaskRunner {
             case ShipCommand.Run run -> runningActivity = create(run.plan());
             case ShipCommand.Perform perform -> {
                 switch (perform.operation()) {
-                    case FINISH_SLIDE -> ship.endSlide();
-                    case END_TRIP -> ship.endTrip();
+                    case ShipPlan.FinishSlide _ -> ship.endSlide();
+                    case ShipPlan.EndTrip _ -> ship.endTrip();
                 }
-                dispatch(new ShipEvent.Report.Performed());
+                dispatch(new ShipEvent.Report.Performed(perform.operation()));
             }
         }
     }

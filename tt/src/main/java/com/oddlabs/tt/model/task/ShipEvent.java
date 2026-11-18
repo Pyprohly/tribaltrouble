@@ -17,7 +17,8 @@ public sealed interface ShipEvent {
     record Sailed(Target target) implements ShipEvent {
     }
 
-    record Docked() implements ShipEvent {
+    /** The ship was destroyed, and gives up its voyage. */
+    record Destroyed() implements ShipEvent {
     }
 
     /** What the controller reports back about the activities and operations it carried out. */
@@ -27,7 +28,7 @@ public sealed interface ShipEvent {
         }
 
         /** The operation the controller was asked for has been carried out. */
-        record Performed() implements Report {
+        record Performed(ShipPlan.Operation operation) implements Report {
         }
     }
 }

@@ -13,11 +13,7 @@ public sealed interface ShipPlan {
     }
 
     /** A change to the world, after which the ship decides again with {@link ShipReason#PERFORMED}. */
-    enum Operation implements ShipPlan {
-        /** The ship reached deep water. */
-        FINISH_SLIDE,
-        /** The ship arrived, or found no route; it settles where it is. */
-        END_TRIP
+    sealed interface Operation extends ShipPlan {
     }
 
     record Moor() implements Run {
@@ -30,5 +26,13 @@ public sealed interface ShipPlan {
     }
 
     record Unstuck() implements Run {
+    }
+
+    /** The ship reached deep water. */
+    record FinishSlide() implements Operation {
+    }
+
+    /** The ship arrived, or found no route; it settles where it is. */
+    record EndTrip() implements Operation {
     }
 }

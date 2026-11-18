@@ -15,4 +15,12 @@ public record Voyage(Target target, Phase phase, int failedUnstucks) implements 
     public Voyage(Target target) {
         this(target, Phase.SAILING, 0);
     }
+
+    public Voyage withPhase(Phase next) {
+        return new Voyage(target, next, failedUnstucks);
+    }
+
+    public Voyage withFailedUnstucks(int next) {
+        return new Voyage(target, phase, next);
+    }
 }

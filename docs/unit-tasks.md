@@ -66,9 +66,9 @@ posture's activity once the posture is gone. `Run` starts a new activity for a p
 posture's again when the controller holds it, and `Perform` carries out an operation. An event the unit does not react to, such as a stun
 while dying or an activity report from a unit that has moved on, returns no commands.
 
-A ship's events are `ShipEvent`s: `Started`, `Sailed` with a new destination and `Docked`, and
+A ship's events are `ShipEvent`s: `Started`, `Sailed` with a new destination and `Destroyed`, and
 the controller's reports under `ShipEvent.Report`, `Finished` and `Performed`. `Sailed` and
-`Docked` replace the ship's task, cancel the running activity and decide at once. `ShipStateReducer.reduce` returns a list of
+`Destroyed` replace the ship's task, cancel the running activity and decide at once. `ShipStateReducer.reduce` returns a list of
 `ShipCommand`s: `Interrupt` or `Release` the running activity, `Run` an activity, or `Perform` an
 operation.
 

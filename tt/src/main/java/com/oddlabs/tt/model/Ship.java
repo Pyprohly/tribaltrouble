@@ -755,7 +755,7 @@ public class Ship extends Building implements Movable {
     protected final void removeDying() {
         removeProxy();
 
-        controller.dock();
+        controller.destroy();
 
         // If it's a ship and it's destroyed, kill everyone on board
         if (ship_hr != null) {
