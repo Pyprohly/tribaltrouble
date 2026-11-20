@@ -30,14 +30,6 @@ import java.util.List;
  */
 @NullMarked
 public final class UnitStateReducer implements StateReducer<UnitState, UnitEvent, List<UnitCommand>> {
-    /**
-     * How many times one decision may hand over between slots. A slot that takes over begins, and
-     * only a posture that spotted an enemy gives itself an order, so a decision needs two at most:
-     * from an interruption through the order to the posture, or from the posture to its own order
-     * and back.
-     */
-    private static final int MAX_HANDOVERS = 2;
-
     private final UnitView view;
     private final OrderReducer orderReducer;
 
@@ -222,8 +214,11 @@ public final class UnitStateReducer implements StateReducer<UnitState, UnitEvent
      * do.
      */
     private Step<TaskSlots, UnitPlan> decide(TaskSlots tasks, UnitReason reason) {
-        for (int handovers = 0;; handovers++) {
-            assert handovers <= MAX_HANDOVERS : "a decision that never ends in something to do";
+        // A slot that takes over begins, and only a posture that spotted an enemy gives itself an
+        // order, so a decision needs two handovers at most: from an interruption through the order
+        // to the posture, or from the posture to its own order and back.
+        final int maxHandovers = 2;
+        for (int handovers = 0; handovers <= maxHandovers; handovers++) {
             Interruption interruption = tasks.interruption();
             Order order = tasks.order();
             if (interruption != null) {
@@ -231,7 +226,7 @@ public final class UnitStateReducer implements StateReducer<UnitState, UnitEvent
                 if (plan != null) {
                     return new Step<>(tasks, plan);
                 }
-                tasks = tasks.withoutInterruption();
+                tasks = tasks.withoutCurrentInterruption();
             } else if (order != null) {
                 if (orderReducer.decide(order, reason) instanceof Step(Order next, UnitPlan plan)) {
                     return new Step<>(tasks.withOrder(next), plan);
@@ -249,17 +244,23 @@ public final class UnitStateReducer implements StateReducer<UnitState, UnitEvent
             }
             reason = UnitReason.BEGIN;
         }
+        throw new IllegalStateException(
+                "No task found anything to do after %d handovers".formatted(maxHandovers));
     }
 
     private static @Nullable UnitPlan decideInterruption(Interruption interruption, UnitReason reason) {
-        // A stun or spell decides only as it begins; any later decision means it has ended.
-        if (!(interruption instanceof Interruption.Dying) && !(reason instanceof UnitReason.Begin)) {
-            return null;
-        }
         return switch (interruption) {
-            case Interruption.Dying _ -> new UnitPlan.Die();
-            case Interruption.Stunned stunned -> new UnitPlan.Stun(stunned.seconds());
-            case Interruption.Casting casting -> new UnitPlan.Cast(casting.factory());
+            case Interruption.Dying _ -> {
+                assert reason instanceof UnitReason.Begin : "a dying unit decided again";
+                yield new UnitPlan.Die();
+            }
+            // A stun or spell is a single activity, so any reason but beginning means it has run
+            // its course and hands over to whatever it interrupted.
+            case Interruption.Stunned stunned when reason instanceof UnitReason.Begin -> new UnitPlan.Stun(
+                    stunned.seconds());
+            case Interruption.Casting casting when reason instanceof UnitReason.Begin -> new UnitPlan.Cast(
+                    casting.factory());
+            case Interruption.Stunned _,Interruption.Casting _ -> null;
         };
     }
 
